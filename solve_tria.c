@@ -82,7 +82,7 @@ void back_sub_upper_short(
 
 /*
  * Function: back_sub_lower_short
- * Solves the a lower triangular matrix with (n_rep-1) subdiagonals 
+ * Solves the a lower triangular matrix with n_rep subdiagonals 
  * by back substitution. The matrix A has a repeating structure every n_rep rows. 
  * Solving the equation A x = b
  * where A is the lower triangular matrix, b is b_vec, x is out
@@ -90,7 +90,7 @@ void back_sub_upper_short(
  * Inputs:
  * n_row - number of rows of the triangular matrix
  * n_rep - number of elements within each repetition block
- * lower - 2D array (A) of the lower traingular matrix (n_row, n_subdiagonals+1)
+ * lower - 2D array (A) of the lower traingular matrix (n_row, n_subdiagonals)
  *         == (n_row, n_rep) stored in a 1D contiguous block.  
  * b_vec - RHS 1D array of size (n_row, )
  *
@@ -139,7 +139,7 @@ void back_sub_lower_short(
  * Inputs:
  * n_row - number of rows of the A, L, U, P matrices and the b vector
  * n_rep - number of elements within each repetition block
- * lower - 2D array (L) of the lower traingular matrix (n_row, n_subdiagonals+1)
+ * lower - 2D array (L) of the lower traingular matrix (n_row, n_subdiagonals)
  *         == (n_row, n_rep) stored in a 1D contiguous block.  
  * upper - 2D array (U) of the upper traingular matrix (n_row, n_superdiagonal+1)
  *         == (n_row, n_rep+2) stored in a 1D contiguous block.  
