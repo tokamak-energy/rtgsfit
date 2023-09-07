@@ -16,6 +16,7 @@ void hessian_col_col(double* arr, int n_row, int n_col, double d_col,
 void hessian_row_col(double* arr, int n_row, int n_col, double d_row,
         double d_col, double* hess_row_col);
         
-void gradient_bound(double* arr, int n_row, int n_col, double* grad_bound);
+void gradient_bound(double* arr, int n_row, int n_col, double d_row, 
+        double d_col, double* grad_bound);
 
 #endif 

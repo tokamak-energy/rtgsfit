@@ -226,31 +226,35 @@ void gradient_bound(
         double* arr,
         int n_row, 
         int n_col, 
+        double d_row, 
+        double d_col,
         double* grad_bound
         )
 {
     
     int ii;
+    double d_row_col = (d_row/d_col);
+    double d_col_row = (d_col/d_row);
     
     for (ii=0; ii<n_row; ++ii) 
     {
-        grad_bound[ii] = 2*arr[ii*n_col + 1] - 0.5*arr[ii*n_col + 2];
+        grad_bound[ii] = d_row_col*(2*arr[ii*n_col + 1] - 0.5*arr[ii*n_col + 2]);
     }
         
     for (ii=0; ii<n_col; ++ii) 
     {
-        grad_bound[ii + n_row] = 2*arr[ii + n_col] - 0.5*arr[2*n_col + ii];
+        grad_bound[ii + n_row] = d_col_row*(2*arr[ii + n_col] - 0.5*arr[2*n_col + ii]);
     }
         
     for (ii=0; ii<n_row; ++ii)
     {
-        grad_bound[ii + n_col + n_row] = 2*arr[ii*n_col + n_col - 2] - 
-                0.5*arr[ii*n_col + n_col - 3];
+        grad_bound[ii + n_col + n_row] = d_row_col*(2*arr[ii*n_col + n_col - 2] - 
+                0.5*arr[ii*n_col + n_col - 3]);
     }
           
     for (ii=0; ii<n_col; ++ii)
     {
-        grad_bound[ii + n_col + 2*n_row] = 2*arr[(n_row - 2)*n_col + ii] - 
-                0.5*arr[(n_row - 3)*n_col + ii];
+        grad_bound[ii + n_col + 2*n_row] = d_col_row*(2*arr[(n_row - 2)*n_col + ii] - 
+                0.5*arr[(n_row - 3)*n_col + ii]);
     }    
 }  

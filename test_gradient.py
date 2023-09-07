@@ -10,10 +10,10 @@ import pytest
 
 class TestGradient:
     
-    @classmethod
+#    @classmethod
     def setup_class(
             self, 
-            func = lambda x, y: np.cos(x*0.5*np.pi)*np.cos(y*0.5*np.pi), 
+            func = lambda x, y: np.sin(x*np.pi)*np.sin(y*np.pi), 
             n_row = 11, 
             n_col = 11,
             thresh = 1e-10,
@@ -134,6 +134,35 @@ class TestGradient:
         
         self.plot(estimate, truth) 
     
+
+    def test_gradient_bound(self):
+    
+        grad_row = FinDiff((0, self.d_row, 1), acc=2)
+        truth_row = grad_row(self.data)
+        
+        grad_col = FinDiff((1, self.d_col, 1), acc=2)
+        truth_col = grad_col(self.data)        
+        
+        truth = np.concatenate([truth_col[:, 0]*self.d_row, truth_row[0, :]*self.d_col, 
+                -truth_col[:, -1]*self.d_row, -truth_row[-1, :]*self.d_col])
+        
+        estimate = np.ascontiguousarray(np.zeros((self.n_row, self.n_col)))
+        p_estimate = estimate.ctypes.data_as(ctypes.POINTER(ctypes.c_double))         
+               
+        c_gradient.gradient_bound(self.p_data, np.int32(self.n_row), 
+                np.int32(self.n_col), self.d_row, self.d_col, p_estimate)
+                                
+        estimate = np.ctypeslib.as_array(p_estimate, shape=(2*(self.n_row + 
+                self.n_col),))    
+        
+        if self.show:
+            plt.plot(estimate)
+            plt.plot(truth)
+            plt.show()                             
+        
+        for est, tru in zip(estimate.flatten(), truth.flatten()):
+            assert(np.abs(est-tru) < self.thresh)
+        
                                 
     def plot(self, estimate, truth):
         
