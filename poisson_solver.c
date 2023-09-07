@@ -101,11 +101,6 @@ void add_bound(
         b_vec[(n_z-1)*n_r + ii]= psi_bound[ii + 2*n_z + n_r];
     }
         
-/*    b_vec[0] = 0.0;*/
-/*    b_vec[n_r - 1] = 0.0;*/
-/*    b_vec[n_r*(n_z-1)] = 0.0;*/
-/*    b_vec[n_r*n_z - 1] = 0.0;      */
-    
 }     
 
 
