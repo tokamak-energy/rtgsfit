@@ -159,12 +159,13 @@ void solve_tria(
         double* out
         )
 {
+    double b_vec_lu[n_row];
        
     permute(b_vec, n_row, idx_final, out);
     
-    back_sub_lower_short(n_row, n_rep, lower, out, b_vec);
+    back_sub_lower_short(n_row, n_rep, lower, out, b_vec_lu);
     
-    back_sub_upper_short(n_row, n_rep, upper, b_vec, out);
+    back_sub_upper_short(n_row, n_rep, upper, b_vec_lu, out);
     
 }
 

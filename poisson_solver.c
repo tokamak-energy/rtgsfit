@@ -35,12 +35,11 @@ void hagenow_bound(
         double d_row,
         double d_col, 
         double* psi,
-        double* psi_bound,     
-        double* dpsi_ltrb 
+        double* psi_bound
         )
 {
-    
-/*    double dpsi_ltrb[n_bound];*/
+
+    double dpsi_ltrb[n_bound];
     int ii;
 
     solve_tria(n_ele, n_r, lower, upper, b_vec, idx_final, psi);
@@ -102,16 +101,16 @@ void add_bound(
         b_vec[(n_z-1)*n_r + ii]= psi_bound[ii + 2*n_z + n_r];
     }
         
-    b_vec[0] = 0.0;
-    b_vec[n_r - 1] = 0.0;
-    b_vec[n_r*(n_z-1)] = 0.0;
-    b_vec[n_r*n_z - 1] = 0.0;      
+/*    b_vec[0] = 0.0;*/
+/*    b_vec[n_r - 1] = 0.0;*/
+/*    b_vec[n_r*(n_z-1)] = 0.0;*/
+/*    b_vec[n_r*n_z - 1] = 0.0;      */
     
 }     
 
 
-/*
- * Function: poisson_solver
+
+/* Function: poisson_solver
  * determines the boundary flux values of the boundary using the Hagenow method
  *
  * Inputs:
@@ -129,30 +128,31 @@ void add_bound(
  * Outputs: 
  * out (n_ele, ) - psi values on the 2D grid
  */ 
-/*void poisson_solver(*/
-/*        int n_r, */
-/*        int n_z, */
-/*        int n_ele,*/
-/*        double* lower, */
-/*        double* upper, */
-/*        double* b_vec, */
-/*        int* idx_final, */
-/*        int n_bound,*/
-/*        double* g_bound,*/
-/*        double* inv_r_mu0,*/
-/*        double* out */
-/*        )*/
-/*{*/
-/*    */
-/*    double psi_bound[n_bound];*/
-/*    */
-/*    hagenow_bound(n_r, n_z, n_ele, lower, upper, b_vec, idx_final, n_bound,*/
-/*            g_bound, inv_r_mu0, out, psi_bound);*/
-/*            */
-/*    add_bound(n_r, n_z, n_ele, n_bound, psi_bound, b_vec);*/
-/*    */
-/*    solve_tria(n_ele, n_r, lower, upper, b_vec, idx_final, out);*/
-/*}  */
-    
+void poisson_solver(
+        int n_r, 
+        int n_z, 
+        int n_ele,
+        double* lower, 
+        double* upper, 
+        double* b_vec, 
+        int* idx_final, 
+        int n_bound,
+        double* g_bound,
+        double* inv_r_mu0,
+        double dz, 
+        double dr, 
+        double* out 
+        )
+{
 
+    double psi_bound[n_bound];
+    
+    hagenow_bound(n_r, n_z, n_ele, lower, upper, b_vec, idx_final, n_bound,
+            g_bound, inv_r_mu0, dz, dr, out, psi_bound);
+            
+    add_bound(n_r, n_z, n_ele, n_bound, psi_bound, b_vec);
+    
+    solve_tria(n_ele, n_r, lower, upper, b_vec, idx_final, out);
+}  
+    
     
