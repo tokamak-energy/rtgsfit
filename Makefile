@@ -14,6 +14,9 @@ all: $(CTYPES)
 $(CTYPES): c_%.py : %.so %.h
 	ctypesgen -o  $@ -l $^
 
+find_x_point.so: find_x_point.o 
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $< -lm
+	
 poisson_solver.so: poisson_solver.o gradient.o solve_tria.o
 	$(CC) $(LDFLAGS) -Wl,-soname,poisson_solver.so -Wl,--no-undefined -o \
 	poisson_solver.so poisson_solver.o solve_tria.o gradient.o -lopenblas
