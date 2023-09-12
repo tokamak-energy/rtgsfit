@@ -1,48 +1,8 @@
 #include "find_x_point.h"
 #include <stdio.h>
 
-#define NP 4
+/*#define NP 4*/
 
-void find_zero_on_edge(
-        double* grad_patch,
-        double thresh, 
-        double* cross_row, 
-        double* cross_col, 
-        int* count
-        )
-{
-    
-    int ii;
-    int nn_c[NP] = {1, 1, 0, 0};
-    int nn_r[NP] = {0, 1, 0, 1};
-    int nn_ind[NP] = {1, 3, 0, 2};
-    int rowNum[NP] = {0, 0, 1, 1};
-    int colNum[NP] = {0, 1, 0, 1};
-    int diff_col, diff_row;
-    double off;
-    
-    *count = 0;
-    
-    for (ii=0; ii<NP; ii++)
-        {
-        if (fabs(grad_patch[ii]) < thresh)
-        {
-            cross_col[*count] = colNum[ii];
-            cross_row[*count] = rowNum[ii];
-            *count = *count + 1;
-        }
-        else if (grad_patch[ii] * grad_patch[nn_ind[ii]] < 0)
-        {
-            diff_col = -colNum[ii] + nn_c[ii];
-            diff_row = -rowNum[ii] + nn_r[ii];
-            off = fabs(grad_patch[ii]) / 
-                  (fabs(grad_patch[ii]) + fabs(grad_patch[nn_ind[ii]]));
-            cross_col[*count] = colNum[ii] + diff_col * off;
-            cross_row[*count] = rowNum[ii] + diff_row * off;
-            *count = *count + 1;
-        }
-    }
-}
 
 void find_null_in_gradient(
         double dr,
@@ -71,13 +31,11 @@ void find_null_in_gradient(
     int idx, i_row, i_col;
     double hess_det;
     double psi_up, psi_down, psi_at_null, dist_to_null_r, dist_to_null_z;
-    double abs_dist_null_r, abs_dist_null_z;
-    double inv_dr = 1.0/dr;
-    double inv_dz = 1.0/dz;
-    
-    for (i_row=0; i_row<n_row; i_row++) 
+    double rel_dist_null_r, rel_dist_null_z;
+
+    for (i_row=0; i_row<(n_row-1); i_row++) 
     {
-        for (i_col=0; i_col<n_col; i_col++)
+        for (i_col=0; i_col<(n_col-1); i_col++)
         {
             
             idx = i_row*n_col + i_col;
@@ -86,43 +44,44 @@ void find_null_in_gradient(
             dist_to_null_r = (grad_z[idx]*hess_rz[idx] - hess_zz[idx]*grad_r[idx])/hess_det;
             dist_to_null_z = (grad_r[idx]*hess_rz[idx] - hess_rr[idx]*grad_z[idx])/hess_det;
             
-            abs_dist_null_r = fabs(dist_to_null_r);
-            abs_dist_null_z = fabs(dist_to_null_z);
-            
-            if (abs_dist_null_r < 0.5*dr && abs_dist_null_z < 0.5*dz)
+            if (dist_to_null_r >= 0.0 && dist_to_null_r < dr && 
+                    dist_to_null_z >= 0.0 && dist_to_null_z < dz)
             {
                 if ((hess_det > 0.0 && hess_rr[idx] < 0.0) || (hess_det < 0.0))
                 {
+                    rel_dist_null_r = dist_to_null_r / dr;
+                    rel_dist_null_z = dist_to_null_z / dz;     
+                       
                     // get psi at point from interpolation 
                     if (dist_to_null_r > 0.0)
                     {
                         if (dist_to_null_z > 0.0)
                         {
-                            psi_up = inv_dr*((1 - abs_dist_null_r)*psi[idx + n_col] + abs_dist_null_r*psi[idx + n_col + 1]);
-                            psi_down = inv_dr*((1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx + 1]);
-                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_down + abs_dist_null_z*psi_up);
+                            psi_up = (1 - rel_dist_null_r)*psi[idx + n_col] + rel_dist_null_r*psi[idx + n_col + 1];
+                            psi_down = (1 - rel_dist_null_r)*psi[idx] + rel_dist_null_r*psi[idx + 1];
+                            psi_at_null = (1 - rel_dist_null_z)*psi_down + rel_dist_null_z*psi_up;
                         }
                         else
                         {
-                            psi_up = inv_dr*((1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx + 1]);
-                            psi_up = inv_dr*((1 - abs_dist_null_r)*psi[idx - n_col] + abs_dist_null_r*psi[idx - n_col + 1]);
-                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_up + abs_dist_null_z*psi_down);
+                            psi_up = (1 - rel_dist_null_r)*psi[idx] + rel_dist_null_r*psi[idx + 1];
+                            psi_up = (1 - rel_dist_null_r)*psi[idx - n_col] + rel_dist_null_r*psi[idx - n_col + 1];
+                            psi_at_null = (1 - rel_dist_null_z)*psi_up + rel_dist_null_z*psi_down;
                         }
                     }
                     else
                     {
                         if (dist_to_null_z > 0.0)
                         {
-                            psi_up = inv_dr*((1 - abs_dist_null_r)*psi[idx + n_col] + abs_dist_null_r*psi[idx + n_col - 1]);
-                            psi_down = inv_dr*((1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx - 1]);
-                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_down + abs_dist_null_z*psi_up);
+                            psi_up = (1 - rel_dist_null_r)*psi[idx + n_col] + rel_dist_null_r*psi[idx + n_col - 1];
+                            psi_down = (1 - rel_dist_null_r)*psi[idx] + rel_dist_null_r*psi[idx - 1];
+                            psi_at_null = (1 - rel_dist_null_z)*psi_down + rel_dist_null_z*psi_up;
                         
                         }
                         else
                         {
-                            psi_up = inv_dr*((1 - abs_dist_null_r)*psi[idx + n_col] + abs_dist_null_r*psi[idx + n_col - 1]);
-                            psi_down = inv_dr*((1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx - 1]);
-                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_up + abs_dist_null_z*psi_down);                   
+                            psi_up = (1 - rel_dist_null_r)*psi[idx + n_col] + rel_dist_null_r*psi[idx + n_col - 1];
+                            psi_down = (1 - rel_dist_null_r)*psi[idx] + rel_dist_null_r*psi[idx - 1];
+                            psi_at_null = (1 - rel_dist_null_z)*psi_up + rel_dist_null_z*psi_down;                   
                         }
                     }
                     
@@ -146,7 +105,8 @@ void find_null_in_gradient(
         }
     }
 }
-                
+                  
+       
 void find_lcfs(
         double dr,
         double dz,
@@ -159,14 +119,14 @@ void find_lcfs(
         double thresh, 
         double* r_lcfs,
         double* z_lcfs,
-        double* n_lcfs
+        int* n_lcfs
         )
 {
     
-    int i_row, i_col, idx, count, i_count;
-    double patch[NP], cross_row[n_row*n_col], cross_col[n_row*n_col];
+    int i_row, i_col, idx;
+    double off;
     
-    n_lcfs = 0;
+    *n_lcfs = 0;
     
     for (idx=0; idx<(n_row*n_col); idx++)
     {
@@ -177,25 +137,79 @@ void find_lcfs(
     {
         for (i_col=0; i_col<n_col-1; i_col++)
         {
-            count = 0;
             idx = i_row*n_col + i_col;
-            patch[0] = psi[idx];
-            patch[1] = psi[idx+1];
-            patch[2] = psi[idx+n_col];
-            patch[3] = psi[idx+n_col+1];
-            find_zero_on_edge(patch, thresh, cross_row, cross_col, &count);
-            n_lcfs += count;
             
-            for (i_count=0; i_count<count; i_count++)
+            if (fabs(psi[idx]) < thresh)
             {
-                r_lcfs[i_count] = r_arr[i_col] + cross_col[i_count]*dr;
-                z_lcfs[i_count] = z_arr[i_row] + cross_row[i_count]*dz;
+
+                r_lcfs[*n_lcfs] = r_arr[i_col];
+                z_lcfs[*n_lcfs] = z_arr[i_row];
+                *n_lcfs = *n_lcfs + 1;
             }
+            else 
+            {
+                if (psi[idx] * psi[idx+1] < 0)
+                {
+                    off = fabs(psi[idx]) / (fabs(psi[idx]) + fabs(psi[idx+1]));
+                    r_lcfs[*n_lcfs] = r_arr[i_col] + off*dr;
+                    z_lcfs[*n_lcfs ] = z_arr[i_row];
+                    *n_lcfs = *n_lcfs + 1;
+                }
+                if (psi[idx] * psi[idx+n_col] < 0)
+                {
+                    off = fabs(psi[idx]) / (fabs(psi[idx]) + fabs(psi[idx+n_col]));
+                    r_lcfs[*n_lcfs] = r_arr[i_col];
+                    z_lcfs[*n_lcfs ] = z_arr[i_row] + off*dz;
+                    *n_lcfs = *n_lcfs + 1;
+                }
+            }            
+         
+        }
+    }
+    
+    for (i_row=0; i_row<n_row-1; i_row++)
+    {
+        idx = i_row*n_col + n_col - 1;
+        
+        if (fabs(psi[idx]) < thresh)
+        {
+
+            r_lcfs[*n_lcfs] = r_arr[i_col];
+            z_lcfs[*n_lcfs] = z_arr[i_row];
+            *n_lcfs = *n_lcfs + 1;
+        }
+        else if (psi[idx] * psi[idx+n_col] < 0)
+        {
+            off = fabs(psi[idx]) / (fabs(psi[idx]) + fabs(psi[idx+n_col]));
+            r_lcfs[*n_lcfs] = r_arr[i_col];
+            z_lcfs[*n_lcfs ] = z_arr[i_row] + off*dz;
+            *n_lcfs = *n_lcfs + 1;
+        }            
+     
+    }
+    
+    for (i_col=0; i_col<n_col-1; i_col++)
+    {
+        idx = (n_row-1)*n_col + i_col;
+        
+        if (fabs(psi[idx]) < thresh)
+        {
+
+            r_lcfs[*n_lcfs] = r_arr[i_col];
+            z_lcfs[*n_lcfs] = z_arr[i_row];
+            *n_lcfs = *n_lcfs + 1;
+        }
+        else if (psi[idx] * psi[idx+1] < 0)
+        {
+            off = fabs(psi[idx]) / (fabs(psi[idx]) + fabs(psi[idx+1]));
+            r_lcfs[*n_lcfs] = r_arr[i_col] + off*dr;
+            z_lcfs[*n_lcfs ] = z_arr[i_row];
+            *n_lcfs = *n_lcfs + 1;
         }
     }
 } 
        
-       
+              
 void inside_lcfs(
         double dr,
         double dz,
@@ -206,11 +220,9 @@ void inside_lcfs(
         double thresh,
         double* r_arr,
         double* z_arr,
-        double* psi,
-        double psi_bound,
         double* r_lcfs,
         double* z_lcfs,
-        double* n_lcfs, 
+        int* n_lcfs, 
         int* idx,
         int* n_idx
         )        
@@ -284,6 +296,93 @@ void inside_lcfs(
     }
 }  
             
+
+/*void find_zero_on_edge(*/
+/*        double* grad_patch,*/
+/*        double thresh, */
+/*        double* cross_row, */
+/*        double* cross_col, */
+/*        int* count*/
+/*        )*/
+/*{*/
+/*    */
+/*    int ii;*/
+/*    int nn_c[NP] = {1, 1, 0, 0};*/
+/*    int nn_r[NP] = {0, 1, 0, 1};*/
+/*    int nn_ind[NP] = {1, 3, 0, 2};*/
+/*    int rowNum[NP] = {0, 0, 1, 1};*/
+/*    int colNum[NP] = {0, 1, 0, 1};*/
+/*    int diff_col, diff_row;*/
+/*    double off;*/
+/*    */
+/*    *count = 0;*/
+/*    */
+/*    for (ii=0; ii<NP; ii++)*/
+/*        {*/
+/*        if (fabs(grad_patch[ii]) < thresh)*/
+/*        {*/
+/*            cross_col[*count] = colNum[ii];*/
+/*            cross_row[*count] = rowNum[ii];*/
+/*            *count = *count + 1;*/
+/*        }*/
+/*        else if (grad_patch[ii] * grad_patch[nn_ind[ii]] < 0)*/
+/*        {*/
+/*            diff_col = -colNum[ii] + nn_c[ii];*/
+/*            diff_row = -rowNum[ii] + nn_r[ii];*/
+/*            off = fabs(grad_patch[ii]) / */
+/*                  (fabs(grad_patch[ii]) + fabs(grad_patch[nn_ind[ii]]));*/
+/*            cross_col[*count] = colNum[ii] + diff_col * off;*/
+/*            cross_row[*count] = rowNum[ii] + diff_row * off;*/
+/*            *count = *count + 1;*/
+/*        }*/
+/*    }*/
+/*}*/
    
-   
+/*void find_lcfs_old(*/
+/*        double dr,*/
+/*        double dz,*/
+/*        int n_row,*/
+/*        int n_col,*/
+/*        double* r_arr,*/
+/*        double* z_arr,*/
+/*        double* psi,*/
+/*        double psi_bound,*/
+/*        double thresh, */
+/*        double* r_lcfs,*/
+/*        double* z_lcfs,*/
+/*        int* n_lcfs*/
+/*        )*/
+/*{*/
+/*    */
+/*    int i_row, i_col, idx, count, i_count;*/
+/*    double patch[NP], cross_row[n_row*n_col], cross_col[n_row*n_col];*/
+/*    */
+/*    *n_lcfs = 0;*/
+/*    */
+/*    for (idx=0; idx<(n_row*n_col); idx++)*/
+/*    {*/
+/*        psi[idx] -= psi_bound;*/
+/*    }*/
+/*    */
+/*    for (i_row=0; i_row<n_row-1; i_row++)*/
+/*    {*/
+/*        for (i_col=0; i_col<n_col-1; i_col++)*/
+/*        {*/
+/*            count = 0;*/
+/*            idx = i_row*n_col + i_col;*/
+/*            patch[0] = psi[idx];*/
+/*            patch[1] = psi[idx+1];*/
+/*            patch[2] = psi[idx+n_col];*/
+/*            patch[3] = psi[idx+n_col+1];*/
+/*            find_zero_on_edge(patch, thresh, cross_row, cross_col, &count);*/
+/*            */
+/*            for (i_count=0; i_count<count; i_count++)*/
+/*            {*/
+/*                r_lcfs[*n_lcfs + i_count] = r_arr[i_col] + cross_col[i_count]*dr;*/
+/*                z_lcfs[*n_lcfs + i_count] = z_arr[i_row] + cross_row[i_count]*dz;*/
+/*            }*/
+/*            *n_lcfs += count;*/
+/*        }*/
+/*    }*/
+/*}    */
    

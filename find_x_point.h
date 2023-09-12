@@ -3,9 +3,6 @@
 
 #include <math.h>
 
-void find_zero_on_edge(double *grad_patch, double thresh, double *cross_row, 
-        double *cross_col, int *count);
-        
         
 void find_null_in_gradient(double dr, double dz, int n_row, int n_col,
         double *r_arr, double *z_arr, double *psi, double *grad_r,
@@ -16,12 +13,22 @@ void find_null_in_gradient(double dr, double dz, int n_row, int n_col,
         
 void find_lcfs(double dr, double dz, int n_row, int n_col, double *r_arr,
         double *z_arr, double *psi, double psi_bound, double thresh, 
-        double *r_lcfs, double *z_lcfs, double *n_lcfs);
-
+        double *r_lcfs, double *z_lcfs, int *n_lcfs);
         
+                
 void inside_lcfs(double dr, double dz, int n_row, int n_col, double r_opt,
         double z_opt, double thresh, double *r_arr, double *z_arr,
-        double *psi, double psi_bound, double *r_lcfs, double *z_lcfs,
-        double *n_lcfs, int *idx, int *n_idx);                    
+        double *r_lcfs, double *z_lcfs,
+        int *n_lcfs, int *idx, int *n_idx);           
+        
+        
+/*void find_zero_on_edge(double *grad_patch, double thresh, double *cross_row, */
+/*        double *cross_col, int *count);*/
+/*                */
+/*                */
+/*void find_lcfs_old(double dr, double dz, int n_row, int n_col, double *r_arr,*/
+/*        double *z_arr, double *psi, double psi_bound, double thresh, */
+/*        double *r_lcfs, double *z_lcfs, int *n_lcfs);*/
+/*                 */
 
 #endif
