@@ -1,8 +1,94 @@
 #include "find_x_point.h"
 #include <stdio.h>
 
-/*#define NP 4*/
+#define MAX_N 32
+#define MAX_LCFS_N 2048
 
+int max_idx(n_arr, arr)
+{   
+    int i_arr;
+    int i_max = 0;
+    double arr_max = arr[0]; 
+    
+    for (i_arr=1; i_arr<n_arr; i_arr++)
+    {
+        if (arr_max < arr[i_arr])
+        {
+            arr_max = arr[i_arr];
+            i_max = i_arr;
+        }
+    }
+    return i_max
+} 
+
+void find_opt_xpt(
+        double dr,
+        double dz,
+        int n_row,
+        int n_col,
+        double* r_vec,
+        double* z_vec,
+        double* psi,
+        double* grad_r,
+        double* grad_z,
+        double* hess_rr,
+        double* hess_zz,
+        double* hess_rz,
+        double* psi_bound,
+        double* psi_axis,
+        double* opt_chosen_r,
+        double* opt_chosen_z,       
+        )
+{
+    
+    double opt_r[MAX_N], opt_z[MAX_N], opt_psi[MAX_N];
+    double xpt_r[MAX_N], xpt_z[MAX_N], xpt_psi[MAX_N];
+    int n_opt, n_xpt, i_xpt_max, i_opt_max;
+    double xpt_psi_max;
+    double frac = 0.999;
+    
+    find_null_in_gradient(dr, dz, n_row, n_col, r_vec, z_vec, psi, grad_r, 
+            grad_z, hess_rr, hess_zz, hess_rz, opt_r, opt_z, opt_psi, &n_opt, 
+            xpt_r, xpt_z, xpt_psi, &n_xpt);
+   
+    // extract largest opt/xpt psi values
+    i_xpt_max = max_idx(n_xpt, xpt_psi);
+    xpt_psi_max = xpt_psi[i_xpt_max];
+    
+    i_opt_max = max_idx(n_opt, opt_psi);
+    
+    *psi_axis = opt_psi[i_opt_max];
+    *opt_chosen_r = opt_r[i_opt_max];
+    *opt_chosen_z = opt_z[i_opt_max];    
+    *psi_bound = frac * xpt_psi_max + (1-frac)*psi_axis;
+}
+
+
+void find_lcfs_mask(
+        double d_col,
+        double d_row,
+        int n_row,
+        int n_col,
+        double* r_vec,
+        double* z_vec,
+        double* psi,
+        double psi_bound,
+        int* mask
+        )
+{
+    double thresh = 1e-10;
+    double r_lcfs[MAX_LCFS_N], z_lcfs[MAX_LCFS_N];
+    int n_lcfs;
+    
+    // extract LCFS
+    find_lcfs(d_col, d_row, n_row, n_col, r_vec, z_vec, psi, psi_bound, thresh, 
+            r_lcfs, z_lcfs, &n_lcfs);         
+            
+    // extract inside of LCFS
+    inside_lcfs(dr, dz, n_row, n_col, opt_r, opt_z, thresh, r_vec, z_vec, 
+            r_lcfs, z_lcfs, &n_lcfs, mask);
+            
+}
 
 void find_null_in_gradient(
         double dr,
@@ -223,8 +309,7 @@ void inside_lcfs(
         double* r_lcfs,
         double* z_lcfs,
         int* n_lcfs, 
-        int* idx,
-        int* n_idx
+        int* mask
         )        
 {
     
@@ -290,12 +375,100 @@ void inside_lcfs(
         
         for (i_row=row_start; i_row<=row_end; i_row++)
         {
-            idx[*n_idx] = i_row*n_col + i_col;
-            *n_idx += 1;
+            mask[i_row*n_col + i_col] = 1;
         }
     }
 }  
             
+
+/*void inside_lcfs(*/
+/*        double dr,*/
+/*        double dz,*/
+/*        int n_row,*/
+/*        int n_col,*/
+/*        double r_opt,*/
+/*        double z_opt,*/
+/*        double thresh,*/
+/*        double* r_arr,*/
+/*        double* z_arr,*/
+/*        double* r_lcfs,*/
+/*        double* z_lcfs,*/
+/*        int* n_lcfs, */
+/*        int* idx,*/
+/*        int* n_idx*/
+/*        )        */
+/*{*/
+/*    */
+/*    int i_row, i_col, i_lcfs, col_start, col_end, row_start, row_end;*/
+/*    int flag = 0;*/
+/*    double z_nearest;*/
+/*    double r_start, r_end, r_tmp;*/
+/*    double z_start, z_end, z_tmp;*/
+/*    *n_idx = 0;*/
+/*    z_nearest = round((z_opt - z_arr[0])/dz)*dz + z_arr[0];*/
+/*    */
+/*    for (i_lcfs=0; i_lcfs<*n_lcfs; i_lcfs++)*/
+/*    {*/
+/*        if (fabs(z_lcfs[i_lcfs] - z_nearest) < thresh)*/
+/*        {*/
+/*            if (flag == 0)*/
+/*            {*/
+/*                r_tmp = r_lcfs[i_lcfs];*/
+/*                flag += 1;*/
+/*            }*/
+/*            else if (r_tmp < r_lcfs[i_lcfs])*/
+/*            {*/
+/*                r_start = r_tmp;*/
+/*                r_end = r_lcfs[i_lcfs];*/
+/*            }*/
+/*            else*/
+/*            {*/
+/*                r_start = r_lcfs[i_lcfs];*/
+/*                r_end = r_tmp;*/
+/*            }*/
+/*        }*/
+/*    }*/
+/*    */
+/*    col_start = (int) ceil((r_start - r_arr[0] ) / dr);*/
+/*    col_end = (int) floor((r_end - r_arr[0])/dr);*/
+/*    */
+/*    for (i_col=col_start; i_col<=col_end; i_col++)*/
+/*    {*/
+/*        flag = 0;*/
+/*        for (i_lcfs=0; i_lcfs<*n_lcfs; i_lcfs++)*/
+/*        {*/
+/*            if (fabs(r_lcfs[i_lcfs] - r_arr[i_col]) < thresh)*/
+/*            {*/
+/*                if (flag == 0)*/
+/*                {*/
+/*                    z_tmp = z_lcfs[i_lcfs];*/
+/*                    flag += 1;*/
+/*                }*/
+/*                else if (z_tmp < z_lcfs[i_lcfs])*/
+/*                {*/
+/*                    z_start = z_tmp;*/
+/*                    z_end = z_lcfs[i_lcfs];*/
+/*                }*/
+/*                else*/
+/*                {*/
+/*                    z_start = z_lcfs[i_lcfs];*/
+/*                    z_end = z_tmp;*/
+/*                }*/
+/*            }*/
+/*        }*/
+/*        row_start = (int) ceil((z_start - z_arr[0] ) / dz);*/
+/*        row_end = (int) floor((z_end - z_arr[0])/dz);*/
+/*        */
+/*        for (i_row=row_start; i_row<=row_end; i_row++)*/
+/*        {*/
+/*            idx[*n_idx] = i_row*n_col + i_col;*/
+/*            *n_idx += 1;*/
+/*        }*/
+/*    }*/
+/*}  */
+/*          */
+
+/*#define NP 4*/
 
 /*void find_zero_on_edge(*/
 /*        double* grad_patch,*/

@@ -26,12 +26,23 @@ solve_tria.so: solve_tria.o
 	
 gradient.so: gradient.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $<
-		
+	
 $(OBJS): %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+rtgsfit.so: rtgsfit.o
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $< gradient.o -lopenblas
+
+rtgsfit.o: rtgsfit.c
+	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke
+	
+c_cblas.py: 
+	ctypesgen -o c_cblas.py -llibcblas.so /usr/include/cblas.h
+	
 clean:
 	rm -f $(SHARED) $(OBJS) $(CTYPES)
+
+
 
 #all: $(SHARED)
 
