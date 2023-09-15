@@ -1,11 +1,33 @@
+#include "constants.h"
+#include <math.h>
+#include <cblas.h>
+#include "gradient.h"
 #include "rtgsfit.h"
+#include <lapacke.h>
+#include "poisson_solver.h"
+#include "find_x_point.h"
 
-#define N_GRID 2145
+int max_idx(
+        int n_arr, 
+        double* arr
+        )
+{   
+    int i_arr;
+    int i_max = 0;
+    double arr_max = arr[0]; 
+    
+    for (i_arr=1; i_arr<n_arr; i_arr++)
+    {
+        if (arr_max < arr[i_arr])
+        {
+            arr_max = arr[i_arr];
+            i_max = i_arr;
+        }
+    }
+    return i_max;
+} 
 
 void rm_coil_from_meas(
-        int n_meas,
-        int n_coil,
-        double* g_meas_coil,
         double* coil_curr,
         double* meas,
         double* meas_no_coil
@@ -13,10 +35,10 @@ void rm_coil_from_meas(
 {
     int i_meas;
     // subtract PF (vessel) contributions from measurements    
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas, n_coil, 1.0, g_meas_coil, 
-            n_coil, coil_curr, 1, 0.0, meas_no_coil, 1);  
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS, N_COIL, 1.0, G_MEAS_COIL, 
+            N_COIL, coil_curr, 1, 0.0, meas_no_coil, 1);  
     
-    for (i_meas=0; i_meas<n_meas; i_meas++)
+    for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
         meas_no_coil[i_meas] = meas[i_meas] - meas_no_coil[i_meas];
     }
@@ -24,162 +46,138 @@ void rm_coil_from_meas(
         
         
 void make_basis(
-        int n_row,
-        int n_col,
-        int n_grid,
-        double d_row, 
-        double* psi_norm,
-        double* r_grid,
-        double* inv_r_mu0,
+        double* flux_norm,
         int* mask,
         double* basis
         )
 {    
     int i_grid;
-    
-    // could use 1- psi_norm instead of psi_norm ?????
-    for (i_grid=0; i_grid<n_grid; i_grid++)
+
+    // could use 1 - flux_norm instead of flux_norm ?????
+    for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
         if (mask[i_grid])
         {
-            basis[i_grid] = (1 - psi_norm[i_grid]) * r_grid[i_grid];
-            basis[i_grid + n_grid] = (1 -  psi_norm[i_grid]) * inv_r_mu0[i_grid];
+            basis[i_grid] = (1 - flux_norm[i_grid]) * R_GRID[i_grid];
+            basis[i_grid + N_GRID] = (1 -  flux_norm[i_grid]) * INV_R_LTRB_MU0[i_grid];
         }
         else
         {
             basis[i_grid] = 0.0;
-            basis[i_grid + n_grid] = 0.0;
-        }
-        
+            basis[i_grid + N_GRID] = 0.0;
+        }        
     }
-    gradient_row(psi_norm, n_row, n_col, d_row, &basis[2*n_grid]);   
+    // could use gradient from previous iteration.  should apply mask 
+    gradient_z(flux_norm, &basis[2*N_GRID]);   
 }
 
 
 
-void normalise_psi(
-        int n_grid, 
-        double* psi_norm, 
-        double* psi_total, 
-        double psi_bound, 
-        double psi_axis,
+void normalise_flux(
+        double* flux_norm, 
+        double* flux_total, 
+        double flux_lcfs, 
+        double flux_axis,
         int* mask
         )
 {
-    inv_psi_diff = 1.0/(psi_bound - psi_axis);
+    double inv_flux_diff;
+    int i_grid;
+    inv_flux_diff = 1.0/(flux_lcfs - flux_axis);
     
     // psi norm has to be of total flux, as boundary is defined in terms of total flux !
-    for (i_grid=0; i_grid<n_grid; i_grid++)
+    for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
         if (mask[i_grid])
         {
-            psi_norm[i_grid] = psi_total * inv_psi_diff;
+            flux_norm[i_grid] = flux_total[i_grid] * inv_flux_diff;
         }
         else
         {
-            psi_norm[i_grid] = 1.0;
+            flux_norm[i_grid] = 1.0;
         }
     }
 }
 
 void rtgsfit(
-        int n_meas,
         double* meas,
-        int n_coil,
-        double* g_meas_coil,
         double* coil_curr,
-        int n_row,
-        int n_col,
-        double* psi_norm,
-        double d_row,
-        double d_col,
-        double* g_grid_sens,
-        double* r_grid,
-        double* inv_r_mu0,
-        double* r_mu0_dz2,
-        double* g_bound,
-        double* g_grid_coeff,
-        double* g_coeff_sens,
-        double* lower_band,
-        double* upper_band,
-        int* perm_idx,
-        int n_bound,
-        double* g_grid_coil,
-        double* r_vec,
-        double* z_vec        
+        double* flux_norm, 
+        int* mask
         )
-
 {
-    int n_grid = n_row*n_col;
-
-
-    int n_coeff = 3;
-    double basis[n_coeff*n_grid], g_coeff_sens[n_coeff*n_meas];
-    int info, rank;
-    double rcond = -1.0;
-    double single_vals[n_coeff];
-    double source[n_grid], meas_no_coil[n_meas];
-    double psi_pls[n_grid]; psi_total[n_grid];
-    int xpt_idx;
-    double grad_z[n_grid], grad_r[n_grid], hess_rr[n_grid], hess_zz[n_grid];
-    double hess_rz[n_grid];
-    double psi_bound, psi_axis, opt_r, opt_z;
-    
+    double g_coef_meas[N_COEF*N_MEAS];
+    double basis[N_COEF*N_GRID];
+    int info, rank, i_grid, i_opt, i_xpt;
+    double rcond = -1.0, xpt_flux_max;
+    double single_vals[N_COEF];
+    double source[N_GRID], meas_no_coil[N_MEAS];
+    double flux_pls[N_GRID], flux_total[N_GRID];
+    double lcfs_flux, axis_flux, axis_r, axis_z;
+    double lcfs_r[N_LCFS_MAX], lcfs_z[N_LCFS_MAX];
+    double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
+    double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
+    int lcfs_n, xpt_n, opt_n;
     
     // subtract PF (vessel) contributions from measurements    
-    rm_coil_from_meas(n_meas, n_coil, g_meas_coil, coil_curr, meas, meas_no_coil);
+    rm_coil_from_meas(coil_curr, meas, meas_no_coil);
        
     // make basis    
-    make_basis(n_row, n_col, n_grid, d_row, psi_norm, r_grid, inv_r_mu0, mask, basis);
+    make_basis(flux_norm, mask, basis);
     
     // make meas2coeff matrix
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, n_coeff, n_meas, n_grid, 
-            1.0, basis, n_grid, g_grid_sens, n_meas, 0.0, g_coeff_sens, n_meas);    
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_COEF, N_MEAS, N_GRID, 
+            1.0, basis, N_GRID, G_GRID_MEAS, N_MEAS, 0.0, g_coef_meas, N_MEAS);    
 
     // fit coeff
-    info = LAPACKE_dgelss(LAPACK_COL_MAJOR, n_meas, n_coeff, 1, g_coeff_sens, 
-            n_meas, meas_no_coil, n_meas, single_vals, rcond, &rank);
+    info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas, 
+            N_MEAS, meas_no_coil, N_MEAS, single_vals, rcond, &rank);
             
     // apply coeff to find current
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_grid, n_coeff, 1.0, g_grid_coeff, 
-            n_coeff, meas_no_coil, 1, 0.0, source, 1);   
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_COEF, 1.0, basis, 
+            N_COEF, meas_no_coil, 1, 0.0, source, 1);   
          
     // convert current to RHS of eq   
-    for (i_grid=0; i_grid<n_grid; i_grid++)
+    for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        source[i_grid] *= -r_mu0_dz2;
+        source[i_grid] *= -R_MU0_DZ2[i_grid];
     }          
     
     //  poisson solver -> psi_plasma
-    poisson_solver(n_col, n_row, n_grid, lower_band, upper_band, source, 
-        perm_idx, n_bound, g_bound, inv_r_mu0, d_row, d_col, psi_pls);
+    poisson_solver(source, flux_pls);
         
     // calculate coil psi on grid
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_grid, n_coil, 1.0, g_grid_coil, 
-            n_coil, coil_curr, 1, 0.0, psi_total, 1);     
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_COIL, 1.0, G_GRID_COIL, 
+            N_COIL, coil_curr, 1, 0.0, flux_total, 1);     
             
-    for (i_grid=0; i_grid<n_grid; i_grid++)
+    for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        psi_total[i_grid] += TWO_PI * psi_pls;
-    }  
-        
-    // find hessian & gradients 
-    gradient_row(psi, n_row, n_col, d_row, grad_z);   
-    gradient_col(psi, n_row, n_col, d_col, grad_r);
-    hessian_row_row(psi, n_row, n_col, d_row, hess_zz);
-    hessian_col_col(psi, n_row, n_col, d_col, hess_rr);
-    hessian_row_col(psi, n_row, n_col, d_row, d_col, hess_rz);
+        flux_total[i_grid] += 2 * M_PI * flux_pls[i_grid];
+    }          
     
     // find x point & opt
-    find_opt_xpt(d_col, d_row, n_row, n_col, r_vec, z_vec, psi, grad_r, grad_z, 
-            hess_rr, hess_zz, hess_rz, psi_bound, psi_axis, opt_r, opt_z);
+    find_null_in_gradient(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
+            xpt_r, xpt_z, xpt_flux, &xpt_n);
     
-    // find LCFS mask
-    find_lcfs_mask(d_col, d_row, n_row, n_col, r_vec, z_vec, psi_total,
-            psi_bound, mask);
+    // select opt
+    i_opt = max_idx(opt_n, opt_flux);    
+    axis_flux = opt_flux[i_opt];
+    axis_r = opt_r[i_opt];
+    axis_z = opt_z[i_opt];  
+
+    // select xpt      
+    i_xpt = max_idx(xpt_n, xpt_flux);
+    xpt_flux_max = xpt_flux[i_xpt];      
+    lcfs_flux = FRAC * xpt_flux_max + (1-FRAC)*axis_flux;
+    
+    // extract LCFS
+    find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);         
+            
+    // extract inside of LCFS
+    inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
     
     // normalise total psi                                
-    normalise_psi(n_grid, psi_norm, psi_total, psi_bound, psi_axis, mask);
+    normalise_flux(flux_norm, flux_total, lcfs_flux, axis_flux, mask);
 }                   
    
     
@@ -188,31 +186,31 @@ void rtgsfit(
 /*void make_basis(*/
 /*        int n_row,*/
 /*        int n_col,*/
-/*        int n_grid,*/
+/*        int N_GRID,*/
 /*        double d_row, */
-/*        double* psi_norm,*/
-/*        double* r_grid,*/
-/*        double* inv_r_mu0,*/
+/*        double* flux_norm,*/
+/*        double* R_GRID,*/
+/*        double* INV_R_MU0,*/
 /*        int* inside_idx,*/
 /*        int inside_n,*/
 /*        double* basis*/
 /*        )*/
 /*{    */
 /*    int i_grid;*/
-/*    double dpsi_dz[n_grid];*/
+/*    double dpsi_dz[N_GRID];*/
 /*    */
-/*    for (i_grid=0; i_grid<3*n_grid; i_grid++)*/
+/*    for (i_grid=0; i_grid<3*N_GRID; i_grid++)*/
 /*    {*/
 /*        basis[i_grid] = 0.0;*/
 /*    }*/
 /*    */
-/*    gradient_row(psi_norm, n_row, n_col, d_row, &dpsi_dz);   */
+/*    gradient_row(flux_norm, n_row, n_col, d_row, &dpsi_dz);   */
 /*    */
 /*    for (i_idx=0; i_idx<inside_n; i_idx++)*/
 /*    {*/
-/*        basis[inside_idx[i_idx]] = (1 - psi_norm[inside_idx[i_idx]]) * r_grid[inside_idx[i_idx]];*/
-/*        basis[inside_idx[i_idx] + n_grid] = (1 -  psi_norm[inside_idx[i_idx]]) * inv_r_mu0[inside_idx[i_idx]];*/
-/*        basis[inside_idx[i_idx] + 2*n_grid] = dpsi_dz[inside_idx[i_idx]];*/
+/*        basis[inside_idx[i_idx]] = (1 - flux_norm[inside_idx[i_idx]]) * R_GRID[inside_idx[i_idx]];*/
+/*        basis[inside_idx[i_idx] + N_GRID] = (1 -  flux_norm[inside_idx[i_idx]]) * INV_R_MU0[inside_idx[i_idx]];*/
+/*        basis[inside_idx[i_idx] + 2*N_GRID] = dpsi_dz[inside_idx[i_idx]];*/
 /*    }*/
 /*}*/
 

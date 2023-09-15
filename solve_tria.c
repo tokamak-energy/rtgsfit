@@ -1,4 +1,6 @@
 #include "solve_tria.h"
+#include "constants.h"
+#include <stdio.h>
 
 /*
  * Function: permute
@@ -14,16 +16,13 @@
  */ 
 void permute(
         double* arr_orig,
-        int n_row, 
-        int* idx_final,
         double* arr_swap
         )
 {   
     int ii;
-    
-    for(ii=0; ii<n_row; ii++)
+    for(ii=0; ii<N_GRID; ii++)
     {
-        arr_swap[ii] = arr_orig[idx_final[ii]];
+        arr_swap[ii] = arr_orig[PERM_IDX[ii]];
     }
 }
 
@@ -44,10 +43,8 @@ void permute(
  * Outputs: 
  * out - 1D array containing the solution (x) of length n_row
  */ 
+ 
 void back_sub_upper_short( 
-        int n_row, 
-        int n_rep, 
-        double* upper, 
         double* b_vec, 
         double* out
         )
@@ -55,27 +52,27 @@ void back_sub_upper_short(
 
     double sum;
     int ii, jj, idx;
-    int n_col = n_rep + 2;
+    int n_col = N_R + 2;
     
-    for (ii=0; ii< n_rep; ii++)
+    for (ii=0; ii< N_R; ii++)
     {
         out[ii] = b_vec[ii];
     }
         
-    for (ii=n_row-n_rep; ii< n_row; ii++)
+    for (ii=N_GRID-N_R; ii< N_GRID; ii++)
     {
         out[ii] = b_vec[ii];
     } 
     
-    for (ii=(n_row-n_rep-1); ii>=n_rep; ii--)
+    for (ii=(N_GRID-N_R-1); ii>=N_R; ii--)
     {
         sum = 0.0;
         for (jj=1; jj<n_col; jj++)
         {
             idx = ii*n_col + jj;
-            sum = sum + upper[idx]*out[ii+jj];
+            sum = sum + UPPER_BAND[idx]*out[ii+jj];
         }
-        out[ii] = (b_vec[ii] - sum) * upper[ii*n_col];
+        out[ii] = (b_vec[ii] - sum) * UPPER_BAND[ii*n_col];
     }
 }    
     
@@ -97,10 +94,8 @@ void back_sub_upper_short(
  * Outputs: 
  * out - 1D array containing the solution (x) of length n_row
  */    
+ 
 void back_sub_lower_short( 
-        int n_row, 
-        int n_rep, 
-        double* lower, 
         double* b_vec, 
         double* out
         )
@@ -109,23 +104,23 @@ void back_sub_lower_short(
     double sum;
     int ii, jj, idx;
     
-    for (ii=0; ii< n_rep; ii++)
+    for (ii=0; ii< N_R; ii++)
     {
         out[ii] = b_vec[ii];
     }
         
-    for (ii=n_row-n_rep; ii< n_row; ii++)
+    for (ii=N_GRID-N_R; ii< N_GRID; ii++)
     {
         out[ii] = b_vec[ii];
     }            
     
-    for (ii=n_rep; ii<(n_row-n_rep); ii++)
+    for (ii=N_R; ii<(N_GRID-N_R); ii++)
     {
         sum = 0.0;
-        for (jj=0; jj<n_rep; jj++)
+        for (jj=0; jj<N_R; jj++)
         {
-            idx = n_rep*ii + jj;
-            sum = sum + lower[idx]*out[ii-n_rep+jj];
+            idx = N_R*ii + jj;
+            sum = sum + LOWER_BAND[idx]*out[ii-N_R+jj];
         }
         out[ii] = b_vec[ii] - sum;
     }
@@ -148,24 +143,20 @@ void back_sub_lower_short(
  *
  * Outputs: 
  * out - 1D array containing the solution (x) of length n_row
- */     
+ */  
+    
 void solve_tria(
-        int n_row, 
-        int n_rep, 
-        double* lower, 
-        double* upper, 
         double* b_vec, 
-        int* idx_final, 
         double* out
         )
 {
-    double b_vec_lu[n_row];
+    double b_vec_lu[N_GRID];
        
-    permute(b_vec, n_row, idx_final, out);
+    permute(b_vec, out);
     
-    back_sub_lower_short(n_row, n_rep, lower, out, b_vec_lu);
+    back_sub_lower_short(out, b_vec_lu);
     
-    back_sub_upper_short(n_row, n_rep, upper, b_vec_lu, out);
+    back_sub_upper_short(b_vec_lu, out);
     
 }
 

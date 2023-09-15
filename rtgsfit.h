@@ -1,24 +1,20 @@
 #ifndef RTGSFIT_H_
 #define RTGSFIT_H_
 
-#include <cblas.h>
-/*#include <lapacke.h>*/
-#include "gradient.h"
-
-
-void rm_coil_from_meas(int n_meas, int n_coil, double* g_meas_coil,
-        double* coil_curr, double* meas, double* meas_no_coil);
+int max_idx(int n_arr, double* arr);
         
         
-void make_basis(int n_row, int n_col, int n_grid, double d_row, 
-        double* psi_norm, double* r_grid, double* inv_r_mu0, double* basis);
+void rm_coil_from_meas(double* coil_curr, double* meas, double* meas_no_coil);
+
+              
+void make_basis(double* psi_norm, int* mask, double* basis);
 
 
-/*void rtgsfit(int n_meas, double* meas, int n_coil, double* g_meas_coil,*/
-/*        double* coil_curr, int n_row, int n_col, double* psi_norm,*/
-/*        double d_row, double* g_grid_sens, double* r_grid, double* inv_r_mu0,*/
-/*        double* meas_no_coil);*/
-
+void normalise_flux(double* flux_norm, double* flux_total, double flux_lcfs, 
+        double flux_axis,int* mask);
+        
+        
+void rtgsfit(double* meas, double* coil_curr, double* flux_norm, int* mask);
 
 #endif
 

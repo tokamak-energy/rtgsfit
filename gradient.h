@@ -1,22 +1,16 @@
 #ifndef GRADIENT_H_   /* Include guard */
 #define GRADIENT_H_
 
-void gradient_row(double* arr, int n_row, int n_col, double d_row, 
-        double* grad_row);   
+void gradient_z(double* arr, double* grad_z);   
 
-void gradient_col(double* arr, int n_row, int n_col, double d_col,
-        double* grad_col);
+void gradient_r(double* arr, double* grad_r);
         
-void hessian_row_row(double* arr, int n_row, int n_col, double d_row,
-        double* hess_row_row);
+void hessian_zz(double* arr, double* hess_zz);
         
-void hessian_col_col(double* arr, int n_row, int n_col, double d_col,
-        double* hess_col_col);
+void hessian_rr(double* arr, double* hess_rr);
         
-void hessian_row_col(double* arr, int n_row, int n_col, double d_row,
-        double d_col, double* hess_row_col);
+void hessian_rz(double* arr, double* hess_rz);
         
-void gradient_bound(double* arr, int n_row, int n_col, double d_row, 
-        double d_col, double* grad_bound);
+void gradient_bound(double* arr, double* grad_bound);
 
 #endif 
