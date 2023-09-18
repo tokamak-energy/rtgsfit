@@ -5,6 +5,7 @@
 #include <float.h>
 #include "gradient.h"
 
+
 void find_null_in_gradient(
         double* flux,
         double* opt_r,
@@ -18,19 +19,21 @@ void find_null_in_gradient(
         )
 {
     
-    int idx, i_row, i_col;
+    int idx, i_row, i_col, nearest_idx;
     double hess_det;
     double flux_up, flux_down, flux_at_null, dist_to_null_r, dist_to_null_z;
     double rel_dist_null_r, rel_dist_null_z;
     double grad_z[N_GRID], grad_r[N_GRID], hess_zz[N_GRID], hess_rr[N_GRID], hess_rz[N_GRID];
 
+    *opt_n = 0;
+    *xpt_n = 0;
+    
     // find hessian & gradients 
     gradient_z(flux, grad_z);   
     gradient_r(flux, grad_r);
     hessian_zz(flux, hess_zz);
     hessian_rr(flux, hess_rr);
-    gradient_z(flux, hess_rz);
-    gradient_r(flux, hess_rz);
+    gradient_r(grad_z, hess_rz);
     
     for (i_row=0; i_row<(N_Z-1); i_row++) 
     {
@@ -50,30 +53,37 @@ void find_null_in_gradient(
                 rel_dist_null_r = dist_to_null_r / DR;
                 rel_dist_null_z = dist_to_null_z / DZ;     
                    
-                // get flux at point from interpolation 
-                flux_up = (1 - rel_dist_null_r)*flux[idx + N_R] + rel_dist_null_r*flux[idx + N_R + 1];
-                flux_down = (1 - rel_dist_null_r)*flux[idx] + rel_dist_null_r*flux[idx + 1];
-                flux_at_null = (1 - rel_dist_null_z)*flux_down + rel_dist_null_z*flux_up;
-                         
-                if (hess_det > 0.0 && hess_rr[idx] < 0.0) 
+                nearest_idx = idx + round(rel_dist_null_r) + N_R*round(rel_dist_null_z);
+                
+                if (MASK_LIM[nearest_idx])
                 {
-                    opt_r[*opt_n] = R_VEC[i_col] + dist_to_null_r;
-                    opt_z[*opt_n] = Z_VEC[i_row] + dist_to_null_z;    
-                    opt_flux[*opt_n] = flux_at_null;
-                    *opt_n += 1;
-                }
-                else if (hess_det < 0.0)
-                {
-                    xpt_r[*xpt_n] = R_VEC[i_col] + dist_to_null_r;
-                    xpt_z[*xpt_n] = Z_VEC[i_row] + dist_to_null_z;    
-                    xpt_flux[*xpt_n] = flux_at_null;
-                    *xpt_n += 1;      
+                    // get flux at point from interpolation 
+                    flux_up = (1 - rel_dist_null_r)*flux[idx + N_R] + rel_dist_null_r*flux[idx + N_R + 1];
+                    flux_down = (1 - rel_dist_null_r)*flux[idx] + rel_dist_null_r*flux[idx + 1];
+                    flux_at_null = (1 - rel_dist_null_z)*flux_down + rel_dist_null_z*flux_up;
+                             
+                     // need to interpolate hess_det and hess_rr as well
+                    if (hess_det > 0.0 && hess_rr[idx] < 0.0) 
+                    {
+                        opt_r[*opt_n] = R_VEC[i_col] + dist_to_null_r;
+                        opt_z[*opt_n] = Z_VEC[i_row] + dist_to_null_z;    
+                        opt_flux[*opt_n] = flux_at_null;
+                        *opt_n += 1;
+                    }
+                    else if (hess_det < 0.0)
+                    {
+                        xpt_r[*xpt_n] = R_VEC[i_col] + dist_to_null_r;
+                        xpt_z[*xpt_n] = Z_VEC[i_row] + dist_to_null_z;    
+                        xpt_flux[*xpt_n] = flux_at_null;
+                        *xpt_n += 1;      
+                    }
                 }
             }
         }
     }
 }
-                  
+
+
        
 void find_lcfs_rz(
         double* flux,
@@ -100,7 +110,7 @@ void find_lcfs_rz(
         {
             idx = i_row*N_R + i_col;
             
-            if (fabs(flux[idx]) < DBL_MIN)
+            if ((fabs(flux[idx]) < THRESH)  && MASK_LIM[idx])
             {
 
                 lcfs_r[*lcfs_n] = R_VEC[i_col];
@@ -109,19 +119,25 @@ void find_lcfs_rz(
             }
             else 
             {
-                if (flux[idx] * flux[idx+1] < 0)
+                if ((flux[idx] * flux[idx+1] < 0)  && (MASK_LIM[idx] || MASK_LIM[idx+1]))
                 {
                     off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+1]));
-                    lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;
-                    lcfs_z[*lcfs_n ] = Z_VEC[i_row];
-                    *lcfs_n = *lcfs_n + 1;
+                    if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+1]))
+                    {
+                        lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;
+                        lcfs_z[*lcfs_n ] = Z_VEC[i_row];
+                        *lcfs_n = *lcfs_n + 1;
+                    }
                 }
-                if (flux[idx] * flux[idx+N_R] < 0)
+                if ((flux[idx] * flux[idx+N_R] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+N_R]))
                 {
                     off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+N_R]));
-                    lcfs_r[*lcfs_n] = R_VEC[i_col];
-                    lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ;
-                    *lcfs_n = *lcfs_n + 1;
+                    if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+N_R]))
+                    {
+                        lcfs_r[*lcfs_n] = R_VEC[i_col];
+                        lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ;
+                        *lcfs_n = *lcfs_n + 1;
+                    }
                 }
             }            
          
@@ -132,19 +148,22 @@ void find_lcfs_rz(
     {
         idx = i_row*N_R + N_R - 1;
         
-        if (fabs(flux[idx]) < DBL_MIN)
+        if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx])
         {
 
             lcfs_r[*lcfs_n] = R_VEC[i_col];
             lcfs_z[*lcfs_n] = Z_VEC[i_row];
             *lcfs_n = *lcfs_n + 1;
         }
-        else if (flux[idx] * flux[idx+N_R] < 0)
+        else if ((flux[idx] * flux[idx+N_R] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+N_R]))
         {
             off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+N_R]));
-            lcfs_r[*lcfs_n] = R_VEC[i_col];
-            lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ;
-            *lcfs_n = *lcfs_n + 1;
+            if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+N_R]))
+            { 
+                lcfs_r[*lcfs_n] = R_VEC[i_col];
+                lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ;
+                *lcfs_n = *lcfs_n + 1;
+            }
         }            
      
     }
@@ -153,19 +172,22 @@ void find_lcfs_rz(
     {
         idx = (N_Z-1)*N_R + i_col;
         
-        if (fabs(flux[idx]) < DBL_MIN)
+        if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx])
         {
 
             lcfs_r[*lcfs_n] = R_VEC[i_col];
             lcfs_z[*lcfs_n] = Z_VEC[i_row];
             *lcfs_n = *lcfs_n + 1;
         }
-        else if (flux[idx] * flux[idx+1] < 0)
+        else if ((flux[idx] * flux[idx+1] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+1]))
         {
             off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+1]));
-            lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;
-            lcfs_z[*lcfs_n ] = Z_VEC[i_row];
-            *lcfs_n = *lcfs_n + 1;
+            if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+1]))
+            {
+                lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;
+                lcfs_z[*lcfs_n ] = Z_VEC[i_row];
+                *lcfs_n = *lcfs_n + 1;
+            }
         }
     }
 } 
@@ -181,65 +203,95 @@ void inside_lcfs(
         )        
 {
     
-    int i_row, i_col, i_lcfs, col_start, col_end, row_start, row_end;
-    int flag = 0;
+    int i_row, i_col, i_lcfs, col_start, col_end, row_start, row_end, i_grid, i_count;
+    int count = 0;
     double z_nearest;
-    double r_start, r_end, r_tmp;
-    double z_start, z_end, z_tmp;
+    double r_start, r_end;
+    double r_tmp[N_XPT_MAX];
+    double z_start, z_end;
+    double z_tmp[N_XPT_MAX];
+
+    for (i_grid=0; i_grid<N_GRID; i_grid++)
+    {
+        mask[i_grid] = 0 ;
+    }
 
     z_nearest = round((z_opt - Z_VEC[0])/DZ)*DZ + Z_VEC[0];
     
     for (i_lcfs=0; i_lcfs<lcfs_n; i_lcfs++)
     {
-        if (fabs(lcfs_z[i_lcfs] - z_nearest) < DBL_MIN)
+        if (fabs(lcfs_z[i_lcfs] - z_nearest) < THRESH)
         {
-            if (flag == 0)
+            r_tmp[count] = lcfs_r[i_lcfs];
+            count += 1;
+        }
+    }
+    
+    r_start = -DBL_MAX;
+    r_end = DBL_MAX;
+    
+    for (i_count=0; i_count< count; i_count++)
+    {
+        if (r_tmp[i_count] < r_opt)
+        {
+            if (r_tmp[i_count] > r_start)
             {
-                r_tmp = lcfs_r[i_lcfs];
-                flag += 1;
+                r_start = r_tmp[i_count];
             }
-            else if (r_tmp < lcfs_r[i_lcfs])
+        }
+        else 
+        {
+            if (r_tmp[i_count] < r_end)
             {
-                r_start = r_tmp;
-                r_end = lcfs_r[i_lcfs];
-            }
-            else
-            {
-                r_start = lcfs_r[i_lcfs];
-                r_end = r_tmp;
+                r_end = r_tmp[i_count];
             }
         }
     }
     
+    
+    
     col_start = (int) ceil((r_start - R_VEC[0] ) / DR);
     col_end = (int) floor((r_end - R_VEC[0])/DR);
     
+    printf("col: %d, %d \n", col_start, col_end);
+    
     for (i_col=col_start; i_col<=col_end; i_col++)
     {
-        flag = 0;
+        count = 0;
         for (i_lcfs=0; i_lcfs<lcfs_n; i_lcfs++)
         {
-            if (fabs(lcfs_r[i_lcfs] - R_VEC[i_col]) < DBL_MIN)
+            if (fabs(lcfs_r[i_lcfs] - R_VEC[i_col]) < THRESH)
             {
-                if (flag == 0)
+                z_tmp[count] = lcfs_z[i_lcfs];
+                count += 1;
+            }
+        }
+        
+        z_start = -DBL_MAX;
+        z_end = DBL_MAX;
+
+        for (i_count=0; i_count< count; i_count++)
+        {
+            if (z_tmp[i_count] < z_opt)
+            {
+                if (z_tmp[i_count] > z_start)
                 {
-                    z_tmp = lcfs_z[i_lcfs];
-                    flag += 1;
+                    z_start = z_tmp[i_count];
                 }
-                else if (z_tmp < lcfs_z[i_lcfs])
+            }
+            else 
+            {
+                if (z_tmp[i_count] < z_end)
                 {
-                    z_start = z_tmp;
-                    z_end = lcfs_z[i_lcfs];
-                }
-                else
-                {
-                    z_start = lcfs_z[i_lcfs];
-                    z_end = z_tmp;
+                    z_end = z_tmp[i_count];
                 }
             }
         }
+            
         row_start = (int) ceil((z_start - Z_VEC[0] ) / DZ);
         row_end = (int) floor((z_end - Z_VEC[0])/DZ);
+        
+        printf("row: %d, %d \n", row_start, row_end);
         
         for (i_row=row_start; i_row<=row_end; i_row++)
         {
@@ -250,6 +302,105 @@ void inside_lcfs(
             
 
 
+/*void find_null_in_gradient(*/
+/*        double* flux,*/
+/*        double* opt_r,*/
+/*        double* opt_z,*/
+/*        double* opt_flux,*/
+/*        int* opt_n,*/
+/*        double* xpt_r,*/
+/*        double* xpt_z,*/
+/*        double* xpt_flux,*/
+/*        int* xpt_n       */
+/*        )*/
+/*{*/
+
+/*    int idx, i_row, i_col;*/
+/*    double grad_z[N_GRID], grad_r[N_GRID], hess_zz[N_GRID], hess_rr[N_GRID], hess_rz[N_GRID];*/
+/*    double psi_up, psi_down, psi_at_null, dist_to_null_r, dist_to_null_z;*/
+/*    double abs_dist_null_r, abs_dist_null_z, hess_det;*/
+/*    double inv_dr = 1.0/DR;*/
+/*    double inv_dz = 1.0/DZ;*/
+/*    */
+/*       // find hessian & gradients */
+/*    gradient_z(flux, grad_z);   */
+/*    gradient_r(flux, grad_r);*/
+/*    hessian_zz(flux, hess_zz);*/
+/*    hessian_rr(flux, hess_rr);*/
+/*    gradient_r(grad_z, hess_rz);*/
+
+/*    for (i_row=0; i_row<N_Z; i_row++) */
+/*    {*/
+/*        for (i_col=0; i_col<N_R; i_col++)*/
+/*        {*/
+
+/*            idx = i_row*N_R + i_col;*/
+/*            hess_det = hess_rr[idx]*hess_zz[idx] - hess_rz[idx]*hess_rz[idx];*/
+
+/*            dist_to_null_r = (grad_z[idx]*hess_rz[idx] - hess_zz[idx]*grad_r[idx])/hess_det;*/
+/*            dist_to_null_z = (grad_r[idx]*hess_rz[idx] - hess_rr[idx]*grad_z[idx])/hess_det;*/
+
+/*            abs_dist_null_r = fabs(dist_to_null_r);*/
+/*            abs_dist_null_z = fabs(dist_to_null_z);*/
+
+/*            if (abs_dist_null_r < 0.5*DR && abs_dist_null_z < 0.5*DZ)*/
+/*            {*/
+/*                printf("%d", idx);*/
+/*                if ((hess_det > 0.0 && hess_rr[idx] < 0.0) || (hess_det < 0.0))*/
+/*                {*/
+/*                    // get flux at point from interpolation */
+/*                    if (dist_to_null_r > 0.0)*/
+/*                    {*/
+/*                        if (dist_to_null_z > 0.0)*/
+/*                        {                            psi_up = inv_dr*((1 - abs_dist_null_r)*flux[idx + N_R] + abs_dist_null_r*flux[idx + N_R + 1]);*/
+/*                            psi_down = inv_dr*((1 - abs_dist_null_r)*flux[idx] + abs_dist_null_r*flux[idx + 1]);*/
+/*                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_down + abs_dist_null_z*psi_up);*/
+/*                        }*/
+/*                        else*/
+/*                        {*/
+/*                            psi_up = inv_dr*((1 - abs_dist_null_r)*flux[idx] + abs_dist_null_r*flux[idx + 1]);*/
+/*                            psi_up = inv_dr*((1 - abs_dist_null_r)*flux[idx - N_R] + abs_dist_null_r*flux[idx - N_R + 1]);*/
+/*                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_up + abs_dist_null_z*psi_down);*/
+/*                        }*/
+/*                    }*/
+/*                    else*/
+/*                    {*/
+/*                        if (dist_to_null_z > 0.0)*/
+/*                        {*/
+/*                            psi_up = inv_dr*((1 - abs_dist_null_r)*flux[idx + N_R] + abs_dist_null_r*flux[idx + N_R - 1]);*/
+/*                            psi_down = inv_dr*((1 - abs_dist_null_r)*flux[idx] + abs_dist_null_r*flux[idx - 1]);*/
+/*                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_down + abs_dist_null_z*psi_up);*/
+
+/*                        }*/
+/*                        else*/
+/*                        {*/
+/*                            psi_up = inv_dr*((1 - abs_dist_null_r)*flux[idx + N_R] + abs_dist_null_r*flux[idx + N_R - 1]);*/
+/*                            psi_down = inv_dr*((1 - abs_dist_null_r)*flux[idx] + abs_dist_null_r*flux[idx - 1]);*/
+/*                            psi_at_null = inv_dz*((1 - abs_dist_null_z)*psi_up + abs_dist_null_z*psi_down);                   */
+/*                        }*/
+/*                    }*/
+/*                    */
+/*                    // should also probably interpolate these*/
+/*                    if (hess_det > 0.0 && hess_rr[idx] < 0.0) */
+/*                    {*/
+/*                        opt_r[*opt_n] = R_VEC[i_col] + dist_to_null_r;*/
+/*                        opt_z[*opt_n] = Z_VEC[i_row] + dist_to_null_z;    */
+/*                        opt_flux[*opt_n] = psi_at_null;*/
+/*                        *opt_n += 1;*/
+/*                    }*/
+/*                    else if (hess_det < 0.0)*/
+/*                    {*/
+/*                        xpt_r[*xpt_n] = R_VEC[i_col] + dist_to_null_r;*/
+/*                        xpt_z[*xpt_n] = Z_VEC[i_row] + dist_to_null_z;    */
+/*                        xpt_flux[*xpt_n] = psi_at_null;*/
+/*                        *xpt_n += 1;      */
+/*                    }              */
+
+/*                } */
+/*            }*/
+/*        }*/
+/*    }*/
+/*}          */
 
 /*void find_opt_xpt(      */
 /*        double* flux,*/
@@ -263,7 +414,7 @@ void inside_lcfs(
 /*    */
 /*    double opt_r[N_MAX_XPT], opt_z[N_MAX_XPT], opt_flux[N_MAX_XPT];*/
 /*    double xpt_r[N_MAX_XPT], xpt_z[N_MAX_XPT], xpt_flux[N_MAX_XPT];*/
-/*    int n_opt, n_xpt, i_xpt_max, i_opt_max;*/
+/*    int n_opt, n_xpt, xpt_n_max, opt_n_max;*/
 /*    double xpt_flux_max;*/
 /*    double frac = 0.99;*/
 /*    */
@@ -271,13 +422,13 @@ void inside_lcfs(
 /*            xpt_z, xpt_flux, &n_xpt);*/
 /*   */
 /*    // extract largest opt/xpt flux values*/
-/*    i_xpt_max = max_idx(n_xpt, xpt_flux);*/
-/*    xpt_flux_max = xpt_flux[i_xpt_max];*/
+/*    xpt_n_max = max_idx(n_xpt, xpt_flux);*/
+/*    xpt_flux_max = xpt_flux[xpt_n_max];*/
 /*    */
-/*    i_opt_max = max_idx(n_opt, opt_flux);    */
-/*    *flux_axis = opt_flux[i_opt_max];*/
-/*    *opt_chosen_r = opt_r[i_opt_max];*/
-/*    *opt_chosen_z = opt_z[i_opt_max];  */
+/*    opt_n_max = max_idx(n_opt, opt_flux);    */
+/*    *flux_axis = opt_flux[opt_n_max];*/
+/*    *opt_chosen_r = opt_r[opt_n_max];*/
+/*    *opt_chosen_z = opt_z[opt_n_max];  */
 /*      */
 /*    *flux_lcfs = frac * xpt_flux_max + (1-frac)*flux_axis;*/
 /*}*/

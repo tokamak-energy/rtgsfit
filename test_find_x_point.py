@@ -9,8 +9,15 @@ from py_to_ctypes import run_c_func
 import contourpy
 from findiff import FinDiff
 from shapely.geometry import Point, Polygon
+from scipy.io import loadmat
 
-def solovev(r_vec, z_vec, r0=0.5, c0=-1.0, c1=15.0, c2=1.5):
+filename = '12001000_RUN01_for_python.mat'
+
+@fixture(scope="module")
+def data():
+    return loadmat(filename, squeeze_me=True)
+
+def solovev(r_vec, z_vec, r0=0.4, c0=-1.0, c1=15.0, c2=1.5):
 
     p_prime = -c1/mu_0;
     ff_prime = -c2 * r0**2;
@@ -32,59 +39,14 @@ def solovev(r_vec, z_vec, r0=0.5, c0=-1.0, c1=15.0, c2=1.5):
     psi_xpt = psi_func(r_xpt, z_xpt)  
               
     return psi_grid, r_xpt, z_xpt, psi_xpt, r_opt, z_opt, psi_opt
-    
-    
-def test_find_zero_on_edge(n_test = 1000, thresh=1e-10):
-
-    for ii in range(n_test):
-
-        grad_patch = np.random.random_sample([2, 2])*2 - 1
-
-        ContGen = contourpy.contour_generator((0, 1), (0, 1), grad_patch)
-        intrscts = ContGen.lines(0.0)
-
-        if len(intrscts) == 0:
-            intrscts_count = 0
-        else:
-            intrscts = np.concatenate(intrscts, axis=0) 
-            intrscts_count = intrscts.shape[0]
-
-        count = np.zeros(1, dtype=np.int64)
-        cross_row = np.zeros(4)
-        cross_col = np.zeros(4)
+     
         
-        grad_patch, thresh, cross_row, cross_col, count = run_c_func( 
-                c_find_x_point.find_zero_on_edge, grad_patch, thresh, cross_row, 
-                cross_col, count)
+def test_find_null_in_gradient(data, thresh=1.e-3):
 
-        assert count[0] == intrscts_count
-
-        for jj in range(count[0]):
-            assert np.any(np.isclose(cross_col[jj],  intrscts[:, 0]))
-            assert np.any(np.isclose(cross_row[jj], intrscts[:, 1]))
-            
-        
-def test_find_null_in_gradient(r_vec, z_vec, thresh=1.e-3):
+    r_vec = data['r_vec']
+    z_vec = data['z_vec']
 
     psi, xpt_r_gt, xpt_z_gt, xpt_psi_gt, opt_r_gt, opt_z_gt, opt_psi_gt = solovev(r_vec, z_vec)
-    
-    n_row = z_vec.size
-    n_col = r_vec.size
-    
-    dr = r_vec[1] - r_vec[0]
-    dz = z_vec[1] - z_vec[0]
-    
-    hess_row_col = FinDiff((0, dz, 1), (1, dr, 1), acc=2)
-    hess_row_row = FinDiff((0, dz, 2), acc=2)
-    hess_col_col = FinDiff((1, dr, 2), acc=2)
-    grad_row = FinDiff((0, dz, 1), acc=2)
-    grad_col = FinDiff((1, dr, 1), acc=2)
-    
-    grad_r = grad_col(psi)
-    grad_z = grad_row(psi)
-    hess_rr = hess_col_col(psi)
-    hess_zz = hess_row_row(psi)
-    hess_rz = hess_row_col(psi)
     
     opt_r = np.zeros(10)
     opt_z = np.zeros(10)
@@ -96,13 +58,10 @@ def test_find_null_in_gradient(r_vec, z_vec, thresh=1.e-3):
     xpt_psi = np.zeros(10)
     i_xpt =  np.array([0], dtype=np.int64)
     
-    dr, dz, n_row, n_col, r_vec, z_vec, psi, grad_r, grad_z, hess_rr, hess_zz, \
-            hess_rz, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
-            = run_c_func(c_find_x_point.find_null_in_gradient, dr, dz, n_row, 
-            n_col, r_vec, z_vec, psi, grad_r, grad_z, hess_rr, hess_zz, hess_rz,
-            opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
-    
-    
+    psi, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
+            = run_c_func(c_find_x_point.find_null_in_gradient, psi, opt_r, 
+            opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
+        
     i_xpt = i_xpt[0]
     i_opt = i_opt[0]
     
@@ -123,8 +82,11 @@ def test_find_null_in_gradient(r_vec, z_vec, thresh=1.e-3):
         assert np.any(np.isclose(zz, opt_z[:i_opt], rtol=thresh, atol=np.inf))   
         
 
-def test_find_lcfs(r_vec, z_vec, thresh=1e-10):
+def test_find_lcfs(data):
 
+    r_vec = data['r_vec']
+    z_vec = data['z_vec']
+    
     psi_gt, xpt_r_gt, xpt_z_gt, xpt_psi_gt, opt_r_gt, opt_z_gt, opt_psi_gt = solovev(r_vec, z_vec)
     
     ContGen = contourpy.contour_generator(r_vec, z_vec, psi_gt)
@@ -142,10 +104,9 @@ def test_find_lcfs(r_vec, z_vec, thresh=1e-10):
     z_lcfs = np.zeros(500)
     n_lcfs = int(0)
     psi = psi_gt.copy()
-        
-    dr, dz, n_row, n_col, r_vec, z_vec, psi, psi_bound, thresh, r_lcfs, z_lcfs, \
-            n_lcfs = run_c_func(c_find_x_point.find_lcfs, dr, dz, n_row, 
-            n_col, r_vec, z_vec, psi, psi_bound, thresh, r_lcfs, z_lcfs, n_lcfs)
+    
+    psi, psi_bound, r_lcfs, z_lcfs, n_lcfs = run_c_func(c_find_x_point.find_lcfs_rz, 
+            psi, psi_bound, r_lcfs, z_lcfs, n_lcfs)
 
     rz_lcfs = np.vstack((r_lcfs[:n_lcfs], z_lcfs[:n_lcfs])).T
 
@@ -156,9 +117,11 @@ def test_find_lcfs(r_vec, z_vec, thresh=1e-10):
         assert np.any(np.all(np.isclose(rz, rz_lcfs), axis=1))  
         
           
-def test_inside_lcfs(r_vec, z_vec, thresh=1e-10):
+def test_inside_lcfs(data):
 
-
+    r_vec = data['r_vec']
+    z_vec = data['z_vec']
+    
     psi_gt, xpt_r_gt, xpt_z_gt, xpt_psi_gt, opt_r_gt, opt_z_gt, opt_psi_gt = solovev(r_vec, z_vec)
     
     ContGen = contourpy.contour_generator(r_vec, z_vec, psi_gt)
@@ -189,16 +152,13 @@ def test_inside_lcfs(r_vec, z_vec, thresh=1e-10):
     r_lcfs = intrscts[:, 0]
     z_lcfs = intrscts[:, 1]
     n_lcfs = intrscts.shape[0]
-    idx = np.zeros(n_row*n_col, dtype=np.int64)
-    n_idx = int(0)
-
-    dr, dz, n_row, n_col, r_opt, z_opt, thresh, r_vec, z_vec, \
-            r_lcfs, z_lcfs, n_lcfs, idx, n_idx = run_c_func(c_find_x_point.inside_lcfs, dr, dz, n_row, 
-            n_col, r_opt, z_opt, thresh, r_vec, z_vec, r_lcfs, z_lcfs, n_lcfs, idx, n_idx)
+    mask = np.zeros((n_row, n_col), dtype=np.int64)
+        
+    r_opt, z_opt, r_lcfs, z_lcfs, n_lcfs, mask = run_c_func(c_find_x_point.inside_lcfs, r_opt, z_opt, 
+            r_lcfs, z_lcfs, n_lcfs, mask)  
     
-    rr, cc = np.unravel_index(idx[:n_idx], (n_row, n_col))
-    mask = np.zeros((n_row, n_col), dtype=bool)
-    mask[rr, cc] = True
+        
+    mask = mask.astype(bool)
     
     poly = Polygon(intrscts)
     mask_gt = np.zeros((n_row, n_col), dtype=bool)
@@ -207,108 +167,101 @@ def test_inside_lcfs(r_vec, z_vec, thresh=1e-10):
         for i_col in range(n_col):
             mask_gt[i_row, i_col] = poly.contains(Point(r_vec[i_col], z_vec[i_row]))
 
+
     assert np.all(mask_gt == mask)
 
 
-def test_flux_to_mask(r_vec, z_vec):
-    psi_gt, xpt_r_gt, xpt_z_gt, xpt_psi_gt, opt_r_gt, opt_z_gt, opt_psi_gt = solovev(r_vec, z_vec)
-    
-    psi = psi_gt.copy()
-    n_row = z_vec.size
-    n_col = r_vec.size
-    
-    dr = r_vec[1] - r_vec[0]
-    dz = z_vec[1] - z_vec[0]
-    
-    hess_row_col = FinDiff((0, dz, 1), (1, dr, 1), acc=2)
-    hess_row_row = FinDiff((0, dz, 2), acc=2)
-    hess_col_col = FinDiff((1, dr, 2), acc=2)
-    grad_row = FinDiff((0, dz, 1), acc=2)
-    grad_col = FinDiff((1, dr, 1), acc=2)
-    
-    grad_r = grad_col(psi)
-    grad_z = grad_row(psi)
-    hess_rr = hess_col_col(psi)
-    hess_zz = hess_row_row(psi)
-    hess_rz = hess_row_col(psi)
-    
-    opt_r = np.zeros(10)
-    opt_z = np.zeros(10)
-    opt_psi = np.zeros(10)
-    i_opt = int(0)
-    
-    xpt_r = np.zeros(10)
-    xpt_z = np.zeros(10)
-    xpt_psi = np.zeros(10)
-    i_xpt = int(0)
-    
-    dr, dz, n_row, n_col, r_vec, z_vec, psi, grad_r, grad_z, hess_rr, hess_zz, \
-            hess_rz, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
-            = run_c_func(c_find_x_point.find_null_in_gradient, dr, dz, n_row, 
-            n_col, r_vec, z_vec, psi, grad_r, grad_z, hess_rr, hess_zz, hess_rz,
-            opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
-            
-    r_lcfs = np.zeros(n_row*n_col)
-    z_lcfs = np.zeros(n_row*n_col)
-    n_lcfs = int(0)
+#def test_flux_to_mask(data):
 
-    psi_bound = np.max(xpt_psi)*1.001
-    thresh=1e-10
-    dr, dz, n_row, n_col, r_vec, z_vec, psi, psi_bound, thresh, r_lcfs, z_lcfs, \
-            n_lcfs = run_c_func(c_find_x_point.find_lcfs, dr, dz, n_row, 
-            n_col, r_vec, z_vec, psi, psi_bound, thresh, r_lcfs, z_lcfs, n_lcfs)    
-            
-    r_opt = opt_r[0]
-    z_opt = opt_z[0]    
-    idx = np.zeros(n_row*n_col, dtype=np.int64)
-    n_idx = int(0)
-                
-    dr, dz, n_row, n_col, r_opt, z_opt, thresh, r_vec, z_vec, \
-            r_lcfs, z_lcfs, n_lcfs, idx, n_idx = run_c_func(c_find_x_point.inside_lcfs, dr, dz, n_row, 
-            n_col, r_opt, z_opt, thresh, r_vec, z_vec, r_lcfs, z_lcfs, n_lcfs, idx, n_idx)
-    
-    rr, cc = np.unravel_index(idx[:n_idx], (n_row, n_col))
-    mask = np.zeros((n_row, n_col), dtype=bool)
-    mask[rr, cc] = True
-    
-    ContGen = contourpy.contour_generator(r_vec, z_vec, psi_gt)
-    intrscts = ContGen.lines(np.max(xpt_psi_gt)*1.001)
-    
-    is_closed = np.zeros(len(intrscts), dtype=bool)
-    count = 0
-    for ii in range(len(intrscts)):
-        if np.all(np.isclose(intrscts[ii][0, :], intrscts[ii][-1, :])):
-            idx = ii
-            count = count + 1
+#    r_vec = data['r_vec']
+#    z_vec = data['z_vec']
+#    
+#    psi_gt, xpt_r_gt, xpt_z_gt, xpt_psi_gt, opt_r_gt, opt_z_gt, opt_psi_gt = solovev(r_vec, z_vec)
+#    
+#    psi = psi_gt.copy()
+#    n_row = z_vec.size
+#    n_col = r_vec.size
+#    
+#    dr = r_vec[1] - r_vec[0]
+#    dz = z_vec[1] - z_vec[0]
+#    
+#    hess_row_col = FinDiff((0, dz, 1), (1, dr, 1), acc=2)
+#    hess_row_row = FinDiff((0, dz, 2), acc=2)
+#    hess_col_col = FinDiff((1, dr, 2), acc=2)
+#    grad_row = FinDiff((0, dz, 1), acc=2)
+#    grad_col = FinDiff((1, dr, 1), acc=2)
+#    
+#    grad_r = grad_col(psi)
+#    grad_z = grad_row(psi)
+#    hess_rr = hess_col_col(psi)
+#    hess_zz = hess_row_row(psi)
+#    hess_rz = hess_row_col(psi)
+#    
+#    opt_r = np.zeros(10)
+#    opt_z = np.zeros(10)
+#    opt_psi = np.zeros(10)
+#    i_opt = int(0)
+#    
+#    xpt_r = np.zeros(10)
+#    xpt_z = np.zeros(10)
+#    xpt_psi = np.zeros(10)
+#    i_xpt = int(0)
+#    
+#    psi, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
+#        = run_c_func(c_find_x_point.find_null_in_gradient, psi, opt_r, 
+#        opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
+#    
+#    r_lcfs = np.zeros(n_row*n_col)
+#    z_lcfs = np.zeros(n_row*n_col)
+#    n_lcfs = int(0)
 
-    assert count == 1
+#    psi_bound = np.max(xpt_psi)*1.001
 
-    intrscts = intrscts[idx]
-    
-    poly = Polygon(intrscts)
-    mask_gt = np.zeros((n_row, n_col), dtype=bool)
-    
-    for i_row in range(n_row):
-        for i_col in range(n_col):
-            mask_gt[i_row, i_col] = poly.contains(Point(r_vec[i_col], z_vec[i_row]))
-    
-    breakpoint()
-    assert np.all(mask_gt == mask)
+#    psi, psi_bound, r_lcfs, z_lcfs, n_lcfs = run_c_func(c_find_x_point.find_lcfs_rz, 
+#            psi, psi_bound, r_lcfs, z_lcfs, n_lcfs) 
+#            
+#    r_opt = opt_r[0]
+#    z_opt = opt_z[0]    
+#    idx = np.zeros(n_row*n_col, dtype=np.int64)
+#    n_idx = int(0)
+#                
+#   
+#    mask = np.zeros((n_row, n_col), dtype=np.int64)
+#        
+#    r_opt, z_opt, r_lcfs, z_lcfs, n_lcfs, mask = run_c_func(c_find_x_point.inside_lcfs, r_opt, z_opt, 
+#            r_lcfs, z_lcfs, n_lcfs, mask)  
+#    
+#    mask = mask.astype(bool)
+#    
+#    ContGen = contourpy.contour_generator(r_vec, z_vec, psi_gt)
+#    intrscts = ContGen.lines(np.max(xpt_psi_gt)*1.001)
+#    
+#    is_closed = np.zeros(len(intrscts), dtype=bool)
+#    count = 0
+#    for ii in range(len(intrscts)):
+#        if np.all(np.isclose(intrscts[ii][0, :], intrscts[ii][-1, :])):
+#            idx = ii
+#            count = count + 1
+
+#    assert count == 1
+
+#    intrscts = intrscts[idx]
+#    
+#    poly = Polygon(intrscts)
+#    mask_gt = np.zeros((n_row, n_col), dtype=bool)
+#    
+#    for i_row in range(n_row):
+#        for i_col in range(n_col):
+#            mask_gt[i_row, i_col] = poly.contains(Point(r_vec[i_col], z_vec[i_row]))
+#    
+#    breakpoint()
+#    assert np.all(mask_gt == mask)
                
 if __name__ == "__main__":
 
-
-    r_start = 0.14;
-    r_end = 1.0;
-    n_r = 33;
-    z_start = -1.96; 
-    z_end = 1.96;
-    n_z = 65; 
-    r_vec = np.linspace(r_start, r_end, n_r);
-    z_vec = np.linspace(z_start, z_end, n_z);
     
-#    test_find_null_in_gradient(r_vec, z_vec)
-    test_flux_to_mask(r_vec, z_vec)
+    test_find_null_in_gradient(data)
+#    test_flux_to_mask(r_vec, z_vec)
 #    psi, r_xpt, z_xpt, psi_xpt, r_opt, z_opt, psi_opt = solovev(r_vec, z_vec)
 #    
 #    plt.contour(r_vec, z_vec, psi, 50)

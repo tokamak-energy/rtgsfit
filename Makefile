@@ -9,7 +9,7 @@ LDFLAGS = -pg -shared
 #OBJS = $(patsubst %.c,%.o,$(SRCS))
 #SHARED = $(patsubst %.o,%.so,$(HEADERS))
 
-OBJS = constants.o solve_tria.o gradient.o poisson_solver.o # find_x_point.o    rtgsfit.o
+OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o dgelss.o
 SHARED = $(patsubst %.o,%.so,$(OBJS))
 CTYPES = $(addprefix c_, $(patsubst %.so,%.py,$(SHARED)))
 
@@ -43,11 +43,17 @@ rtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o sol
 rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke 
 	
+dgelss.so: dgelss.o  constants.o
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
+
+dgelss.o: dgelss.c
+	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke 
+	
 c_cblas.py: 
 	ctypesgen -o c_cblas.py -llibcblas.so /usr/include/cblas.h
 	
 clean:
-	rm -f $(SHARED) $(OBJS) $(CTYPES)
+	rm -f $(SHARED) $(OBJS) $(CTYPES) constants.c *.pyc
 
 
 

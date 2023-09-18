@@ -28,6 +28,9 @@ const int N_COEF = 0;
 /* FRAC : relative weight between flux_lcfs and flux_axis */
 const double FRAC = 0.0;
 
+/* THRESH : numerical precision threshold */
+const double THRESH = 0.0;
+
 /* D_ROW : difference in Z_VEC */
 const double DZ = 0.0;
 
@@ -40,6 +43,12 @@ const double R_VEC[] = {};
 /* Z_VEC : Z values (length N_ROW) */
 const double Z_VEC[] = {};
 
+/* WEIGHT: weight values (length N_MEAS) */
+const double WEIGHT[] = {};
+
+/* MASK_LIM: mask of the points inside the vessel */
+const int MASK_LIM[] = {};
+
 /* R_GRID : R values (length N_GRID) */
 const double R_GRID[] = {};
 
@@ -47,6 +56,9 @@ const double R_GRID[] = {};
 const double Z_GRID[] = {};
 
 /* INV_R_MU0 : 1/(mu0 * R_GRID) */
+const double INV_R_MU0[] = {};
+
+/* INV_R_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
 const double INV_R_LTRB_MU0[] = {};
 
 /* R_MU0_DZ2 : mu0 * R_GRID * D_ROW * D_ROW */

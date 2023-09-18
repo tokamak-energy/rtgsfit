@@ -6,6 +6,8 @@
 #include <lapacke.h>
 #include "poisson_solver.h"
 #include "find_x_point.h"
+#include <stdio.h>
+
 
 int max_idx(
         int n_arr, 
@@ -59,7 +61,7 @@ void make_basis(
         if (mask[i_grid])
         {
             basis[i_grid] = (1 - flux_norm[i_grid]) * R_GRID[i_grid];
-            basis[i_grid + N_GRID] = (1 -  flux_norm[i_grid]) * INV_R_LTRB_MU0[i_grid];
+            basis[i_grid + N_GRID] = (1 -  flux_norm[i_grid]) * INV_R_MU0[i_grid];
         }
         else
         {
@@ -90,7 +92,7 @@ void normalise_flux(
     {
         if (mask[i_grid])
         {
-            flux_norm[i_grid] = flux_total[i_grid] * inv_flux_diff;
+            flux_norm[i_grid] = (flux_total[i_grid] - flux_axis) * inv_flux_diff;
         }
         else
         {
@@ -108,8 +110,9 @@ void rtgsfit(
 {
     double g_coef_meas[N_COEF*N_MEAS];
     double basis[N_COEF*N_GRID];
-    int info, rank, i_grid, i_opt, i_xpt;
-    double rcond = -1.0, xpt_flux_max;
+    int info, rank, i_grid, i_opt, i_xpt, i_meas;
+    double rcond = -1.0;
+    double xpt_flux_max;
     double single_vals[N_COEF];
     double source[N_GRID], meas_no_coil[N_MEAS];
     double flux_pls[N_GRID], flux_total[N_GRID];
@@ -117,65 +120,102 @@ void rtgsfit(
     double lcfs_r[N_LCFS_MAX], lcfs_z[N_LCFS_MAX];
     double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
     double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
-    int lcfs_n, xpt_n, opt_n;
+    int lcfs_n;
+    int xpt_n = 0;
+    int opt_n = 0;
     
+    printf("a\n");
     // subtract PF (vessel) contributions from measurements    
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
-       
+
+    printf("b\n");       
     // make basis    
     make_basis(flux_norm, mask, basis);
-    
+
+
+
+    printf("c\n");    
     // make meas2coeff matrix
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_COEF, N_MEAS, N_GRID, 
             1.0, basis, N_GRID, G_GRID_MEAS, N_MEAS, 0.0, g_coef_meas, N_MEAS);    
 
-    // fit coeff
+    for (i_meas=0; i_meas<N_MEAS; i_meas++)
+    {
+        meas_no_coil[i_meas] *= WEIGHT[i_meas];
+    }
+
+    printf("d\n");
+    // fit coeff or use dgelsd
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas, 
             N_MEAS, meas_no_coil, N_MEAS, single_vals, rcond, &rank);
-            
+
+    printf("e, %f, %f, %f\n", meas_no_coil[0], meas_no_coil[1], meas_no_coil[2]);            
     // apply coeff to find current
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_COEF, 1.0, basis, 
-            N_COEF, meas_no_coil, 1, 0.0, source, 1);   
-         
+    cblas_dgemv(CblasColMajor, CblasNoTrans, N_GRID, N_COEF, 1.0, basis, 
+            N_GRID, meas_no_coil, 1, 0.0, source, 1);   
+
+    printf("f\n");         
     // convert current to RHS of eq   
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
         source[i_grid] *= -R_MU0_DZ2[i_grid];
     }          
-    
+
+    printf("g\n");    
     //  poisson solver -> psi_plasma
     poisson_solver(source, flux_pls);
-        
+
+    printf("h\n");        
     // calculate coil psi on grid
     cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_COIL, 1.0, G_GRID_COIL, 
             N_COIL, coil_curr, 1, 0.0, flux_total, 1);     
-            
+
+    printf("i\n");            
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
         flux_total[i_grid] += 2 * M_PI * flux_pls[i_grid];
     }          
-    
+
+    printf("j, \n");    
     // find x point & opt
     find_null_in_gradient(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
             xpt_r, xpt_z, xpt_flux, &xpt_n);
-    
+
+    printf("k");    
+    printf("k, %f\n", opt_r[0]);    
     // select opt
     i_opt = max_idx(opt_n, opt_flux);    
     axis_flux = opt_flux[i_opt];
     axis_r = opt_r[i_opt];
     axis_z = opt_z[i_opt];  
-
+    
     // select xpt      
     i_xpt = max_idx(xpt_n, xpt_flux);
+    printf("%d\n", i_xpt);
     xpt_flux_max = xpt_flux[i_xpt];      
     lcfs_flux = FRAC * xpt_flux_max + (1-FRAC)*axis_flux;
-    
+
+    printf("lcfs_flux, %d\n", lcfs_flux);    
     // extract LCFS
     find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);         
-            
+
+    for (i_grid=0; i_grid<lcfs_n; i_grid++)
+    {
+        printf("%f, ", lcfs_r[i_grid]);
+    }
+    printf("\n\n\n");
+    for (i_grid=0; i_grid<lcfs_n; i_grid++)
+    {
+        printf("%f, ", lcfs_z[i_grid]);
+    }    
+    
+    printf("m\n");            
     // extract inside of LCFS
     inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
+
+
     
+    printf("n\n");    
     // normalise total psi                                
     normalise_flux(flux_norm, flux_total, lcfs_flux, axis_flux, mask);
 }                   

@@ -122,7 +122,7 @@ void poisson_solver(
 {
 
     double psi_bound[N_LTRB];
-    printf("hi");
+
     hagenow_bound(b_vec, out, psi_bound);
             
     add_bound(psi_bound, b_vec);
