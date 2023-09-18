@@ -1,6 +1,8 @@
 import re
 from scipy.io import loadmat
 import numpy as np
+import sys
+
 
 def const_to_file(const_dict, file_read='constants_template.c', file_write='constants.c'):
 
@@ -39,7 +41,12 @@ def const_to_file(const_dict, file_read='constants_template.c', file_write='cons
     
     
 if __name__ == '__main__':
-    dd = loadmat('12001000_RUN01_for_python.mat', squeeze_me=True)
+
+    if len(sys.argv) != 2:
+        print("ERROR: python const_to_file.py <datafile>")
+        sys.exit(1)
+    print(sys.argv[1])
+    dd = loadmat(sys.argv[1], squeeze_me=True)
     const_to_file(dd)
     
 
