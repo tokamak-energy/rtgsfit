@@ -7,7 +7,7 @@
 #include "poisson_solver.h"
 #include "find_x_point.h"
 #include <stdio.h>
-
+#include <float.h>
 
 int max_idx(
         int n_arr, 
@@ -89,7 +89,7 @@ double find_flux_on_limiter(double* flux_total)
             idx = i_limit*N_INTRP + i_intrp;
             flux_limit += LIMIT_WEIGHT[idx] * flux_total[LIMIT_IDX[idx]];
         }
-        if flux_limit > flux_limit_max
+        if (flux_limit > flux_limit_max)
         {
             flux_limit_max = flux_limit;
         }
@@ -125,7 +125,7 @@ void normalise_flux(
 }
 
 
-        double* flux_norm, 
+
 void rtgsfit(
         double* meas,
         double* coil_curr,
@@ -137,7 +137,7 @@ void rtgsfit(
     double basis[N_COEF*N_GRID];
     int info, rank, i_grid, i_opt, i_xpt, i_meas;
     double rcond = -1.0;
-    double xpt_flux_max;
+    double xpt_flux_max, limit_flux;
     double single_vals[N_COEF];
     double source[N_GRID], meas_no_coil[N_MEAS];
     double flux_pls[N_GRID], flux_total[N_GRID];
@@ -209,7 +209,7 @@ void rtgsfit(
     limit_flux = find_flux_on_limiter(flux_total);
     
     // limited or diverted
-    if limit_flux > lcfs_flux
+    if (limit_flux > lcfs_flux)
     {
         lcfs_flux = limit_flux;
     }

@@ -248,12 +248,8 @@ void inside_lcfs(
         }
     }
     
-    
-    
     col_start = (int) ceil((r_start - R_VEC[0] ) / DR);
     col_end = (int) floor((r_end - R_VEC[0])/DR);
-    
-    printf("col: %d, %d \n", col_start, col_end);
     
     for (i_col=col_start; i_col<=col_end; i_col++)
     {
@@ -290,8 +286,6 @@ void inside_lcfs(
             
         row_start = (int) ceil((z_start - Z_VEC[0] ) / DZ);
         row_end = (int) floor((z_end - Z_VEC[0])/DZ);
-        
-        printf("row: %d, %d \n", row_start, row_end);
         
         for (i_row=row_start; i_row<=row_end; i_row++)
         {

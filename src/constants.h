@@ -56,10 +56,10 @@ extern const int N_LIMIT;
 extern const int N_INTRP;
 
 /* LIMIT_IDX : limiter index (N_LIMIT, N_INTRP) */
-extern const int LIMIT_IDX;
+extern const int LIMIT_IDX[];
 
 /* LIMIT_WEIGHT : limiter interpolation weights (N_LIMIT, N_INTRP) */
-extern const double LIMIT_WEIGHT;
+extern const double LIMIT_WEIGHT[];
 
 /* MASK_LIM: mask of the points inside the vessel */
 extern const int MASK_LIM[];

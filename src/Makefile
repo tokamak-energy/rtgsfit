@@ -37,7 +37,7 @@ rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke 
 	
 constants.c: constants_template.c $(DATAFILE)
-	python3 ../utility/const_to_file.py $(DATAFILE)
+	python ../utility/const_to_file.py $(DATAFILE)
 	
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc

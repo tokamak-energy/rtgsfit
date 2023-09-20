@@ -53,10 +53,10 @@ const int N_LIMIT = 0;
 const int N_INTRP = 0;
 
 /* LIMIT_IDX : limiter index (N_LIMIT, N_INTRP) */
-const int LIMIT_IDX = {};
+const int LIMIT_IDX[] = {};
 
 /* LIMIT_WEIGHT : limiter interpolation weights (N_LIMIT, N_INTRP) */
-const double LIMIT_WEIGHT = {};
+const double LIMIT_WEIGHT[] = {};
 
 /* MASK_LIM: mask of the points inside the vessel */
 const int MASK_LIM[] = {};
