@@ -2,3 +2,5 @@ numpy
 matplotlib
 findiff 
 pytest
+ctypesgen
+pytest_cases

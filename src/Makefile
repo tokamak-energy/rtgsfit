@@ -1,7 +1,7 @@
 # Check if FILENAME is defined as a command line argument
-#ifndef DATAFILE
-#$(error DATAFILE is not defined. Please provide a value using 'make DATAFILE=<your_file_name>')
-#endif
+ifndef DATAFILE
+$(error DATAFILE is not defined. Please provide a value using 'make DATAFILE=<your_file_name>')
+endif
 CC = gcc
 DEBUG = 0
 CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11
@@ -37,7 +37,7 @@ rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke 
 	
 constants.c: constants_template.c $(DATAFILE)
-	python ../utility/const_to_file.py $(DATAFILE)
+	python3 ../utility/const_to_file.py $(DATAFILE)
 	
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc
