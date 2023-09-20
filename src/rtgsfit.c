@@ -74,13 +74,36 @@ void make_basis(
 }
 
 
+double find_flux_on_limiter(double* flux_total)
+{
+
+    int i_limit, i_intrp, idx;
+    double flux_limit_max, flux_limit;
+    
+    flux_limit_max = -DBL_MAX;
+    for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
+    {
+        flux_limit = 0.0;
+        for (i_intrp = 0; i_intrp < N_INTRP; i_intrp++)
+        {
+            idx = i_limit*N_INTRP + i_intrp;
+            flux_limit += LIMIT_WEIGHT[idx] * flux_total[LIMIT_IDX[idx]];
+        }
+        if flux_limit > flux_limit_max
+        {
+            flux_limit_max = flux_limit;
+        }
+    }
+    return flux_limit_max;
+}
+
 
 void normalise_flux(
-        double* flux_norm, 
         double* flux_total, 
         double flux_lcfs, 
         double flux_axis,
-        int* mask
+        int* mask,
+        double* flux_norm
         )
 {
     double inv_flux_diff;
@@ -101,6 +124,8 @@ void normalise_flux(
     }
 }
 
+
+        double* flux_norm, 
 void rtgsfit(
         double* meas,
         double* coil_curr,
@@ -180,6 +205,15 @@ void rtgsfit(
     xpt_flux_max = xpt_flux[i_xpt];      
     lcfs_flux = FRAC * xpt_flux_max + (1-FRAC)*axis_flux;
 
+    // flux value on limiter
+    limit_flux = find_flux_on_limiter(flux_total);
+    
+    // limited or diverted
+    if limit_flux > lcfs_flux
+    {
+        lcfs_flux = limit_flux;
+    }
+
     // extract LCFS
     find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);         
 
@@ -187,6 +221,6 @@ void rtgsfit(
     inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
 
     // normalise total psi                                
-    normalise_flux(flux_norm, flux_total, lcfs_flux, axis_flux, mask);
+    normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
 }                   
    

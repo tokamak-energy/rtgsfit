@@ -49,6 +49,18 @@ extern const double Z_VEC[];
 /* WEIGHTS: weight values (length N_MEAS) */
 extern const double WEIGHT[];
 
+/* N_LIMIT : number of limit points */
+extern const int N_LIMIT;
+
+/* N_INTRP : number of interpolation points */
+extern const int N_INTRP;
+
+/* LIMIT_IDX : limiter index (N_LIMIT, N_INTRP) */
+extern const int LIMIT_IDX;
+
+/* LIMIT_WEIGHT : limiter interpolation weights (N_LIMIT, N_INTRP) */
+extern const double LIMIT_WEIGHT;
+
 /* MASK_LIM: mask of the points inside the vessel */
 extern const int MASK_LIM[];
 
