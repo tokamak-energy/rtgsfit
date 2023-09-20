@@ -1,20 +1,20 @@
 
+import os
 import ctypes
 import numpy as np
 import matplotlib.pyplot as plt
 import pytest
 from pytest_cases import fixture
-from py_to_ctypes import run_c_func
 import c_rtgsfit
 import c_constants
 from findiff import FinDiff
 from scipy.io import loadmat
-import c_cblas
-import c_dgelss
-import c_poisson_solver
-import c_find_x_point
+import sys
+sys.path.append("../utility")
+from py_to_ctypes import run_c_func
 
-filename = '12001000_RUN01_for_python.mat'
+filename = '../data/12001000_RUN01_for_python.mat'
+
 
 #@fixture(scope="module")
 #def data():

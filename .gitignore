@@ -50,3 +50,8 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Created files
+src/constants.c
+tests/c_*.py
+**/__pycache__
