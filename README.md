@@ -2,15 +2,33 @@
 Real-Time equilibrium reconstruction code
 
 ## Compilation
+A .mat datafile will be required with the same variable names of that of the 
+global constants specified in constants.h or constants_template.c. This should 
+contain all matrices in row major order, with indexing also in row major order 
+and starting from 0.  The conda environment is only required for running the 
+python tests
+
+```bash
+conda create -n rtgsfit python=3.9
+pip install -r requirements.txt
+cd src
+make DATAFILE=<PATH/TO/DATAFILE.mat>
+cd ../tests
+make
+```
+
 
 ## Program Structure
 * shared libraries
 * dependancy graph
 
 rtgsfit
-    lapacke.h
-    cblas.h
-    
+
+lapacke.h
+cblas.h
+math.h 
+float.h
+stdio.h
 
 ## Naming convention
 * Global constants are fully capitilised e.g. R_GRID

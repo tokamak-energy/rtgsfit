@@ -187,7 +187,7 @@ void rtgsfit(
 
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        flux_total[i_grid] += 2 * M_PI * flux_pls[i_grid];
+        flux_total[i_grid] += flux_pls[i_grid];
     }          
 
     // find x point & opt
