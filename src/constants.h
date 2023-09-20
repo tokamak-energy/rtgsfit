@@ -80,7 +80,7 @@ extern const double INV_R_LTRB_MU0[];
 extern const double R_MU0_DZ2[];
 
 /* G_GRID_MEAS : greens matrix (N_GRID, N_MEAS) */
-extern const double G_GRID_MEAS[];
+extern const double G_GRID_MEAS_WEIGHT[];
 
 /* G_BOUND : greens matrix (N_BOUND, N_BOUND) */
 extern const double G_LTRB[];

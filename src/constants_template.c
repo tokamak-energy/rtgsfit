@@ -77,7 +77,7 @@ const double INV_R_LTRB_MU0[] = {};
 const double R_MU0_DZ2[] = {};
 
 /* G_GRID_MEAS : greens matrix (N_GRID, N_MEAS) */
-const double G_GRID_MEAS[] = {};
+const double G_GRID_MEAS_WEIGHT[] = {};
 
 /* G_MEAS_COIL : greems matrix (N_MEAS, N_COIL) */
 const double G_MEAS_COIL[] = {};

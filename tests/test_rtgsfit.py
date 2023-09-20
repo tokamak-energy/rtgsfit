@@ -13,8 +13,8 @@ import sys
 sys.path.append("../utility")
 from py_to_ctypes import run_c_func
 
-filename = '../data/12001000_RUN01_for_python.mat'
-
+filename = '../data/12001000_RUN01_for_python_works.mat'
+inputsname = '../data/12001000_RUN01_inputs.mat'
 
 #@fixture(scope="module")
 #def data():
@@ -70,6 +70,7 @@ filename = '../data/12001000_RUN01_for_python.mat'
 #def test_rtgsfit(data):
 
 data = loadmat(filename, squeeze_me=True)
+inputs = loadmat(inputsname, squeeze_me=True)
 
 n_z = data['n_z']
 n_r = data['n_r']
@@ -77,17 +78,17 @@ r_grid = data['r_grid']
 z_grid = data['z_grid']
 meas = data['measurements']
 coil_curr = data['coil_current'].astype(float)   
-flux = data['flux'] 
+#flux = data['flux'] 
 n_meas = data['n_meas']
 n_coef = data['n_coef']
 n_grid = data['n_grid']
-g_grid_meas = data['g_grid_meas']
-r_mu0_dz2 = data['r_mu0_dz2']
-n_coil = data['n_coil']
-g_grid_coil = data['g_grid_coil']
-weight = data['weight']
-n_xpt_max = data['n_xpt_max']
-n_lcfs_max = data['n_lcfs_max']
+#g_grid_meas = data['g_grid_meas']
+#r_mu0_dz2 = data['r_mu0_dz2']
+#n_coil = data['n_coil']
+#g_grid_coil = data['g_grid_coil']
+#weight = data['weight']
+#n_xpt_max = data['n_xpt_max']
+#n_lcfs_max = data['n_lcfs_max']
 
 
 mask = np.ones((n_z, n_r), dtype=np.int64)  

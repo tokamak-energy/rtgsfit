@@ -157,7 +157,7 @@ void rtgsfit(
 
     // make meas2coeff matrix
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_COEF, N_MEAS, N_GRID, 
-            1.0, basis, N_GRID, G_GRID_MEAS, N_MEAS, 0.0, g_coef_meas, N_MEAS);    
+            1.0, basis, N_GRID, G_GRID_MEAS_WEIGHT, N_MEAS, 0.0, g_coef_meas, N_MEAS);    
 
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
@@ -187,7 +187,7 @@ void rtgsfit(
 
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        flux_total[i_grid] += flux_pls[i_grid];
+        flux_total[i_grid] += 2* M_PI * flux_pls[i_grid];
     }          
 
     // find x point & opt

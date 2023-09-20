@@ -86,7 +86,7 @@ void find_null_in_gradient(
 
        
 void find_lcfs_rz(
-        double* flux,
+        double* flux_orig,
         double flux_lcfs,
         double* lcfs_r,
         double* lcfs_z,
@@ -96,12 +96,13 @@ void find_lcfs_rz(
     
     int i_row, i_col, idx;
     double off;
+    double flux[N_GRID];
     
     *lcfs_n = 0;
     
     for (idx=0; idx<(N_Z*N_R); idx++)
     {
-        flux[idx] -= flux_lcfs;
+        flux[idx] = flux_orig[idx] - flux_lcfs;
     }
     
     for (i_row=0; i_row<N_Z-1; i_row++)
