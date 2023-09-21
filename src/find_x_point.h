@@ -1,7 +1,8 @@
 #ifndef FIND_X_POINT_H_
 #define FIND_X_POINT_H_
 
-
+float lin_intrp(double* psi, int idx, double dist_to_null_r, 
+        double dist_to_null_z, double abs_dist_null_r, double abs_dist_null_z);
         
 void find_null_in_gradient(double *psi, 
         double *opt_r, double *opt_z, double *opt_psi, int *i_opt,

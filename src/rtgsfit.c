@@ -137,7 +137,7 @@ void rtgsfit(
     double basis[N_COEF*N_GRID];
     int info, rank, i_grid, i_opt, i_xpt, i_meas;
     double rcond = -1.0;
-    double xpt_flux_max, limit_flux;
+    double xpt_flux_max;
     double single_vals[N_COEF];
     double source[N_GRID], meas_no_coil[N_MEAS];
     double flux_pls[N_GRID], flux_total[N_GRID];
@@ -187,13 +187,16 @@ void rtgsfit(
 
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        flux_total[i_grid] += 2* M_PI * flux_pls[i_grid];
+        flux_total[i_grid] +=  flux_pls[i_grid];
     }          
-
+    
+    // flux value on limiter
+    lcfs_flux = find_flux_on_limiter(flux_total);
+    
     // find x point & opt
     find_null_in_gradient(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
             xpt_r, xpt_z, xpt_flux, &xpt_n);
-
+    
     // select opt
     i_opt = max_idx(opt_n, opt_flux);    
     axis_flux = opt_flux[i_opt];
@@ -201,22 +204,20 @@ void rtgsfit(
     axis_z = opt_z[i_opt];  
     
     // select xpt      
-    i_xpt = max_idx(xpt_n, xpt_flux);
-    xpt_flux_max = xpt_flux[i_xpt];      
-    lcfs_flux = FRAC * xpt_flux_max + (1-FRAC)*axis_flux;
-
-    // flux value on limiter
-    limit_flux = find_flux_on_limiter(flux_total);
-    
-    // limited or diverted
-    if (limit_flux > lcfs_flux)
+    if (xpt_n > 0)
     {
-        lcfs_flux = limit_flux;
-    }
+        i_xpt = max_idx(xpt_n, xpt_flux);
+        xpt_flux_max = xpt_flux[i_xpt];      
+        xpt_flux_max = FRAC * xpt_flux_max + (1-FRAC)*axis_flux;
+        if (xpt_flux_max > lcfs_flux)
+        {
+            lcfs_flux = xpt_flux_max;
+        }
+    }  
 
     // extract LCFS
-    find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);         
-
+    find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);  
+     
     // extract inside of LCFS
     inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
 

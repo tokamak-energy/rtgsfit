@@ -6,6 +6,55 @@
 #include "gradient.h"
 
 
+float lin_intrp(
+        double* psi,
+        int idx, 
+        double dist_to_null_r, 
+        double dist_to_null_z,
+        double abs_dist_null_r,
+        double abs_dist_null_z
+        )
+{
+double psi_up, psi_down, psi_at_null;
+
+abs_dist_null_r = abs_dist_null_r / DR;
+abs_dist_null_z = abs_dist_null_z / DZ;
+
+if (dist_to_null_r > 0.0)
+    {
+        if (dist_to_null_z > 0.0)
+        {
+            psi_up = (1 - abs_dist_null_r)*psi[idx + N_R] + abs_dist_null_r*psi[idx + N_R + 1];
+            psi_down = (1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx + 1];
+            psi_at_null = (1 - abs_dist_null_z)*psi_down + abs_dist_null_z*psi_up;
+        }
+        else
+        {
+            psi_up = (1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx + 1];
+            psi_down = (1 - abs_dist_null_r)*psi[idx - N_R] + abs_dist_null_r*psi[idx - N_R + 1];
+            psi_at_null = (1 - abs_dist_null_z)*psi_up + abs_dist_null_z*psi_down;
+        }
+    }
+    else
+    {
+        if (dist_to_null_z > 0.0)
+        {
+            psi_up = (1 - abs_dist_null_r)*psi[idx + N_R] + abs_dist_null_r*psi[idx + N_R - 1];
+            psi_down = (1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx - 1];
+            psi_at_null = (1 - abs_dist_null_z)*psi_down + abs_dist_null_z*psi_up;
+        
+        }
+        else
+        {
+            psi_up = (1 - abs_dist_null_r)*psi[idx] + abs_dist_null_r*psi[idx - 1];
+            psi_down = (1 - abs_dist_null_r)*psi[idx - N_R] + abs_dist_null_r*psi[idx - N_R - 1];
+            psi_at_null = (1 - abs_dist_null_z)*psi_up + abs_dist_null_z*psi_down;                
+        }
+    }
+    return psi_at_null;
+}
+
+
 void find_null_in_gradient(
         double* flux,
         double* opt_r,
@@ -19,12 +68,15 @@ void find_null_in_gradient(
         )
 {
     
-    int idx, i_row, i_col, nearest_idx;
+    int idx, i_row, i_col;
     double hess_det;
-    double flux_up, flux_down, flux_at_null, dist_to_null_r, dist_to_null_z;
-    double rel_dist_null_r, rel_dist_null_z;
+    double dist_to_null_r, dist_to_null_z, abs_dist_null_r, abs_dist_null_z;
     double grad_z[N_GRID], grad_r[N_GRID], hess_zz[N_GRID], hess_rr[N_GRID], hess_rz[N_GRID];
-
+    double hess_det_at_null;
+    double hess_rr_at_null;
+    double hess_zz_at_null;
+    double hess_rz_at_null;    
+    
     *opt_n = 0;
     *xpt_n = 0;
     
@@ -35,48 +87,47 @@ void find_null_in_gradient(
     hessian_rr(flux, hess_rr);
     gradient_r(grad_z, hess_rz);
     
-    for (i_row=0; i_row<(N_Z-1); i_row++) 
+    for (i_row=1; i_row<(N_Z-1); i_row++) 
     {
-        for (i_col=0; i_col<(N_R-1); i_col++)
+        for (i_col=1; i_col<(N_R-1); i_col++)
         {
             
             idx = i_row*N_R + i_col;
-            hess_det = hess_rr[idx]*hess_zz[idx] - hess_rz[idx]*hess_rz[idx];
-            
+            hess_det = hess_zz[idx]*hess_rr[idx] - hess_rz[idx]*hess_rz[idx];
             dist_to_null_r = (grad_z[idx]*hess_rz[idx] - hess_zz[idx]*grad_r[idx])/hess_det;
             dist_to_null_z = (grad_r[idx]*hess_rz[idx] - hess_rr[idx]*grad_z[idx])/hess_det;
             
-            if (dist_to_null_r >= 0.0 && dist_to_null_r < DR && 
-                    dist_to_null_z >= 0.0 && dist_to_null_z < DZ &&
-                    ((hess_det > 0.0 && hess_rr[idx] < 0.0) || (hess_det < 0.0)))
-            {
-                rel_dist_null_r = dist_to_null_r / DR;
-                rel_dist_null_z = dist_to_null_z / DZ;     
-                   
-                nearest_idx = idx + round(rel_dist_null_r) + N_R*round(rel_dist_null_z);
-                
-                if (MASK_LIM[nearest_idx])
+            abs_dist_null_r = fabs(dist_to_null_r);
+            abs_dist_null_z = fabs(dist_to_null_z);
+            
+            if (abs_dist_null_r < 0.5*DR && abs_dist_null_z < 0.5*DZ && MASK_LIM[idx])
+            {   
+            
+                hess_rr_at_null = lin_intrp(hess_rr, idx, dist_to_null_r, 
+                            dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
+                hess_zz_at_null = lin_intrp(hess_zz, idx, dist_to_null_r, 
+                            dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
+                hess_rz_at_null = lin_intrp(hess_rz, idx, dist_to_null_r, 
+                            dist_to_null_z, abs_dist_null_r, abs_dist_null_z);  
+                            
+                hess_det_at_null = hess_rr_at_null*hess_zz_at_null - \
+                        hess_rz_at_null*hess_rz_at_null;
+                                                                                       
+                if (hess_det_at_null > 0.0 && hess_rr_at_null < 0.0) 
                 {
-                    // get flux at point from interpolation 
-                    flux_up = (1 - rel_dist_null_r)*flux[idx + N_R] + rel_dist_null_r*flux[idx + N_R + 1];
-                    flux_down = (1 - rel_dist_null_r)*flux[idx] + rel_dist_null_r*flux[idx + 1];
-                    flux_at_null = (1 - rel_dist_null_z)*flux_down + rel_dist_null_z*flux_up;
-                             
-                     // need to interpolate hess_det and hess_rr as well
-                    if (hess_det > 0.0 && hess_rr[idx] < 0.0) 
-                    {
-                        opt_r[*opt_n] = R_VEC[i_col] + dist_to_null_r;
-                        opt_z[*opt_n] = Z_VEC[i_row] + dist_to_null_z;    
-                        opt_flux[*opt_n] = flux_at_null;
-                        *opt_n += 1;
-                    }
-                    else if (hess_det < 0.0)
-                    {
-                        xpt_r[*xpt_n] = R_VEC[i_col] + dist_to_null_r;
-                        xpt_z[*xpt_n] = Z_VEC[i_row] + dist_to_null_z;    
-                        xpt_flux[*xpt_n] = flux_at_null;
-                        *xpt_n += 1;      
-                    }
+                    opt_r[*opt_n] = R_VEC[i_col] + dist_to_null_r;
+                    opt_z[*opt_n] = Z_VEC[i_row] + dist_to_null_z;    
+                    opt_flux[*opt_n] = lin_intrp(flux, idx, dist_to_null_r, 
+                            dist_to_null_z,  abs_dist_null_r, abs_dist_null_z);
+                    *opt_n += 1;
+                }
+                else if (hess_det_at_null < 0.0)
+                {
+                    xpt_r[*xpt_n] = R_VEC[i_col] + dist_to_null_r;
+                    xpt_z[*xpt_n] = Z_VEC[i_row] + dist_to_null_z;    
+                    xpt_flux[*xpt_n] = lin_intrp(flux, idx, dist_to_null_r, 
+                            dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
+                    *xpt_n += 1;     
                 }
             }
         }
@@ -227,7 +278,6 @@ void inside_lcfs(
             count += 1;
         }
     }
-    
     r_start = -DBL_MAX;
     r_end = DBL_MAX;
     
@@ -248,10 +298,10 @@ void inside_lcfs(
             }
         }
     }
-    
+
     col_start = (int) ceil((r_start - R_VEC[0] ) / DR);
     col_end = (int) floor((r_end - R_VEC[0])/DR);
-    
+
     for (i_col=col_start; i_col<=col_end; i_col++)
     {
         count = 0;
@@ -263,7 +313,7 @@ void inside_lcfs(
                 count += 1;
             }
         }
-        
+
         z_start = -DBL_MAX;
         z_end = DBL_MAX;
 
@@ -284,7 +334,7 @@ void inside_lcfs(
                 }
             }
         }
-            
+
         row_start = (int) ceil((z_start - Z_VEC[0] ) / DZ);
         row_end = (int) floor((z_end - Z_VEC[0])/DZ);
         

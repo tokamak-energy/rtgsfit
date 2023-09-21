@@ -13,8 +13,8 @@ import sys
 sys.path.append("../utility")
 from py_to_ctypes import run_c_func
 
-filename = '../data/12001000_RUN01_for_python_works.mat'
-inputsname = '../data/12001000_RUN01_inputs.mat'
+filename = '../data/12001000_RUN01_for_python.mat'
+inputsname = '../data/12001000_RUN03_inputs.mat'
 
 #@fixture(scope="module")
 #def data():
@@ -76,8 +76,8 @@ n_z = data['n_z']
 n_r = data['n_r']
 r_grid = data['r_grid']
 z_grid = data['z_grid']
-meas = data['measurements']
-coil_curr = data['coil_current'].astype(float)   
+meas = inputs['measurements']
+coil_curr = inputs['coil_current'].astype(float)   
 #flux = data['flux'] 
 n_meas = data['n_meas']
 n_coef = data['n_coef']
@@ -90,7 +90,6 @@ n_grid = data['n_grid']
 #n_xpt_max = data['n_xpt_max']
 #n_lcfs_max = data['n_lcfs_max']
 
-
 mask = np.ones((n_z, n_r), dtype=np.int64)  
 psi_norm =  1 - np.exp(-10*(z_grid**2)) * np.exp(-10*(r_grid - 0.5)**2);
 meas_no_coil = np.zeros(n_meas,)
@@ -102,7 +101,8 @@ flux_coil = np.zeros(n_grid,)
 
 meas, coil_curr, psi_norm, mask = run_c_func( 
             c_rtgsfit.rtgsfit, meas, coil_curr, psi_norm, mask)   
-            
+
+psi_norm = np.reshape(psi_norm,(n_z, n_r))
 plt.imshow(psi_norm)
 plt.show()
 
