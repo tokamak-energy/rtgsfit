@@ -14,7 +14,7 @@ sys.path.append("../utility")
 from py_to_ctypes import run_c_func
 
 filename = '../data/12001000_RUN01_for_python.mat'
-inputsname = '../data/12001000_RUN03_inputs.mat'
+inputsname = '../data/12001000_RUN02_inputs.mat'
 
 #@fixture(scope="module")
 #def data():
@@ -98,13 +98,30 @@ g_coef_meas = np.zeros(n_coef*n_meas)
 curr_dens = np.zeros(n_grid,)
 flux_pls = np.zeros(n_grid,)
 flux_coil = np.zeros(n_grid,)
+psi_total = np.zeros(psi_norm.shape)
+error = np.zeros((1,))
 
-meas, coil_curr, psi_norm, mask = run_c_func( 
-            c_rtgsfit.rtgsfit, meas, coil_curr, psi_norm, mask)   
+fig, ax = plt.subplots(3,6, sharex=True, sharey=True)
+ax = ax.flatten()
 
-psi_norm = np.reshape(psi_norm,(n_z, n_r))
-plt.imshow(psi_norm)
+meas_orig = meas.copy()
+coil_curr_orig = coil_curr.copy()
+for ii in range(18):
+    meas, coil_curr, psi_norm, mask, psi_total, error = run_c_func( 
+                c_rtgsfit.rtgsfit, meas_orig, coil_curr_orig, psi_norm, mask, psi_total, error) 
+                
+    meas = meas.astype(float)
+    coil_curr = coil_curr.astype(float)
+    psi_norm = psi_norm.astype(float)
+    mask = mask.astype(np.int64)
+    psi_total = psi_total.astype(float) 
+    error = error.astype(float)   
+      
+    ax[ii].contour(np.reshape(psi_total, (n_z, n_r)), 20)
+    ax[ii].set_title(f"{ii}: {error[0]:.5e}")
+    
 plt.show()
+
 
 #coil_curr, meas,  meas_no_coil = run_c_func(c_rtgsfit.rm_coil_from_meas, coil_curr, meas,  meas_no_coil)    
 # 

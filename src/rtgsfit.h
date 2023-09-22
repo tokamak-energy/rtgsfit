@@ -14,7 +14,8 @@ void normalise_flux(double* flux_total, double flux_lcfs,
         double flux_axis,int* mask, double* flux_norm);
         
         
-void rtgsfit(double* meas, double* coil_curr, double* flux_norm, int* mask);
+void rtgsfit(double* meas, double* coil_curr, double* flux_norm, int* mask,
+        double* flux_total, double* error);
 
 #endif
 

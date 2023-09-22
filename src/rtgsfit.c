@@ -8,6 +8,8 @@
 #include "find_x_point.h"
 #include <stdio.h>
 #include <float.h>
+#include <string.h>
+
 
 int max_idx(
         int n_arr, 
@@ -130,7 +132,9 @@ void rtgsfit(
         double* meas,
         double* coil_curr,
         double* flux_norm, 
-        int* mask
+        int* mask,
+        double* flux_total,
+        double* error
         )
 {
     double g_coef_meas[N_COEF*N_MEAS];
@@ -138,9 +142,9 @@ void rtgsfit(
     int info, rank, i_grid, i_opt, i_xpt, i_meas;
     double rcond = -1.0;
     double xpt_flux_max;
-    double single_vals[N_COEF];
-    double source[N_GRID], meas_no_coil[N_MEAS];
-    double flux_pls[N_GRID], flux_total[N_GRID];
+    double single_vals[N_COEF], coef[N_MEAS];
+    double source[N_GRID], meas_no_coil[N_MEAS], meas_model[N_MEAS];
+    double flux_pls[N_GRID];
     double lcfs_flux, axis_flux, axis_r, axis_z;
     double lcfs_r[N_LCFS_MAX], lcfs_z[N_LCFS_MAX];
     double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
@@ -164,13 +168,28 @@ void rtgsfit(
         meas_no_coil[i_meas] *= WEIGHT[i_meas];
     }
 
-    // fit coeff or use dgelsd
+    // copy measurment to coef due to overwritting in LAPACKE_dgelss
+    memcpy(coef, meas_no_coil, sizeof(double)*N_MEAS);
+
+    // fit coeff or use dgelsd or  dgels
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas, 
-            N_MEAS, meas_no_coil, N_MEAS, single_vals, rcond, &rank);
+            N_MEAS, coef, N_MEAS, single_vals, rcond, &rank);
 
     // apply coeff to find current
     cblas_dgemv(CblasColMajor, CblasNoTrans, N_GRID, N_COEF, 1.0, basis, 
-            N_GRID, meas_no_coil, 1, 0.0, source, 1);   
+            N_GRID, coef, 1, 0.0, source, 1);   
+            
+    // modelled measurements
+    cblas_dgemv(CblasColMajor, CblasNoTrans, N_MEAS, N_COEF, 1.0, g_coef_meas, 
+            N_MEAS, coef, 1, 0.0, meas_model, 1);       
+
+    // find error between meas and model
+    *error = 0.0;
+    for (i_meas=0; i_meas<N_MEAS; i_meas++)
+    {
+        *error += (meas_no_coil[i_meas] -  meas_model[i_meas]) \
+                * (meas_no_coil[i_meas] -  meas_model[i_meas]);
+    }
 
     // convert current to RHS of eq   
     for (i_grid=0; i_grid<N_GRID; i_grid++)
@@ -223,5 +242,6 @@ void rtgsfit(
 
     // normalise total psi                                
     normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
+    
 }                   
    
