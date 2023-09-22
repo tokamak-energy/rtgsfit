@@ -14,7 +14,7 @@ const int N_MEAS = 0;
 /* N_COIL : number of PF coils */
 const int N_COIL = 0;
 
-/* N_BOUND : number of boundary points + 4 */
+/* N_BOUND : number of boundary points */
 const int N_LTRB = 0;
 
 /* N_LCFS_MAX : max storage allocated for find LCFS coordinates */ 
@@ -23,7 +23,14 @@ const int N_LCFS_MAX = 0;
 /* N_XPT_MAX : max storage allocated for find xpts/opts */ 
 const int N_XPT_MAX = 0;
 
+/* N_COEF : total number of coefficients */
 const int N_COEF = 0;
+
+/* N_PLS : number of plasma coefficients */
+const int N_PLS = 0;
+
+/* N_VESS : number of vessel coefficients */
+const int N_VESS = 0;
 
 /* FRAC : relative weight between flux_lcfs and flux_axis */
 const double FRAC = 0.0;
@@ -76,11 +83,16 @@ const double INV_R_LTRB_MU0[] = {};
 /* R_MU0_DZ2 : mu0 * R_GRID * D_ROW * D_ROW */
 const double R_MU0_DZ2[] = {};
 
-/* G_GRID_MEAS : greens matrix (N_GRID, N_MEAS) */
+/* G_WEIGHT_MEAS_GRID : greens matrix (N_MEAS, N_GRID) */
 const double G_GRID_MEAS_WEIGHT[] = {};
+
+/* G_WEIGHT_MEAS_GRID : greens matrix (N_MEAS, N_COEF) */
+const double G_COEF_MEAS_WEIGHT[] = {};
 
 /* G_MEAS_COIL : greems matrix (N_MEAS, N_COIL) */
 const double G_MEAS_COIL[] = {};
+
+const double G_GRID_VESSEL[] = {};
 
 /* G_BOUND : greens matrix (N_BOUND, N_BOUND) */
 const double G_LTRB[] = {};

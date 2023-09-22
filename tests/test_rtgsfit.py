@@ -14,7 +14,7 @@ sys.path.append("../utility")
 from py_to_ctypes import run_c_func
 
 filename = '../data/12001000_RUN01_for_python.mat'
-inputsname = '../data/12001000_RUN02_inputs.mat'
+inputsname = '../data/12001000_RUN01_inputs.mat'
 
 #@fixture(scope="module")
 #def data():
@@ -107,6 +107,7 @@ ax = ax.flatten()
 meas_orig = meas.copy()
 coil_curr_orig = coil_curr.copy()
 for ii in range(18):
+    print(ii)
     meas, coil_curr, psi_norm, mask, psi_total, error = run_c_func( 
                 c_rtgsfit.rtgsfit, meas_orig, coil_curr_orig, psi_norm, mask, psi_total, error) 
                 
