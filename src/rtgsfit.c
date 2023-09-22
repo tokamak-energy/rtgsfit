@@ -171,7 +171,7 @@ void rtgsfit(
     // copy measurment to coef due to overwritting in LAPACKE_dgelss
     memcpy(coef, meas_no_coil, sizeof(double)*N_MEAS);
 
-    // fit coeff or use dgelsd or  dgels
+    // fit coeff or use dgelsd or  dgels or gelsy 
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas, 
             N_MEAS, coef, N_MEAS, single_vals, rcond, &rank);
 
