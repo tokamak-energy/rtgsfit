@@ -1,11 +1,21 @@
 # Check if FILENAME is defined as a command line argument
 ifndef DATAFILE
-$(error DATAFILE is not defined. Please provide a value using 'make DATAFILE=<your_file_name>')
+    ifneq ($(MAKECMDGOALS),clean)
+    $(error DATAFILE is not defined. Please provide a value using 'make DATAFILE=<your_file_name>')
+    endif
 endif
+
 CC = gcc
-DEBUG = 0
-CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11
-LDFLAGS = -pg -shared
+DEBUG = 1
+
+ifeq ($(DEBUG), 1)
+	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11
+	LDFLAGS = -pg -shared
+else
+	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
+	LDFLAGS = -shared -Wl,-Ofast -pthread
+endif
+
 OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o 
 SHARED = $(patsubst %.o,%.so,$(OBJS))
 
@@ -36,7 +46,7 @@ $(OBJS): %.o : %.c
 rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke 
 	
-constants.c: constants_template.c $(DATAFILE)
+constants.c: constants.h 
 	python ../utility/const_to_file.py $(DATAFILE)
 	
 clean:

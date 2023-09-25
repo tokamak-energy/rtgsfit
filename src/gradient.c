@@ -226,7 +226,6 @@ void gradient_bound(
     for (ii=0; ii<N_Z; ++ii) 
     {
         grad_bound[ii] = dz_dr*(2*arr[ii*N_R + 1] - 0.5*arr[ii*N_R + 2]);
-        // printf("%d, %f, %f \n", ii, R_GRID[ii*N_R], Z_GRID[ii*N_R]);
     }
 
     // top
@@ -234,7 +233,6 @@ void gradient_bound(
     {
         grad_bound[ii + N_Z - 1] = dr_dz*(2*arr[(N_Z - 2)*N_R + ii] - 
                 0.5*arr[(N_Z - 3)*N_R + ii]);
-        // printf("%d, %f, %f \n", ii + N_Z - 1,  R_GRID[(N_Z - 1)*N_R + ii], Z_GRID[(N_Z - 1)*N_R + ii]);
     }  
         
     // right  
@@ -242,13 +240,11 @@ void gradient_bound(
     {
         grad_bound[ii + N_R + N_Z - 2] = dz_dr*(2*arr[(N_Z-ii-1)*N_R + N_R - 2] - 
                 0.5*arr[(N_Z-ii-1)*N_R + N_R - 3]);
-        // printf("%d, %f, %f \n", ii + N_R + N_Z - 2, R_GRID[(N_Z-ii-1)*N_R + N_R - 1], Z_GRID[(N_Z-ii-1)*N_R + N_R - 1]);
     }
     
     // bottom
     for (ii=1; ii<N_R-1; ++ii) 
     {
         grad_bound[ii + N_R + 2*N_Z - 3] = dr_dz*(2*arr[(N_R - ii - 1) + N_R] - 0.5*arr[2*N_R + (N_R - ii - 1)]);
-        // printf("%d, %f, %f \n", ii + N_R + 2*N_Z - 3, R_GRID[(N_R - ii - 1)], Z_GRID[(N_R - ii - 1)]);
     }  
 }  
