@@ -187,12 +187,7 @@ void rtgsfit(
     // modelled measurements
     cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w, 
             N_MEAS, coef, 1, 0.0, meas_model, 1);       
-
-    for (i_meas=0; i_meas<N_COEF; i_meas++)
-    {
-        printf("%f\n", coef[i_meas]);
-    }
-
+            
     // find error between meas and model
     *error = 0.0;
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
