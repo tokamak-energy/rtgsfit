@@ -16,39 +16,37 @@ else
 	LDFLAGS = -shared -Wl,-Ofast -pthread
 endif
 
-OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o 
-SHARED = $(patsubst %.o,%.so,$(OBJS))
-
+OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o
+LIB = /home/filip.janky/rt-gsfit/rtgsfit/lib
+SHARED = $(patsubst %.o,$(LIB)/lib%.so,$(OBJS))
 all: constants.c $(SHARED)
 
-find_x_point.so: find_x_point.o gradient.o constants.o
+$(LIB)/libfind_x_point.so: find_x_point.o gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm
-	
-poisson_solver.so: poisson_solver.o gradient.o solve_tria.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,poisson_solver.so -Wl,--no-undefined -o \
-	poisson_solver.so poisson_solver.o solve_tria.o gradient.o constants.o -lopenblas
 
-solve_tria.so: solve_tria.o  constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
-	
-gradient.so: gradient.o  constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
-	
-constants.so: constants.o
+$(LIB)/libpoisson_solver.so: poisson_solver.o gradient.o solve_tria.o constants.o
+	$(CC) $(LDFLAGS) -Wl,-soname,-Wl,--no-undefined -o $@ $^ -lopenblas
+
+$(LIB)/libsolve_tria.so: solve_tria.o  constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
-rtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
+$(LIB)/libgradient.so: gradient.o  constants.o
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
+
+$(LIB)/libconstants.so: constants.o
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
+
+$(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
-	
+
 $(OBJS): %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@	
+	$(CC) $(CFLAGS) -c $< -o $@
 
 rtgsfit.o: rtgsfit.c
-	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke 
-	
-constants.c: constants.h 
+	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke
+
+constants.c: constants.h
 	python ../utility/const_to_file.py $(DATAFILE)
-	
+
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc
-
