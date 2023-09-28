@@ -1,0 +1,25 @@
+CC = gcc
+PCS_PATH := /home/filip.janky/pcs
+CFLAGS += -fPIC -Wall -Warray-bounds -pg -std=gnu11
+MDSTOOL_SRC := $(PCS_PATH)/model/st40pcs/tools/src
+RTGSFIT := ../src
+TE_INCLUDES := $(PCS_PATH)/model/ST40PCS/include/
+TE_OBJS := $(PCS_PATH)/model/ST40PCS/bin/
+OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o
+SHARED = $(patsubst %.o,%.so,$(OBJS))
+
+MDSPLUS_ROOT := /usr/local/mdsplus
+MDSPLUS_LDFLAG := /usr/local/mdsplus/lib
+MDSPLUS_SYSLIB := -lMdsLib -lMdsShr -l
+SYSLIB := -lm
+
+MYLIB = -L../lib
+LDFLAGS += -shared
+INCLUDES := -I$(RTGSFIT)
+all: replay_rtgsfit rtgsfit_fileIO
+
+rtgsfit_fileIO: rtgsfit_fileIO.o
+	$(CC)  -o $@ $< $(MYLIB) -lrtgsfit $(TE_OBJS)/utils.o
+rtgsfit_fileIO.o: rtgsfit_fileIO.c
+	$(info %% BINSRC $(CFLAGS) -c -o $@ $^)
+	$(CC) $(CFLAGS) $(INCLUDES) -I$(TE_INCLUDES) -c -o $@ $<
