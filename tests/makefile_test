@@ -1,9 +1,10 @@
 CC = gcc
+PCS_PATH := /home/filip.janky/pcs
 CFLAGS += -fPIC -Wall -Warray-bounds -pg -std=gnu11
-MDSTOOL_SRC := ~/pcs/model/st40pcs/tools/src
-RTGSFIT := /home/filip.janky/rt-gsfit/rtgsfit/src
-TE_INCLUDES := /home/filip.janky/pcs/model/ST40PCS/include/
-TE_OBJS := /home/filip.janky/pcs/model/ST40PCS/bin/
+MDSTOOL_SRC := $(PCS_PATH)/model/st40pcs/tools/src
+RTGSFIT := ../src
+TE_INCLUDES := $(PCS_PATH)/model/ST40PCS/include/
+TE_OBJS := $(PCS_PATH)/model/ST40PCS/bin/
 OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o
 SHARED = $(patsubst %.o,%.so,$(OBJS))
 
@@ -12,21 +13,10 @@ MDSPLUS_LDFLAG := /usr/local/mdsplus/lib
 MDSPLUS_SYSLIB := -lMdsLib -lMdsShr -l
 SYSLIB := -lm
 
-MYLIB = -L/home/filip.janky/rt-gsfit/rtgsfit/lib
+MYLIB = -L../lib
 LDFLAGS += -shared
 INCLUDES := -I$(RTGSFIT)
 all: replay_rtgsfit rtgsfit_fileIO
-
-replay_rtgsfit: replay_rtgsfit.o $(RTGSFIT)/constants.so  $(RTGSFIT)/find_x_point.so  \
-	$(RTGSFIT)/gradient.so  $(RTGSFIT)/poisson_solver.so  $(RTGSFIT)/rtgsfit.so  \
-	$(RTGSFIT)/solve_tria.so
-	$(CC) $(LDFLAGS) -o $@ $^ $(SYSLIB) $(RTGSFIT)/constants.so  \
-	$(RTGSFIT)/find_x_point.so  $(RTGSFIT)/gradient.so  $(RTGSFIT)/poisson_solver.so  \
-	$(RTGSFIT)/rtgsfit.so  $(RTGSFIT)/solve_tria.so $(TE_OBJS)/utils.o
-replay_rtgsfit.o: replay_rtgsfit.c
-	$(info %% BINSRC $(CFLAGS) -I$(TE_INCLUDES) -c -o $@ $^)
-	$(CC) $(CFLAGS) -I$(TE_INCLUDES) -I$(INCLUDES) -I$(RTGSFIT) -c -o $@ $^
-
 
 rtgsfit_fileIO: rtgsfit_fileIO.o
 	$(CC)  -o $@ $< $(MYLIB) -lrtgsfit $(TE_OBJS)/utils.o

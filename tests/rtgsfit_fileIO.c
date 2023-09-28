@@ -5,7 +5,6 @@
 
 int main() {
   int i, iter;
-  uint32_t lines_count;
   uint32_t sensors_num, pf_coils_num;
   FILE *p_fid;
   char *fn_sensors_idx = "../data/sensor_index.txt";
@@ -15,16 +14,14 @@ int main() {
   char *fn_flux_norm = "../data/flux_norm.txt";
   char *fn_mask = "../data/mask.txt";
   char *fn_psi_total = "../data/psi_total.txt";
-  char *fn_error = "../data/error.txt";
-  char character;
 
   if (count_lines(fn_sensors_idx, &sensors_num) != 0) {
     errorExit("Cannot count lines");
   }
-  // if (N_MEAS != sensors_num) {
-  //   snprintf(error_msg, sizeof(error_msg), "Incorrect amount of sensors index %d %d\n", N_MEAS, sensors_num);
-  //   errorExit(error_msg);
-  // }
+  if (N_MEAS != sensors_num) {
+    snprintf(error_msg, sizeof(error_msg), "Incorrect amount of sensors index %d %d\n", N_MEAS, sensors_num);
+    errorExit(error_msg);
+  }
   int sensors_idx[N_MEAS];
   if (get_int_from_file(fn_sensors_idx, N_MEAS, sensors_idx) != 0) {
     errorExit("Cannot get array for coil sensors index.\n");
@@ -32,10 +29,10 @@ int main() {
   if (count_lines(fn_pf_coil_idx, &pf_coils_num) != 0) {
     errorExit("Cannot count lines");
   }
-  // if (N_COIL != pf_coils_num) {
-  //   snprintf(error_msg, sizeof(error_msg), "Incorrect amount of pf_coils %d %d\n", N_COIL, pf_coils_num);
-  //   errorExit(error_msg);
-  // }
+  if (N_COIL != pf_coils_num) {
+    snprintf(error_msg, sizeof(error_msg), "Incorrect amount of pf_coils %d %d\n", N_COIL, pf_coils_num);
+    errorExit(error_msg);
+  }
   int32_t coil_idx[N_COIL];
   if (get_int_from_file(fn_pf_coil_idx, N_COIL, coil_idx) != 0) {
     errorExit("Cannot get array for coil current index.\n");
