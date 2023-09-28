@@ -50,6 +50,8 @@ np.savetxt('../data/flux_norm.txt', psi_norm)
 np.savetxt('../data/mask.txt', mask, fmt='%d')
 np.savetxt('../data/psi_total.txt', psi_total)
 np.savetxt('../data/error.txt', error)
+np.savetxt('../data/meas.txt', meas_orig)
+np.savetxt('../data/coil_curr.txt', coil_curr_orig)
 
 for ii in range(18):
     print(ii)
@@ -63,8 +65,10 @@ for ii in range(18):
     psi_total = psi_total.astype(float) 
     error = error.astype(float)   
       
-    ax[ii].contour(np.reshape(psi_total, (n_z, n_r)), 20)
+    out = ax[ii].contourf(np.reshape(psi_total, (n_z, n_r)), 20)
+    plt.colorbar(out, ax = ax[ii])    
     ax[ii].set_title(f"{ii}: {error[0]:.5e}")
-    
+
+
 plt.show()
 

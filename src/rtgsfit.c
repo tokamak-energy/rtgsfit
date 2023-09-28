@@ -60,7 +60,7 @@ void make_basis(
     // could use 1 - flux_norm instead of flux_norm ?????
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        if (mask[i_grid])
+        if (mask[i_grid] && MASK_LIM[i_grid])
         {
             basis[i_grid] = (1 - flux_norm[i_grid]) * R_GRID[i_grid];
             basis[i_grid + N_GRID] = (1 -  flux_norm[i_grid]) * INV_R_MU0[i_grid];
@@ -71,10 +71,13 @@ void make_basis(
             basis[i_grid + N_GRID] = 0.0;
         }        
     }
+    
     // could use gradient from previous iteration.  should apply mask 
-    gradient_z(flux_norm, &basis[2*N_GRID]);   
+    if (N_PLS == 3)
+    {
+        gradient_z(flux_norm, &basis[2*N_GRID]);   
+    }
 }
-
 
 double find_flux_on_limiter(double* flux_total)
 {
@@ -115,7 +118,7 @@ void normalise_flux(
     // psi norm has to be of total flux, as boundary is defined in terms of total flux !
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
-        if (mask[i_grid])
+        if (mask[i_grid] && MASK_LIM[i_grid])
         {
             flux_norm[i_grid] = (flux_total[i_grid] - flux_axis) * inv_flux_diff;
         }
@@ -137,7 +140,7 @@ void rtgsfit(
         double* error
         )
 {
-    double g_coef_meas_w[N_COEF*N_MEAS];
+    double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
     double g_pls_grid[N_PLS*N_GRID];
     int info, rank, i_grid, i_opt, i_xpt, i_meas;
     double rcond = -1.0;
@@ -175,6 +178,7 @@ void rtgsfit(
 
     // copy measurment to coef due to overwritting in LAPACKE_dgelss
     memcpy(coef, meas_no_coil, sizeof(double)*N_MEAS);
+    memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double)*N_COEF*N_MEAS);
 
     // fit coeff or use dgelsd or  dgels or gelsy 
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas_w, 
@@ -185,17 +189,17 @@ void rtgsfit(
             N_GRID, coef, 1, 0.0, source, 1);   
 
     // modelled measurements
-    cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w, 
-            N_MEAS, coef, 1, 0.0, meas_model, 1);       
+    cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig, 
+            N_MEAS, coef, 1, 0.0, meas_model, 1);    
             
     // find error between meas and model
     *error = 0.0;
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
-        *error += (meas_no_coil[i_meas] -  meas_model[i_meas]) \
+        *error = *error + (meas_no_coil[i_meas] -  meas_model[i_meas]) \
                 * (meas_no_coil[i_meas] -  meas_model[i_meas]);
     }
-
+    
     // convert current to RHS of eq   
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
@@ -210,14 +214,24 @@ void rtgsfit(
             N_COIL, coil_curr, 1, 0.0, flux_total, 1);     
 
     // calculate vessel flux on grid
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_VESS, 1.0, G_GRID_VESSEL, 
-            N_VESS, &coef[N_PLS], 1, 0.0, flux_vessel, 1);      
-      
-    // calculate total flux = coil + plasma + vessel
-    for (i_grid=0; i_grid<N_GRID; i_grid++)
+    if (N_VESS > 0)
     {
-        flux_total[i_grid] +=  flux_pls[i_grid] + flux_vessel[i_grid];
-    }          
+        cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_VESS, 1.0, G_GRID_VESSEL, 
+                N_VESS, &coef[N_PLS], 1, 0.0, flux_vessel, 1);      
+          
+        // calculate total flux = coil + plasma + vessel
+        for (i_grid=0; i_grid<N_GRID; i_grid++)
+        {
+            flux_total[i_grid] +=  flux_pls[i_grid] + flux_vessel[i_grid];
+        }   
+    }
+    else
+    {
+        for (i_grid=0; i_grid<N_GRID; i_grid++)
+        {
+            flux_total[i_grid] +=  flux_pls[i_grid];
+        }      
+    }
 
     // flux value on limiter
     lcfs_flux = find_flux_on_limiter(flux_total);
