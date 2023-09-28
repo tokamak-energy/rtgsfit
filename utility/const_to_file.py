@@ -45,19 +45,6 @@ def const_to_file(const_dict, file_read='constants.h', file_write='constants.c')
 
     with open(file_write, 'w') as file:
         file.write(new_c_code)
-        
-#    pattern = r'\b(\w+)\s*(?:\[\s*\d*\s*\])?\s*=\s*([^;]+);'
-#    # Define a function to perform variable replacements
-#    def add_extern(match):
-#        var_name = match.group(1).lower()
-#        return f'extern {match.group(1)} {match.group(2)} {match.group(3)};'         
-
-#    pattern = r'\b(\w+)\s+\b(\w+)\s+\b(\w+)\s*(?:\[\s*\d*\s*\])?\s*=\s*([^;]+);'        
-#    new_c_header = re.sub(pattern, add_extern, file_contents)
-#        
-#    with open(file_write + '.h', 'w') as file:
-#        file.write(new_c_header)
-    
     
 if __name__ == '__main__':
 
