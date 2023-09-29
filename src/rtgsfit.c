@@ -57,6 +57,12 @@ void make_basis(
 {    
     int i_grid;
 
+    // could use gradient from previous iteration.  should apply mask 
+    if (N_PLS == 3)
+    {
+        gradient_z(flux_norm, &basis[2*N_GRID]);   
+    }
+    
     // could use 1 - flux_norm instead of flux_norm ?????
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
@@ -69,13 +75,8 @@ void make_basis(
         {
             basis[i_grid] = 0.0;
             basis[i_grid + N_GRID] = 0.0;
+            basis[i_grid + 2*N_GRID] = 0.0;
         }        
-    }
-    
-    // could use gradient from previous iteration.  should apply mask 
-    if (N_PLS == 3)
-    {
-        gradient_z(flux_norm, &basis[2*N_GRID]);   
     }
 }
 
@@ -84,8 +85,9 @@ double find_flux_on_limiter(double* flux_total)
 
     int i_limit, i_intrp, idx;
     double flux_limit_max, flux_limit;
-    
+        
     flux_limit_max = -DBL_MAX;
+    
     for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
     {
         flux_limit = 0.0;
@@ -163,13 +165,13 @@ void rtgsfit(
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
     // make basis    
-    make_basis(flux_norm, mask, g_pls_grid);
-
+    make_basis(flux_norm, mask, g_pls_grid);    
+        
     // make meas-pls matrix
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_PLS, N_MEAS, N_GRID, 
             1.0, g_pls_grid, N_GRID, G_GRID_MEAS_WEIGHT, N_MEAS, 0.0, 
             g_coef_meas_w, N_MEAS);   
-
+    
     // form meas vectors from measurements 
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
@@ -187,7 +189,7 @@ void rtgsfit(
     // apply coeff to find current
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid, 
             N_GRID, coef, 1, 0.0, source, 1);   
-
+    
     // modelled measurements
     cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig, 
             N_MEAS, coef, 1, 0.0, meas_model, 1);    
@@ -257,13 +259,13 @@ void rtgsfit(
             lcfs_flux = xpt_flux_max;
         }
     }  
-
+    
     // extract LCFS
     find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);  
 
     // extract inside of LCFS
     inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
-
+    
     // normalise total psi                                
     normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
 
