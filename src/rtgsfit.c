@@ -159,7 +159,6 @@ void rtgsfit(
     int lcfs_n;
     int xpt_n = 0;
     int opt_n = 0;
-    FILE *fptr;
     
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
