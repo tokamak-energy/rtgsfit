@@ -59,11 +59,6 @@ np.savetxt('../data/error.txt', error)
 np.savetxt('../data/meas.txt', meas_orig)
 np.savetxt('../data/coil_curr.txt', coil_curr_orig)
 
-#plt.imshow(np.reshape(psi_norm, (65, 33)))
-#plt.show()
-#plt.imshow(np.reshape(mask, (65, 33)))
-#plt.show()
-
 for ii in range(18):
 #    print(ii)
     meas, coil_curr, psi_norm, mask, psi_total, error = run_c_func( 

@@ -78,8 +78,6 @@ void make_basis(
             basis[i_grid + 2*N_GRID] = 0.0;
         }        
     }
-    
-
 }
 
 double find_flux_on_limiter(double* flux_total)
