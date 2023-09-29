@@ -57,6 +57,12 @@ void make_basis(
 {    
     int i_grid;
 
+    // could use gradient from previous iteration.  should apply mask 
+    if (N_PLS == 3)
+    {
+        gradient_z(flux_norm, &basis[2*N_GRID]);   
+    }
+    
     // could use 1 - flux_norm instead of flux_norm ?????
     for (i_grid=0; i_grid<N_GRID; i_grid++)
     {
@@ -69,14 +75,11 @@ void make_basis(
         {
             basis[i_grid] = 0.0;
             basis[i_grid + N_GRID] = 0.0;
+            basis[i_grid + 2*N_GRID] = 0.0;
         }        
     }
     
-    // could use gradient from previous iteration.  should apply mask 
-    if (N_PLS == 3)
-    {
-        gradient_z(flux_norm, &basis[2*N_GRID]);   
-    }
+
 }
 
 double find_flux_on_limiter(double* flux_total)
@@ -84,8 +87,23 @@ double find_flux_on_limiter(double* flux_total)
 
     int i_limit, i_intrp, idx;
     double flux_limit_max, flux_limit;
-    
+    FILE *fptr;
+        
     flux_limit_max = -DBL_MAX;
+    
+    fptr = fopen("limit_weight.txt", "w");
+    for (i_limit=0; i_limit<N_LIMIT*N_INTRP; i_limit++)
+    {
+        fprintf(fptr, "%e\n", LIMIT_WEIGHT[i_limit]);
+    }
+    fclose(fptr);
+    fptr = fopen("limit_idx.txt", "w");
+    for (i_limit=0; i_limit<N_LIMIT*N_INTRP; i_limit++)
+    {
+        fprintf(fptr, "%d\n", LIMIT_IDX[i_limit]);
+    }
+    fclose(fptr);
+    
     for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
     {
         flux_limit = 0.0;
@@ -155,6 +173,7 @@ void rtgsfit(
     int lcfs_n;
     int xpt_n = 0;
     int opt_n = 0;
+    FILE *fptr;
     
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
@@ -162,14 +181,62 @@ void rtgsfit(
     // subtract PF (vessel) contributions from measurements    
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
+    fptr = fopen("flux_norm.txt", "w");
+    for (i_meas=0; i_meas<N_GRID; i_meas++)
+    {
+        fprintf(fptr, "%e\n", flux_norm[i_meas]);
+    }
+    fclose(fptr);
+
     // make basis    
     make_basis(flux_norm, mask, g_pls_grid);
 
+/*    fptr = fopen("basis1.txt", "w");*/
+/*    for (i_meas=0; i_meas<N_GRID; i_meas++)*/
+/*    {*/
+/*        fprintf(fptr, "%f\n", g_pls_grid[i_meas]);*/
+/*    }*/
+/*    fclose(fptr);*/
+/*    fptr = fopen("basis2.txt", "w");*/
+/*    for (i_meas=0; i_meas<N_GRID; i_meas++)*/
+/*    {*/
+/*        fprintf(fptr, "%f\n", g_pls_grid[i_meas+N_GRID]);*/
+/*    }*/
+/*    fclose(fptr);*/
+/*    */
+/*    fptr = fopen("basis3.txt", "w");*/
+/*    for (i_meas=0; i_meas<N_GRID; i_meas++)*/
+/*    {*/
+/*        fprintf(fptr, "%lf\n", g_pls_grid[i_meas+2*N_GRID]);*/
+/*    }*/
+/*    fclose(fptr);*/
+    
+    fptr = fopen("basis_all.txt", "w");
+    for (i_meas=0; i_meas<N_COEF*N_GRID; i_meas++)
+    {
+        fprintf(fptr, "%e\n", g_pls_grid[i_meas]);
+    }
+    fclose(fptr);    
+    
+    fptr = fopen("g_grid_meas_w.txt", "w");
+    for (i_meas=0; i_meas<N_MEAS*N_GRID; i_meas++)
+    {
+        fprintf(fptr, "%e\n", G_GRID_MEAS_WEIGHT[i_meas]);
+    }
+    fclose(fptr);   
+        
     // make meas-pls matrix
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_PLS, N_MEAS, N_GRID, 
             1.0, g_pls_grid, N_GRID, G_GRID_MEAS_WEIGHT, N_MEAS, 0.0, 
             g_coef_meas_w, N_MEAS);   
 
+    fptr = fopen("g_coef_meas_w.txt", "w");
+    for (i_meas=0; i_meas<N_COEF*N_MEAS; i_meas++)
+    {
+        fprintf(fptr, "%e\n", g_coef_meas_w[i_meas]);
+    }
+    fclose(fptr);
+    
     // form meas vectors from measurements 
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
@@ -180,14 +247,30 @@ void rtgsfit(
     memcpy(coef, meas_no_coil, sizeof(double)*N_MEAS);
     memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double)*N_COEF*N_MEAS);
 
+/*    for (i_meas=0; i_meas<N_MEAS; i_meas++)*/
+/*    {*/
+/*        printf("%f\n", coef[i_meas]);*/
+/*    }*/
+/*    printf("\n");*/
+/*    */
+/*    for (i_meas=0; i_meas<N_MEAS*N_COEF; i_meas++)*/
+/*    {*/
+/*        printf("%f\n", g_coef_meas_w[i_meas]);*/
+/*    }*/
+/*    printf("\n");    */
+
     // fit coeff or use dgelsd or  dgels or gelsy 
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas_w, 
             N_MEAS, coef, N_MEAS, single_vals, rcond, &rank);
+
+
 
     // apply coeff to find current
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid, 
             N_GRID, coef, 1, 0.0, source, 1);   
 
+    printf("%f, %f, %f\n", coef[0], coef[1], coef[2]);
+    
     // modelled measurements
     cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig, 
             N_MEAS, coef, 1, 0.0, meas_model, 1);    
@@ -233,6 +316,13 @@ void rtgsfit(
         }      
     }
 
+    fptr = fopen("flux_total.txt", "w");
+    for (i_meas=0; i_meas<N_GRID; i_meas++)
+    {
+        fprintf(fptr, "%e\n", flux_total[i_meas]);
+    }
+    fclose(fptr);
+
     // flux value on limiter
     lcfs_flux = find_flux_on_limiter(flux_total);
     
@@ -240,11 +330,28 @@ void rtgsfit(
     find_null_in_gradient(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
             xpt_r, xpt_z, xpt_flux, &xpt_n);
 
+    fptr = fopen("stnry_point.txt", "w"); 
+    for (i_meas=0; i_meas<opt_n; i_meas++)
+    {
+        fprintf(fptr, "%e, %e, %e\n", opt_r[i_meas], opt_z[i_meas], opt_flux[i_meas]);
+    }
+    for (i_meas=0; i_meas<xpt_n; i_meas++)
+    {
+        fprintf(fptr, "%e, %e, %e\n", xpt_r[i_meas], xpt_z[i_meas], xpt_flux[i_meas]);
+    }
+    fprintf(fptr, "%e",lcfs_flux); 
+    fclose(fptr);
+
     // select opt
     i_opt = max_idx(opt_n, opt_flux);    
     axis_flux = opt_flux[i_opt];
     axis_r = opt_r[i_opt];
     axis_z = opt_z[i_opt];  
+    
+/*    for (i_meas=0; i_meas < xpt_n; i_meas++)*/
+/*    {*/
+/*            printf("%e, %e, %e \n", xpt_r[i_meas], xpt_z[i_meas], xpt_flux[i_meas]);*/
+/*    }*/
     
     // select xpt      
     if (xpt_n > 0)
@@ -257,13 +364,25 @@ void rtgsfit(
             lcfs_flux = xpt_flux_max;
         }
     }  
-
+/*    printf("%e, %e, %e, %e \n", lcfs_flux, axis_flux, axis_r, axis_z);*/
+    
     // extract LCFS
     find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);  
 
+/*    for (i_meas=0; i_meas<lcfs_n; i_meas++)*/
+/*    {*/
+/*        printf("%e, %e\n", lcfs_r[i_meas], lcfs_z[i_meas]);*/
+/*    }*/
     // extract inside of LCFS
     inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
 
+    fptr = fopen("mask.txt", "w");
+    for (i_meas=0; i_meas<N_GRID; i_meas++)
+    {
+        fprintf(fptr, "%d\n", mask[i_meas]);
+    }
+    fclose(fptr);
+    
     // normalise total psi                                
     normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
 
