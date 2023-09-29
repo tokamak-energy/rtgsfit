@@ -139,7 +139,10 @@ void rtgsfit(
         double* flux_norm, 
         int* mask,
         double* flux_total,
-        double* error
+        double* error, 
+        double* lcfs_r, 
+        double* lcfs_z,
+        int* lcfs_n
         )
 {
     double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
@@ -151,10 +154,8 @@ void rtgsfit(
     double source[N_GRID], meas_no_coil[N_MEAS], meas_model[N_MEAS];
     double flux_pls[N_GRID], flux_vessel[N_GRID];
     double lcfs_flux, axis_flux, axis_r, axis_z;
-    double lcfs_r[N_LCFS_MAX], lcfs_z[N_LCFS_MAX];
     double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
     double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
-    int lcfs_n;
     int xpt_n = 0;
     int opt_n = 0;
     
@@ -189,6 +190,8 @@ void rtgsfit(
     // apply coeff to find current
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid, 
             N_GRID, coef, 1, 0.0, source, 1);   
+    
+/*    coef = &meas_no_coil_tmp[0];*/
     
     // modelled measurements
     cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig, 
@@ -261,10 +264,10 @@ void rtgsfit(
     }  
     
     // extract LCFS
-    find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, &lcfs_n);  
+    find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);  
 
     // extract inside of LCFS
-    inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, lcfs_n, mask);
+    inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
     
     // normalise total psi                                
     normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
