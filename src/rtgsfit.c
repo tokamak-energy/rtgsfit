@@ -87,22 +87,8 @@ double find_flux_on_limiter(double* flux_total)
 
     int i_limit, i_intrp, idx;
     double flux_limit_max, flux_limit;
-    FILE *fptr;
         
     flux_limit_max = -DBL_MAX;
-    
-    fptr = fopen("limit_weight.txt", "w");
-    for (i_limit=0; i_limit<N_LIMIT*N_INTRP; i_limit++)
-    {
-        fprintf(fptr, "%e\n", LIMIT_WEIGHT[i_limit]);
-    }
-    fclose(fptr);
-    fptr = fopen("limit_idx.txt", "w");
-    for (i_limit=0; i_limit<N_LIMIT*N_INTRP; i_limit++)
-    {
-        fprintf(fptr, "%d\n", LIMIT_IDX[i_limit]);
-    }
-    fclose(fptr);
     
     for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
     {
@@ -181,41 +167,13 @@ void rtgsfit(
     // subtract PF (vessel) contributions from measurements    
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
-    fptr = fopen("flux_norm.txt", "w");
-    for (i_meas=0; i_meas<N_GRID; i_meas++)
-    {
-        fprintf(fptr, "%e\n", flux_norm[i_meas]);
-    }
-    fclose(fptr);
-
     // make basis    
-    make_basis(flux_norm, mask, g_pls_grid);
-    
-    fptr = fopen("basis_all.txt", "w");
-    for (i_meas=0; i_meas<N_COEF*N_GRID; i_meas++)
-    {
-        fprintf(fptr, "%e\n", g_pls_grid[i_meas]);
-    }
-    fclose(fptr);    
-    
-    fptr = fopen("g_grid_meas_w.txt", "w");
-    for (i_meas=0; i_meas<N_MEAS*N_GRID; i_meas++)
-    {
-        fprintf(fptr, "%e\n", G_GRID_MEAS_WEIGHT[i_meas]);
-    }
-    fclose(fptr);   
+    make_basis(flux_norm, mask, g_pls_grid);    
         
     // make meas-pls matrix
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_PLS, N_MEAS, N_GRID, 
             1.0, g_pls_grid, N_GRID, G_GRID_MEAS_WEIGHT, N_MEAS, 0.0, 
             g_coef_meas_w, N_MEAS);   
-
-    fptr = fopen("g_coef_meas_w.txt", "w");
-    for (i_meas=0; i_meas<N_COEF*N_MEAS; i_meas++)
-    {
-        fprintf(fptr, "%e\n", g_coef_meas_w[i_meas]);
-    }
-    fclose(fptr);
     
     // form meas vectors from measurements 
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
@@ -230,8 +188,6 @@ void rtgsfit(
     // fit coeff or use dgelsd or  dgels or gelsy 
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas_w, 
             N_MEAS, coef, N_MEAS, single_vals, rcond, &rank);
-
-
 
     // apply coeff to find current
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid, 
