@@ -142,7 +142,8 @@ void rtgsfit(
         double* error, 
         double* lcfs_r, 
         double* lcfs_z,
-        int* lcfs_n
+        int* lcfs_n, 
+        double* coef
         )
 {
     double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
@@ -150,7 +151,7 @@ void rtgsfit(
     int info, rank, i_grid, i_opt, i_xpt, i_meas;
     double rcond = -1.0;
     double xpt_flux_max;
-    double single_vals[N_COEF], coef[N_MEAS];
+    double single_vals[N_COEF], meas_no_coil_cp[N_MEAS];
     double source[N_GRID], meas_no_coil[N_MEAS], meas_model[N_MEAS];
     double flux_pls[N_GRID], flux_vessel[N_GRID];
     double lcfs_flux, axis_flux, axis_r, axis_z;
@@ -180,19 +181,19 @@ void rtgsfit(
     }
 
     // copy measurment to coef due to overwritting in LAPACKE_dgelss
-    memcpy(coef, meas_no_coil, sizeof(double)*N_MEAS);
+    memcpy(meas_no_coil_cp, meas_no_coil, sizeof(double)*N_MEAS);
     memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double)*N_COEF*N_MEAS);
 
     // fit coeff or use dgelsd or  dgels or gelsy 
     info = LAPACKE_dgelss(LAPACK_COL_MAJOR, N_MEAS, N_COEF, 1, g_coef_meas_w, 
-            N_MEAS, coef, N_MEAS, single_vals, rcond, &rank);
+            N_MEAS, meas_no_coil_cp, N_MEAS, single_vals, rcond, &rank);
 
+    memcpy(coef, meas_no_coil_cp, sizeof(double)*N_COEF);
+    
     // apply coeff to find current
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid, 
             N_GRID, coef, 1, 0.0, source, 1);   
-    
-/*    coef = &meas_no_coil_tmp[0];*/
-    
+       
     // modelled measurements
     cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig, 
             N_MEAS, coef, 1, 0.0, meas_model, 1);    

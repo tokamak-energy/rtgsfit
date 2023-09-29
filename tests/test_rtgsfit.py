@@ -69,8 +69,8 @@ np.savetxt('../data/coil_curr.txt', coil_curr_orig)
 
 for ii in range(16):
 #    print(ii)
-    meas, coil_curr, psi_norm, mask, psi_total, error, r_lcfs, z_lcfs, n_lcfs = run_c_func( 
-                c_librtgsfit.rtgsfit, meas_orig, coil_curr_orig, psi_norm, mask, psi_total, error, r_lcfs, z_lcfs, n_lcfs) 
+    meas, coil_curr, psi_norm, mask, psi_total, error, r_lcfs, z_lcfs, n_lcfs, coef = run_c_func( 
+                c_librtgsfit.rtgsfit, meas_orig, coil_curr_orig, psi_norm, mask, psi_total, error, r_lcfs, z_lcfs, n_lcfs, coef) 
                 
     meas = meas.astype(float)
     coil_curr = coil_curr.astype(float)
@@ -81,11 +81,11 @@ for ii in range(16):
     r_lcfs = r_lcfs.astype(float)
     z_lcfs = z_lcfs.astype(float)
     n_lcfs = n_lcfs.astype(np.int64)
-#    coef = coef.astype(float)
+    coef = coef.astype(float)
         
     if ii % 5 == 0:
         jj = int(ii/5)
-
+        print(ii, coef)
         out = ax[jj].contourf(r_vec, z_vec, np.reshape(psi_total, (n_z, n_r)), 20)
         ax[jj].plot(r_lcfs[:n_lcfs[0]], z_lcfs[:n_lcfs[0]], 'k.')    
         ax[jj].set_aspect('equal')
