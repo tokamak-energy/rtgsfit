@@ -58,10 +58,8 @@ void make_basis(
     int i_grid;
 
     // could use gradient from previous iteration.  should apply mask 
-    if (N_PLS == 3)
-    {
-        gradient_z(flux_norm, &basis[2*N_GRID]);   
-    }
+    gradient_z(flux_norm, &basis[2*N_GRID]);   
+
     
     // could use 1 - flux_norm instead of flux_norm ?????
     for (i_grid=0; i_grid<N_GRID; i_grid++)
