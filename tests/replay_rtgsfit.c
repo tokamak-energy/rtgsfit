@@ -173,11 +173,11 @@ int main(int argc, char *argv[]) {
   if (count_lines(fn_pf_coil_idx, &pf_coils_num) != 0) {
     errorExit("Cannot count lines");
   }
-  // if (N_COIL != pf_coils_num) {
-  //   snprintf(error_msg, sizeof(error_msg), "Incorrect amount of pf_coils "
-  //     "%d %d\n", N_COIL, pf_coils_num);
-  //   errorExit(error_msg);
-  // }
+  if (N_COIL != pf_coils_num) {
+    snprintf(error_msg, sizeof(error_msg), "Incorrect amount of pf_coils "
+      "%d %d\n", N_COIL, pf_coils_num);
+    errorExit(error_msg);
+  }
   int32_t coil_idx[N_COIL];
   if (get_int_from_file(fn_pf_coil_idx, N_COIL, coil_idx) != 0) {
     errorExit("Cannot get array for coil current index.\n");
