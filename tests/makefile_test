@@ -1,6 +1,6 @@
 CC = gcc
 PCS_PATH := /home/filip.janky/pcs
-CFLAGS += -fPIC -Wall -Warray-bounds -pg -std=gnu11
+CFLAGS += -fPIC -Wall -Warray-bounds -pg -std=gnu11 -O3 -pthread
 MDSTOOL_SRC := $(PCS_PATH)/model/st40pcs/tools/src
 RTGSFIT := ../src
 TE_INCLUDES := $(PCS_PATH)/model/ST40PCS/include/

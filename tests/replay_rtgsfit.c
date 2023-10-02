@@ -15,14 +15,68 @@ int main(int argc, char *argv[]) {
   float decimate;
   int dec;
   char signal_name[signal_name_len];
+  char *fn_sensors_idx = "../data/sensor_index.txt";
+  char *fn_pf_coil_idx = "../data/pfcoil_index.txt";
   char *fn_meas = "../data/meas.txt";
   char *fn_coil_curr = "../data/coil_curr.txt";
   char *fn_flux_norm = "../data/flux_norm.txt";
   char *fn_mask = "../data/mask.txt";
   char *fn_psi_total = "../data/psi_total.txt";
+  FILE *p_fid;
+  uint32_t sensors_num, pf_coils_num;
 
   /* Convert input argument to unsigned long long with base 10; */
   check_pulseNo_validity(argv[1], filename, &pulseNo);
+  check_input_float_validity(argv[2], filename, &t_start);
+
+  uint32_t sensors_idx_num, pf_coils_idx_num;
+  if (count_lines(fn_sensors_idx, &sensors_idx_num) != 0) {
+    errorExit("Cannot count lines");
+  }
+
+  if (N_MEAS != sensors_idx_num) {
+    snprintf(error_msg, sizeof(error_msg), "Incorrect amount of sensors index "
+    "%d %d\n", N_MEAS, sensors_idx_num);
+    errorExit(error_msg);
+  }
+  int sensors_idx[sensors_idx_num];
+  if (get_int_from_file(fn_sensors_idx, sensors_idx_num, sensors_idx) != 0) {
+    errorExit("Cannot get array for coil sensors index.\n");
+  }
+  if (count_lines(fn_pf_coil_idx, &pf_coils_idx_num) != 0) {
+    errorExit("Cannot count lines");
+  }
+  if (N_COIL != pf_coils_idx_num) {
+    snprintf(error_msg, sizeof(error_msg), "Incorrect amount of pf_coils "
+      "%d %d\n", N_COIL, pf_coils_idx_num);
+    errorExit(error_msg);
+  }
+  int32_t coil_idx[N_COIL];
+  if (get_int_from_file(fn_pf_coil_idx, N_COIL, coil_idx) != 0) {
+    errorExit("Cannot get array for coil current index.\n");
+  }
+  double meas[N_MEAS];
+  if (get_double_from_file(fn_meas, N_MEAS, meas) != 0) {
+    errorExit("Cannot get array for meas data.\n");
+  }
+  double coil_curr[N_COIL];
+  if (get_double_from_file(fn_coil_curr, N_COIL, coil_curr) != 0) {
+    errorExit("Cannot get array for coil current.\n");
+  }
+  double flux_norm[N_GRID];
+  if (get_double_from_file(fn_flux_norm, N_GRID, flux_norm) != 0) {
+    errorExit("Cannot get array for normalised flux.\n");
+  }
+  int mask[N_GRID];
+  if (get_int_from_file(fn_mask, N_GRID, mask) != 0) {
+    errorExit("Cannot get array for mask.\n");
+  }
+  double psi_total[N_GRID];
+  if (get_double_from_file(fn_psi_total, N_GRID, psi_total) != 0) {
+    errorExit("Cannot get array for total flux.\n");
+  }
+
+  double error = 0;
 
   /* use get_signal_length to get size of signal */
   snprintf(signal_name, signal_name_len, "%s.CH%03u", pcs1, 1);
@@ -125,11 +179,6 @@ int main(int argc, char *argv[]) {
   ret = get_signal(pulseNo, server, tree_name, signal_name,
   pcs2_dec_time_length, pcs2_dec_time, &ret_pcs2_dec_time_length);
 
-  char *fn_sensors_idx = "../data/sensor_index.txt";
-  char *fn_pf_coil_idx = "../data/pf_coil_index.txt";
-  FILE *p_fid;
-  uint32_t sensors_num, pf_coils_num;
-
   /* ST40PCS part */
   /* timing vectors */
   struct timespec t0, t1, t2, t3;
@@ -142,8 +191,16 @@ int main(int argc, char *argv[]) {
     errorExit("test_st40pcs_mds: Cannot allocate memory.");
   }
   char channel_num[3];
-  FILE *fd;
 
+  float *pcs_dec_data = (float *)calloc(pcs1_dec_len + pcs2_dec_len,
+    sizeof(float));
+  memcpy(pcs_dec_data, pcs1_dec_data, pcs1_dec_len * sizeof(float));
+  memcpy(&pcs_dec_data[pcs1_dec_len], pcs2_dec_data,
+     (pcs2_dec_len) * sizeof(float));
+  char str[100];
+  float t_step = (pcs1_dec_time[dec_N_iter - 1] - pcs1_dec_time[0]) / dec_N_iter;
+  /* t_start is referenced to plasma breakdown */
+  long int t_start_idx = (long int) ((t_start - pcs1_dec_time[0]) / t_step);
   long *t10 = calloc((size_t)N_iter, sizeof(long));
   if (t10 == NULL) {
     errorExit("test_st40pcs: Error! memory t10 not allocated.");
@@ -156,89 +213,38 @@ int main(int argc, char *argv[]) {
   if (t32 == NULL) {
     errorExit("test_st40pcs_mds: Error! memory t32 not allocated.");
   }
-  uint32_t sensors_idx_num;
-  if (count_lines(fn_sensors_idx, &sensors_idx_num) != 0) {
-    errorExit("Cannot count lines");
-  }
-
-  // if (N_MEAS != sensors_num) {
-  //   snprintf(error_msg, sizeof(error_msg), "Incorrect amount of sensors index "
-  //   "%d %d\n", N_MEAS, sensors_num);
-  //   errorExit(error_msg);
-  // }
-  int sensors_idx[N_MEAS];
-  if (get_int_from_file(fn_sensors_idx, N_MEAS, sensors_idx) != 0) {
-    errorExit("Cannot get array for coil sensors index.\n");
-  }
-  if (count_lines(fn_pf_coil_idx, &pf_coils_num) != 0) {
-    errorExit("Cannot count lines");
-  }
-  if (N_COIL != pf_coils_num) {
-    snprintf(error_msg, sizeof(error_msg), "Incorrect amount of pf_coils "
-      "%d %d\n", N_COIL, pf_coils_num);
-    errorExit(error_msg);
-  }
-  int32_t coil_idx[N_COIL];
-  if (get_int_from_file(fn_pf_coil_idx, N_COIL, coil_idx) != 0) {
-    errorExit("Cannot get array for coil current index.\n");
-  }
-  double meas[N_MEAS];
-  if (get_double_from_file(fn_meas, N_MEAS, meas) != 0) {
-    errorExit("Cannot get array for meas data.\n");
-  }
-  double coil_curr[N_COIL];
-  if (get_double_from_file(fn_coil_curr, N_COIL, coil_curr) != 0) {
-    errorExit("Cannot get array for coil current.\n");
-  }
-  double flux_norm[N_GRID];
-  if (get_double_from_file(fn_flux_norm, N_GRID, flux_norm) != 0) {
-    errorExit("Cannot get array for normalised flux.\n");
-  }
-  int mask[N_GRID];
-  if (get_int_from_file(fn_mask, N_GRID, mask) != 0) {
-    errorExit("Cannot get array for mask.\n");
-  }
-  double psi_total[N_GRID];
-  if (get_double_from_file(fn_psi_total, N_GRID, psi_total) != 0) {
-    errorExit("Cannot get array for total flux.\n");
-  }
-
-  double error = 0;
-  float *pcs_dec_data = (float *)calloc(pcs1_data_len/dec + pcs2_data_len/dec,
-    sizeof(float));
-  printf("pcs1_dec_len/dec %d\n", pcs1_data_len/dec);
-  memcpy(pcs_dec_data, pcs1_dec_data, (pcs1_data_len/dec) * sizeof(float));
-  printf("memcpy worked\n");
-  memcpy(&pcs_dec_data[pcs1_dec_len/dec], pcs2_dec_data,
-     (pcs2_dec_len/dec) * sizeof(float));
-     printf("memcpy worked1\n");
-  char str[100];
-  float t_step = (pcs1_dec_time[dec_N_iter - 1] - pcs1_dec_time[0]) / dec_N_iter;
-  printf("time end %f, start %f, t_step %f dec_N_iter %d pcs1_dec_time_length %d\n",
-    pcs1_dec_time[68000],
-    pcs1_dec_time[0], t_step, dec_N_iter, pcs1_dec_time_length);
-  int t_step_idx = (int)(0.01 / t_step);
-  long int t_start_idx = (int) (1.2 / t_step);
-  printf("t_start_idx %d sensors_idx_num %d\n", t_start_idx, sensors_idx_num);
-  // for (iter = 0; i < 20; ++iter) {
-    for (i = 0; i < sensors_idx_num; ++i) {
-      printf("for cycles\n");
-      printf("offset %ld sensors_idx[i] %d\n", t_start_idx * (num_pcs1_channels + num_pcs2_channels), sensors_idx[i]);
-      meas[i] = pcs_dec_data[t_start_idx * (num_pcs1_channels + num_pcs2_channels) +
-        sensors_idx[i]];
+  for (i = 0; i < sensors_idx_num; ++i) {
+    if (sensors_idx[i] >= 0) {
+      meas[i] = (double)(pcs_dec_data[t_start_idx * (num_pcs1_channels + num_pcs2_channels) +
+        sensors_idx[i]]);
+    } else {
+      meas[i] = 0;
     }
-  // }
-  // for (iter = 0; iter < 20; ++iter) {
-    char *fn_psi_total_out = "../data/psi_total_out_1p2.txt";
-    snprintf(str, sizeof(str), "%s_%02d", fn_psi_total_out, 1);
+  }
+  for (i = 0; i < N_COIL; ++i) {
+    coil_curr[i] = (double)(pcs_dec_data[t_start_idx * (num_pcs1_channels + num_pcs2_channels) +
+     coil_idx[i]]);
+  }
+  uint32_t N_steps = 1;
+  stash_st40runner_float("pcs1_ch001", filename,
+    sizeof(float), (size_t)dec_N_iter, &pcs_dec_data[dec_N_iter * sensors_idx[29]]);
+  for (istep = 0; istep < N_steps;  ++istep) {
+    clock_gettime(CLOCK_MONOTONIC, &t0);
     rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error);
-    p_fid = fopen(str, "w");
-    for (i = 0; i < N_GRID; ++i) {
-      fprintf(p_fid, "%lf\n", psi_total[i]);
-    }
-    fclose(p_fid);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    t10[istep] = (long)
+      ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
+      printf("time %ld\n", t10[istep]);
+  }
+  char *fn_psi_total_out = "../data/psi_total_out_1p2.txt";
+  snprintf(str, sizeof(str), "%s_%02d", fn_psi_total_out, 1);
+  p_fid = fopen(str, "w");
+  for (i = 0; i < N_GRID; ++i) {
+    fprintf(p_fid, "%lf\n", psi_total[i]);
+  }
+  fclose(p_fid);
   // }
-  printf("I am working\n");
+  printf("data are stored in %s\n", fn_psi_total_out);
 
   /* free the dynamically allocated memory when done */
   free((void *)pcs1_data);
@@ -249,6 +255,7 @@ int main(int argc, char *argv[]) {
   free((void *)pcs2_dec_data);
   free((void *)pcs2_dec_time);
   free((void *)pcs2_time);
+  free((void *)pcs_dec_data);
   free((void *)outputs);
   free((void *)t10);
   free((void *)t21);

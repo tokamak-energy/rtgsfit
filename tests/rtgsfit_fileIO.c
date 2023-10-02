@@ -72,5 +72,5 @@ int main() {
     fclose(p_fid);
   }
   printf("I am working\n");
-  return 0;
+  return EXIT_SUCCESS;
 }

@@ -47,6 +47,7 @@ size_t pcs2_data_len; /* length of pcs2 data in floats including time axis */
 size_t pcs2_dec_len; /* length of decimated pcs2 data */
 
 int pulseNo; /* pulse number to replay */
+float t_start; /* start time in s from plasma breakdown */
 size_t N_iter; /* number of iterations; equal the length of time axis */
 size_t dec_N_iter; /* number of decimated iterations */
 

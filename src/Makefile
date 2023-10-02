@@ -9,7 +9,7 @@ CC = gcc
 DEBUG = 1
 
 ifeq ($(DEBUG), 1)
-	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11
+	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -O3 -pthread
 	LDFLAGS = -pg -shared
 else
 	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto

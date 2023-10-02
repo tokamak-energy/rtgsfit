@@ -36,11 +36,13 @@ sens_list = textscan(fid, '%s');
 sens_list = sens_list{:};
 sens_list_idx = zeros(size(sens_list));
 for rtgsfit_list = 1:length(sens_list)
-    sens_list_idx(rtgsfit_list) = find(contains(AI.List, sens_list{rtgsfit_list}));
+    if ~contains(sens_list{rtgsfit_list},'REG_')
+        sens_list_idx(rtgsfit_list) = find(strcmp(AI.List, sens_list{rtgsfit_list}));
+    end
 end
 fclose(fid);
-fid = fopen('~/rt-gsfit/sensor_index.txt','w');
+fid = fopen('~/rt-gsfit/rtgsfit/data/sensor_index.txt','w');
 for ii=1:length(sens_list_idx)
-    fprintf(fid, "%d\n", sens_list_idx(ii));
+    fprintf(fid, "%d\n", sens_list_idx(ii) - 1);
 end
 fclose(fid);
