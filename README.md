@@ -3,7 +3,7 @@ Real-Time equilibrium reconstruction code
 
 ## Compilation
 A .mat datafile will be required with the same variable names of that of the 
-global constants specified in constants.h or constants_template.c. This should 
+global constants specified in constants.h. This should 
 contain all matrices in row major order, with indexing also in row major order 
 and starting from 0.  The conda environment is only required for running the 
 python tests
@@ -18,6 +18,8 @@ make
 ```
 
 
+
+
 ## Program Structure
 * shared libraries
 * dependancy graph
@@ -29,13 +31,38 @@ cblas.h
 math.h 
 float.h
 stdio.h
+time.h
+string.h
+
+## Formatting convention
+* Allman bracket style
+* 
 
 ## Naming convention
-* Global constants are fully capitilised e.g. R_GRID
+* Global constants are fully capitilised with underscores e.g. R_GRID
+* All global variables are constant and defined at compile time
+* variables and function names should be written in snake case 
+i.e. lower_case_with_underscores
+* variable names should be a noun and should refer to the quantity rather than 
+a Greek letter. e.g. flux instead or psi.
+* function names should begin with a verb e.g. 'get_flux_norm' 
+* boolean variables are simply integers in C. Maybe use short or other inbuilt types
+* Have not used size_t or any other non-inbuilt types
+* Boolean names should begin with is_ prefix to differentiate them from other variables
+* Boolean names should be always be in the "positive" affirmation, with 1 being
+true and 0 being false
+* order of variables should go from largest to smallest e.g. GRID_R_MIN
+as if it was sucessive objects in the OOP paradigme.  
+* Green's functions are prefixed with g_
+
+Names that could be converted to structures
+
+
 
 ## Function conventions
 * docstring format
 * order of inputs outputs
+* example docstring below ...
 
 
 ## Grid convention
@@ -61,7 +88,6 @@ R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
 * freegs
 
 ## To Do
-* limit points
 * deglss vs dgelsd
 * python flux testing
 * interpolate hess_rr hess_det

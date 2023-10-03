@@ -1,9 +1,9 @@
-SHARED := $(wildcard ../src/*.so)
-CTYPES = $(patsubst ../src/%,c_%, $(patsubst %.so,%.py,$(SHARED)))
+SHARED := $(wildcard ../lib/*.so)
+CTYPES = $(patsubst ../lib/%,c_%, $(patsubst %.so,%.py,$(SHARED)))
 
 all: $(CTYPES)
 
-$(CTYPES): c_%.py : ../src/%.so ../src/%.h
+$(CTYPES): c_lib%.py : ../lib/lib%.so ../src/%.h
 	ctypesgen -o  $@ -l $^
 
 clean:
