@@ -9,7 +9,7 @@ CC = gcc
 DEBUG = 1
 
 ifeq ($(DEBUG), 1)
-	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -O3 -pthread
+	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread
 	LDFLAGS = -pg -shared
 else
 	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
@@ -17,7 +17,7 @@ else
 endif
 
 OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o
-LIB = /home/filip.janky/rt-gsfit/rtgsfit/lib
+LIB = ../lib
 SHARED = $(patsubst %.o,$(LIB)/lib%.so,$(OBJS))
 all: constants.c $(SHARED)
 
@@ -37,7 +37,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
+	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 $(OBJS): %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@

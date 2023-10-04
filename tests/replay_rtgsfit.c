@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
   long int idx = 0;
   uint32_t n_iter = (uint32_t) ((t_end_idx - t_start_idx) / (rtgsfit_step_idx));
   printf("iters %u\n", n_iter);
-  long *t10 = calloc((size_t)n_iter, sizeof(long));
+  long *t10 = (long *)calloc((size_t)n_iter, sizeof(long));
   if (t10 == NULL) {
     errorExit("test_st40pcs: Error! memory t10 not allocated.");
   }
@@ -216,32 +216,32 @@ int main(int argc, char *argv[]) {
   for (idx = t_start_idx; idx < t_end_idx;  idx += rtgsfit_step_idx) {
     printf("t_start %ld t_end %ld step %u idx %ld\n",
     t_start_idx, t_end_idx, rtgsfit_step_idx, idx);
-    for (i = 0; i < sensors_idx_num; ++i) {
-      if (sensors_idx[i] >= 0) {
-        meas[i] = (double)(pcs_dec_data[idx * (num_pcs1_channels + num_pcs2_channels) +
-          sensors_idx[i]]);
-      } else {
-        meas[i] = 0;
-      }
-    }
-    for (i = 0; i < N_COIL; ++i) {
-      coil_curr[i] = (double)(pcs_dec_data[idx * (num_pcs1_channels + num_pcs2_channels) +
-       coil_idx[i]]);
-    }
+    // for (i = 0; i < sensors_idx_num; ++i) {
+    //   if (sensors_idx[i] >= 0) {
+    //     meas[i] = (double)(pcs_dec_data[idx * (num_pcs1_channels + num_pcs2_channels) +
+    //       sensors_idx[i]]);
+    //   } else {
+    //     meas[i] = 0;
+    //   }
+    // }
+    // for (i = 0; i < N_COIL; ++i) {
+    //   coil_curr[i] = (double)(pcs_dec_data[idx * (num_pcs1_channels + num_pcs2_channels) +
+    //    coil_idx[i]]);
+    // }
     clock_gettime(CLOCK_MONOTONIC, &t0);
     rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error);
     clock_gettime(CLOCK_MONOTONIC, &t1);
     snprintf(str, sizeof(str), "%s_%01.3f", fn_psi_total_out, pcs1_dec_time[idx]);
     printf("%s_%01.3f\n", fn_psi_total_out, pcs1_dec_time[idx]);
-    p_fid = fopen(str, "w");
-    for (i = 0; i < N_GRID; ++i) {
-      fprintf(p_fid, "%lf\n", psi_total[i]);
-    }
-    fclose(p_fid);
+    // p_fid = fopen(str, "w");
+    // for (i = 0; i < N_GRID; ++i) {
+    //   fprintf(p_fid, "%lf\n", psi_total[i]);
+    // }
+    // fclose(p_fid);
     t10[istep] = (long)
       ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
+      printf("time %ld\n", t10[istep]);
     istep++;
-    printf("istep %d\n", istep);
   }
   // }
   printf("data are stored in %s_YY\n", fn_psi_total_out);
