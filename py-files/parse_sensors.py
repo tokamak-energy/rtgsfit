@@ -1,6 +1,6 @@
 import pandas as pd
 
-sens_file = '../data/sensors_to_use_modified.csv'
+sens_file = '../data/sensors_to_use.csv'
 sens = pd.read_csv(sens_file)
 sens_name = sens['name'].tolist()
 sens_inc = sens['include'].tolist()

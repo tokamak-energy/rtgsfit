@@ -1,6 +1,17 @@
 CC = gcc
-PCS_PATH := /home/filip.janky/pcs
-CFLAGS += -fPIC -Wall -Warray-bounds -pg -std=gnu11
+DEBUG = 1
+ifeq ($(DEBUG), 1)
+	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread
+	LDFLAGS = -pg -shared
+else
+	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
+	LDFLAGS = -shared -Wl,-Ofast -pthread
+endif
+ifndef PCS_PATH
+    ifneq ($(MAKECMDGOALS), clean)
+    $(error PCS_PATH is not defined. Please provide a value using 'make PCS_PATH=<your_pcs_path>')
+    endif
+endif
 MDSTOOL_SRC := $(PCS_PATH)/model/st40pcs/tools/src
 RTGSFIT := ../src
 TE_INCLUDES := $(PCS_PATH)/model/ST40PCS/include/
@@ -14,13 +25,14 @@ MDSPLUS_SYSLIB := -lMdsLib -lMdsShr
 SYSLIB := -lm
 
 MYLIB = -L../lib
-LDFLAGS += -shared
 INCLUDES := -I$(RTGSFIT)
 all: replay_rtgsfit rtgsfit_fileIO
 
 replay_rtgsfit: replay_rtgsfit.o
-	$(CC) -o $@ $< $(MYLIB) -lrtgsfit $(SYSLIB) -L$(MDSPLUS_LDFLAG) $(MDSPLUS_SYSLIB) \
-	 $(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o
+	$(CC) -o $@ $< $(CFLAGS) $(RTGSFIT)/rtgsfit.o $(RTGSFIT)/gradient.o \
+		$(RTGSFIT)/constants.o $(RTGSFIT)/poisson_solver.o $(RTGSFIT)/find_x_point.o \
+		$(RTGSFIT)/solve_tria.o -L$(MDSPLUS_LDFLAG) $(MDSPLUS_SYSLIB) \
+		$(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o  -lopenblas
 
 replay_rtgsfit.o: replay_rtgsfit.c
 	$(info %% $(CC) $(CFLAGS) $(INCLUDES) -I$(TE_INCLUDES) -I$(MDSPLUS_ROOT)/include -c -o $@ $^)
