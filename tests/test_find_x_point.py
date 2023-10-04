@@ -1,17 +1,19 @@
 import ctypes
 import numpy as np
 import matplotlib.pyplot as plt
-import c_find_x_point
+import c_libfind_x_point
 import pytest
 from pytest_cases import fixture
 from scipy.constants import mu_0
+import sys
+sys.path.append("../utility")
 from py_to_ctypes import run_c_func
 import contourpy
 from findiff import FinDiff
 from shapely.geometry import Point, Polygon
 from scipy.io import loadmat
 
-filename = '12001000_RUN01_for_python.mat'
+filename = '../data/12001000_RUN01_for_c.mat'
 
 @fixture(scope="module")
 def data():
@@ -59,7 +61,48 @@ def test_find_null_in_gradient(data, thresh=1.e-3):
     i_xpt =  np.array([0], dtype=np.int64)
     
     psi, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
-            = run_c_func(c_find_x_point.find_null_in_gradient, psi, opt_r, 
+            = run_c_func(c_libfind_x_point.find_null_in_gradient, psi, opt_r, 
+            opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
+        
+    i_xpt = i_xpt[0]
+    i_opt = i_opt[0]
+    
+    for ii in range(i_xpt):
+        assert np.any(np.isclose(xpt_r[ii], xpt_r_gt, rtol=thresh, atol=np.inf))         
+        assert np.any(np.isclose(xpt_z[ii], xpt_z_gt, rtol=thresh, atol=np.inf))         
+
+    for rr, zz in zip(xpt_r_gt, xpt_z_gt):
+        assert np.any(np.isclose(rr, xpt_r[:i_xpt], rtol=thresh, atol=np.inf))         
+        assert np.any(np.isclose(zz, xpt_z[:i_xpt], rtol=thresh, atol=np.inf))       
+        
+    for ii in range(i_opt):
+        assert np.any(np.isclose(opt_r[ii], opt_r_gt, rtol=thresh, atol=np.inf))         
+        assert np.any(np.isclose(opt_z[ii], opt_z_gt, rtol=thresh, atol=np.inf))         
+        
+    for rr, zz in zip(opt_r_gt, opt_z_gt):
+        assert np.any(np.isclose(rr, opt_r[:i_opt], rtol=thresh, atol=np.inf))         
+        assert np.any(np.isclose(zz, opt_z[:i_opt], rtol=thresh, atol=np.inf))   
+
+
+def test_find_null_in_gradient_march(data, thresh=1.e-3):
+
+    r_vec = data['r_vec']
+    z_vec = data['z_vec']
+
+    psi, xpt_r_gt, xpt_z_gt, xpt_psi_gt, opt_r_gt, opt_z_gt, opt_psi_gt = solovev(r_vec, z_vec)
+    
+    opt_r = np.zeros(10)
+    opt_z = np.zeros(10)
+    opt_psi = np.zeros(10)
+    i_opt = np.array([0], dtype=np.int64)
+    
+    xpt_r = np.zeros(10)
+    xpt_z = np.zeros(10)
+    xpt_psi = np.zeros(10)
+    i_xpt =  np.array([0], dtype=np.int64)
+    
+    psi, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
+            = run_c_func(c_libfind_x_point.find_null_in_gradient_march, psi, opt_r, 
             opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
         
     i_xpt = i_xpt[0]
@@ -81,7 +124,12 @@ def test_find_null_in_gradient(data, thresh=1.e-3):
         assert np.any(np.isclose(rr, opt_r[:i_opt], rtol=thresh, atol=np.inf))         
         assert np.any(np.isclose(zz, opt_z[:i_opt], rtol=thresh, atol=np.inf))   
         
-
+    plt.contour(r_vec, z_vec, psi, 50)
+    plt.plot(opt_r[:i_opt], opt_z[:i_opt], '+')
+    plt.plot(xpt_r[:i_xpt], xpt_z[:i_xpt], 'x')    
+    plt.show()
+    
+    
 def test_find_lcfs(data):
 
     r_vec = data['r_vec']
@@ -105,7 +153,7 @@ def test_find_lcfs(data):
     n_lcfs = int(0)
     psi = psi_gt.copy()
     
-    psi, psi_bound, r_lcfs, z_lcfs, n_lcfs = run_c_func(c_find_x_point.find_lcfs_rz, 
+    psi, psi_bound, r_lcfs, z_lcfs, n_lcfs = run_c_func(c_libfind_x_point.find_lcfs_rz, 
             psi, psi_bound, r_lcfs, z_lcfs, n_lcfs)
 
     rz_lcfs = np.vstack((r_lcfs[:n_lcfs], z_lcfs[:n_lcfs])).T
@@ -154,7 +202,7 @@ def test_inside_lcfs(data):
     n_lcfs = intrscts.shape[0]
     mask = np.zeros((n_row, n_col), dtype=np.int64)
         
-    r_opt, z_opt, r_lcfs, z_lcfs, n_lcfs, mask = run_c_func(c_find_x_point.inside_lcfs, r_opt, z_opt, 
+    r_opt, z_opt, r_lcfs, z_lcfs, n_lcfs, mask = run_c_func(c_libfind_x_point.inside_lcfs, r_opt, z_opt, 
             r_lcfs, z_lcfs, n_lcfs, mask)  
     
         
@@ -208,7 +256,7 @@ def test_inside_lcfs(data):
 #    i_xpt = int(0)
 #    
 #    psi, opt_r, opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt \
-#        = run_c_func(c_find_x_point.find_null_in_gradient, psi, opt_r, 
+#        = run_c_func(c_libfind_x_point.find_null_in_gradient, psi, opt_r, 
 #        opt_z, opt_psi, i_opt, xpt_r, xpt_z, xpt_psi, i_xpt)
 #    
 #    r_lcfs = np.zeros(n_row*n_col)
@@ -217,7 +265,7 @@ def test_inside_lcfs(data):
 
 #    psi_bound = np.max(xpt_psi)*1.001
 
-#    psi, psi_bound, r_lcfs, z_lcfs, n_lcfs = run_c_func(c_find_x_point.find_lcfs_rz, 
+#    psi, psi_bound, r_lcfs, z_lcfs, n_lcfs = run_c_func(c_libfind_x_point.find_lcfs_rz, 
 #            psi, psi_bound, r_lcfs, z_lcfs, n_lcfs) 
 #            
 #    r_opt = opt_r[0]
@@ -228,7 +276,7 @@ def test_inside_lcfs(data):
 #   
 #    mask = np.zeros((n_row, n_col), dtype=np.int64)
 #        
-#    r_opt, z_opt, r_lcfs, z_lcfs, n_lcfs, mask = run_c_func(c_find_x_point.inside_lcfs, r_opt, z_opt, 
+#    r_opt, z_opt, r_lcfs, z_lcfs, n_lcfs, mask = run_c_func(c_libfind_x_point.inside_lcfs, r_opt, z_opt, 
 #            r_lcfs, z_lcfs, n_lcfs, mask)  
 #    
 #    mask = mask.astype(bool)
@@ -259,8 +307,8 @@ def test_inside_lcfs(data):
                
 if __name__ == "__main__":
 
-    
-    test_find_null_in_gradient(data)
+    data = loadmat(filename, squeeze_me=True)
+    test_find_null_in_gradient_march(data)
 #    test_flux_to_mask(r_vec, z_vec)
 #    psi, r_xpt, z_xpt, psi_xpt, r_opt, z_opt, psi_opt = solovev(r_vec, z_vec)
 #    
