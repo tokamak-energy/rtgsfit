@@ -15,6 +15,18 @@
 char *pcs1 = "acq2106_032";
 char *pcs2 = "acq2106_033";
 char filename[] = "replay_rtgsfit";
+char *decm_sig = "acq2106_032.decimate";
+char *fn_sensors_idx = "../data/sensor_index.txt";
+char *fn_pf_coil_idx = "../data/pfcoil_index.txt";
+char *fn_meas = "../data/meas.txt";
+char *fn_coil_curr = "../data/coil_curr.txt";
+char *fn_flux_norm = "../data/flux_norm.txt";
+char *fn_mask = "../data/mask.txt";
+char *fn_psi_total = "../data/psi_total.txt";
+float decimate;
+int dec;
+FILE *p_fid;
+uint32_t sensors_num, pf_coils_num;
 int signal_name_len = 100;
 unsigned int num_pcs1_channels = 160;
 unsigned int num_pcs2_channels = 128;
@@ -46,8 +58,11 @@ size_t size_pcs2_DI;
 size_t pcs2_data_len; /* length of pcs2 data in floats including time axis */
 size_t pcs2_dec_len; /* length of decimated pcs2 data */
 
-int pulseNo; /* pulse number to replay */
-float t_start; /* start time in s from plasma breakdown */
+uint32_t pulseNo; /* pulse number to replay */
+float t_start; /* start time [s] from plasma breakdown */
+float rtgsfit_step; /* step time [s] from t_start till t_end at each */
+  /* rtgsfit_step rtgsfit will be calculated */
+float t_end; /* end time [s] from plasma breakdown */
 size_t N_iter; /* number of iterations; equal the length of time axis */
 size_t dec_N_iter; /* number of decimated iterations */
 

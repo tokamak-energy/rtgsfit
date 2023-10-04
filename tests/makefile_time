@@ -1,0 +1,18 @@
+
+CC = gcc
+LIB = ../lib
+SRC = ../src
+
+test_rtgsfit_time: test_rtgsfit_time.o
+	$(CC) -L$(LIB) -pg -o $@  $< $(SRC)/constants.o $(SRC)/rtgsfit.o $(SRC)/gradient.o $(SRC)/find_x_point.o $(SRC)/poisson_solver.o $(SRC)/solve_tria.o -lm -lopenblas
+	
+test_rtgsfit_time.o: test_rtgsfit_time.c 
+	$(CC) -pg -o $@ -c $< -I$(SRC)
+	
+clean:
+	rm test_rtgsfit_time.o test_rtgsfit_time
+	
+
+
+
+
