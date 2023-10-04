@@ -229,7 +229,8 @@ int main(int argc, char *argv[]) {
     //    coil_idx[i]]);
     // }
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error);
+    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z, 
+        &lcfs_n, coef);
     clock_gettime(CLOCK_MONOTONIC, &t1);
     snprintf(str, sizeof(str), "%s_%01.3f", fn_psi_total_out, pcs1_dec_time[idx]);
     printf("%s_%01.3f\n", fn_psi_total_out, pcs1_dec_time[idx]);

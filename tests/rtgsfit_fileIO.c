@@ -14,7 +14,10 @@ int main() {
   char *fn_flux_norm = "../data/flux_norm.txt";
   char *fn_mask = "../data/mask.txt";
   char *fn_psi_total = "../data/psi_total.txt";
-
+  double lcfs_r[N_LCFS_MAX], lcfs_z[N_LCFS_MAX]; 
+  int lcfs_n;
+  double coef[N_COEF]; 
+  
   if (count_lines(fn_sensors_idx, &sensors_num) != 0) {
     errorExit("Cannot count lines");
   }
@@ -64,7 +67,8 @@ int main() {
   for (iter = 0; iter < 20; ++iter) {
     char *fn_psi_total_out = "../data/psi_total_out.txt";
     snprintf(str, sizeof(str), "%s_%02d", fn_psi_total_out, iter);
-    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error);
+    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z, 
+        &lcfs_n, coef);
     p_fid = fopen(str, "w");
     for (i = 0; i < N_GRID; ++i) {
       fprintf(p_fid, "%lf\n", psi_total[i]);
