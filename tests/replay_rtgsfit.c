@@ -14,9 +14,12 @@ int main(int argc, char *argv[]) {
   char *decm_sig = "acq2106_032.decimate";
   float decimate;
   int dec;
+  double lcfs_r[N_LCFS_MAX], lcfs_z[N_LCFS_MAX]; 
+  int lcfs_n;
+  double coef[N_COEF]; 
   char signal_name[signal_name_len];
   char *fn_sensors_idx = "../data/sensor_index.txt";
-  char *fn_pf_coil_idx = "../data/pfcoil_index.txt";
+  char *fn_pf_coil_idx = "../data/pf_coil_index.txt";
   char *fn_meas = "../data/meas.txt";
   char *fn_coil_curr = "../data/coil_curr.txt";
   char *fn_flux_norm = "../data/flux_norm.txt";
@@ -230,7 +233,8 @@ int main(int argc, char *argv[]) {
     sizeof(float), (size_t)dec_N_iter, &pcs_dec_data[dec_N_iter * sensors_idx[29]]);
   for (istep = 0; istep < N_steps;  ++istep) {
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error);
+    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z, 
+        &lcfs_n, coef);
     clock_gettime(CLOCK_MONOTONIC, &t1);
     t10[istep] = (long)
       ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);

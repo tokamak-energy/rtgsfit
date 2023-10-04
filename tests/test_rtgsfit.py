@@ -17,7 +17,8 @@ from py_to_ctypes import run_c_func
 #inputsname = '../data/12001000_RUN01_inputs_fj.mat'
 
 filename = '../data/12001000_RUN01_for_c.mat'
-inputsname = '../data/12001000_RUN01_inputs.mat'
+#inputsname = '../data/12001000_RUN01_inputs.mat'
+inputsname = '../data/11338_mag_BEST_inputs.mat'
 
 data = loadmat(filename, squeeze_me=True)
 inputs = loadmat(inputsname, squeeze_me=True)
