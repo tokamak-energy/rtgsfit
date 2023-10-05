@@ -241,7 +241,7 @@ void rtgsfit(
     lcfs_flux = find_flux_on_limiter(flux_total);
     
     // find x point & opt
-    find_null_in_gradient(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
+    find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
             xpt_r, xpt_z, xpt_flux, &xpt_n);
 
     // select opt
