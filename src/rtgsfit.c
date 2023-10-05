@@ -28,7 +28,6 @@ int max_idx(
             i_max = i_arr;
         }
     }
-    printf("%d\n", i_max);
     return i_max;
 } 
 
@@ -158,7 +157,6 @@ void rtgsfit(
     double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
     int xpt_n = 0;
     int opt_n = 0;
-    FILE *fptr;
     
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
@@ -233,13 +231,10 @@ void rtgsfit(
     }
     else
     {
-        fptr = fopen("psi_tot_out.txt", "w");
         for (i_grid=0; i_grid<N_GRID; i_grid++)
         {
             flux_total[i_grid] +=  flux_pls[i_grid];
-            fprintf(fptr, "%lf \n", flux_total[i_grid]);
         }    
-        fclose(fptr);  
     }
 
     // flux value on limiter
@@ -250,18 +245,10 @@ void rtgsfit(
             xpt_r, xpt_z, xpt_flux, &xpt_n);
 
     // select opt
-    printf("%d, outside\n", opt_n);
-    for (i_grid=0; i_grid< opt_n; i_grid++)
-    {
-        printf("%lf, %lf, %lf\n", opt_r[i_grid], opt_z[i_grid], opt_flux[i_grid]);
-    }
     i_opt = max_idx(opt_n, opt_flux);    
-    printf("%d, %d", i_opt, opt_n);
     axis_flux = opt_flux[i_opt];
     axis_r = opt_r[i_opt];
     axis_z = opt_z[i_opt];  
-    
-    printf("%f, %f, %f", axis_r, axis_z, axis_flux);
     
     // select xpt      
     if (xpt_n > 0)

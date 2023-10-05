@@ -237,29 +237,25 @@ void find_null_in_gradient_march(
         for (i_col = 0; i_col < N_R-1; i_col++)
         {
             idx = i_row*N_R + i_col;
-            printf("%d, %d \n", i_row, i_col);
             
             gr_patch[0] = grad_r[idx];
             gr_patch[1] = grad_r[idx+1]; 
             gr_patch[2] = grad_r[idx+N_R];
             gr_patch[3] = grad_r[idx+N_R+1];
-            printf("a\n");
+
             gz_patch[0] = grad_z[idx];
             gz_patch[1] = grad_z[idx+1]; 
             gz_patch[2] = grad_z[idx+N_R];
             gz_patch[3] = grad_z[idx+N_R+1];
-            printf("b\n");        
+
             find_zero_on_edge(gr_patch, grs_row, grs_col, &count_r);
             find_zero_on_edge(gz_patch, gzs_row, gzs_col, &count_z);
-            printf("c\n");
+
             if ((count_r > 0) && (count_z > 0))
             {
 
-                printf("d\n");
                 n_comb(count_r, &n_comb_r, idx_r_start, idx_r_end);            
                 n_comb(count_z, &n_comb_z, idx_z_start, idx_z_end);            
- 
-                printf("count_r: %d, count_z: %d, row: %d, col: %d, n_comb_r: %d, n_comb_z: %d\n", count_r, count_z, i_row, i_col, n_comb_r, n_comb_z);
                                                 
                 for (ii = 0; ii < n_comb_r; ii++)
                 {
@@ -296,9 +292,7 @@ void find_null_in_gradient_march(
                                 hess_rz_at_null = lin_intrp_2(hess_rz, idx, col_off, row_off);
                             
                                 hess_det_at_null = hess_rr_at_null*hess_zz_at_null - \
-                                        hess_rz_at_null*hess_rz_at_null;
-                                
-                                printf("%f, %f, %f, %f \n",  R_VEC[i_col] + DR*col_off, Z_VEC[i_row] + DZ*row_off, hess_det_at_null, hess_rr_at_null);
+                                        hess_rz_at_null*hess_rz_at_null;                               
                                 
                                 if (hess_det_at_null > 0.0 && hess_rr_at_null < 0.0 && MASK_LIM[idx]) 
                                 {
@@ -306,7 +300,6 @@ void find_null_in_gradient_march(
                                     opt_z[*opt_n] = Z_VEC[i_row] + DZ*row_off;    
                                     opt_flux[*opt_n] = lin_intrp_2(flux, idx, col_off, row_off);
                                     *opt_n += 1;
-                                    printf("opt: %f, %f, %f, %f \n",  R_VEC[i_col] + DR*col_off, Z_VEC[i_row] + DZ*row_off, hess_det_at_null, hess_rr_at_null);
                                 }
                                 else if (hess_det_at_null < 0.0)
                                 {
@@ -314,7 +307,6 @@ void find_null_in_gradient_march(
                                     xpt_z[*xpt_n] = Z_VEC[i_row] + DZ*row_off;    
                                     xpt_flux[*xpt_n] = lin_intrp_2(flux, idx, col_off, row_off);
                                     *xpt_n += 1;     
-                                    printf("zpt: %f, %f, %f, %f \n",  R_VEC[i_col] + DR*col_off, Z_VEC[i_row] + DZ*row_off, hess_det_at_null, hess_rr_at_null);
                                 }
                             }
                         }
