@@ -234,14 +234,14 @@ void rtgsfit(
         for (i_grid=0; i_grid<N_GRID; i_grid++)
         {
             flux_total[i_grid] +=  flux_pls[i_grid];
-        }      
+        }    
     }
 
     // flux value on limiter
     lcfs_flux = find_flux_on_limiter(flux_total);
     
     // find x point & opt
-    find_null_in_gradient(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
+    find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n, 
             xpt_r, xpt_z, xpt_flux, &xpt_n);
 
     // select opt
@@ -255,7 +255,7 @@ void rtgsfit(
     {
         i_xpt = max_idx(xpt_n, xpt_flux);
         xpt_flux_max = xpt_flux[i_xpt];      
-        xpt_flux_max = FRAC * xpt_flux_max + (1-FRAC)*axis_flux;
+        xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*axis_flux;
         if (xpt_flux_max > lcfs_flux)
         {
             lcfs_flux = xpt_flux_max;
