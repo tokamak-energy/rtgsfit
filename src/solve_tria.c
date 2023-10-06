@@ -117,6 +117,7 @@ void back_sub_lower_short(
     for (ii=N_R; ii<(N_GRID-N_R); ii++)
     {
         sum = 0.0;
+        #pragma omp simd reduction(+:sum)
         for (jj=0; jj<N_R; jj++)
         {
             idx = N_R*ii + jj;

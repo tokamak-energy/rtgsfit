@@ -12,7 +12,7 @@ ifeq ($(DEBUG), 1)
 	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread
 	LDFLAGS = -pg -shared
 else
-	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
+	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto -fopt-info-vec-all=tmp -fopenmp -mavx512f
 	LDFLAGS = -shared -Wl,-Ofast -pthread
 endif
 
