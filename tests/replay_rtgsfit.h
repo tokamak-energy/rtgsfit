@@ -11,12 +11,18 @@
 #include "mds_tools.h"
 #include "constants.h"
 #include "rtgsfit.h"
+#include "gains.h"
+
+int get_int_from_file(char *file_name, uint32_t array_size, int *array);
+int get_double_from_file(char *file_name, uint32_t array_size, double *array);
+int count_lines(char *, uint32_t *);
+char error_msg[200];
 
 char *pcs1 = "acq2106_032";
 char *pcs2 = "acq2106_033";
 char filename[] = "replay_rtgsfit";
 char *decm_sig = "acq2106_032.decimate";
-char *fn_sensors_idx = "../data/sensor_index.txt";
+char *fn_sensors_idx = "../data/rtgsfit_idx.txt";
 char *fn_pf_coil_idx = "../data/pfcoil_index.txt";
 char *fn_meas = "../data/meas.txt";
 char *fn_coil_curr = "../data/coil_curr.txt";
