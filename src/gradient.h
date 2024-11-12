@@ -9,7 +9,7 @@ void hessian_zz(double* arr, double* hess_zz);
         
 void hessian_rr(double* arr, double* hess_rr);
         
-void hessian_rz(double* arr, double* hess_rz);
+//void hessian_rz(double* arr, double* hess_rz);
         
 void gradient_bound(double* arr, double* grad_bound);
 

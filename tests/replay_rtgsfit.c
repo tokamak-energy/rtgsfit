@@ -7,7 +7,7 @@ int count_lines(char *, uint32_t *);
 int main(int argc, char *argv[]) {
   /* local vars */
   int i, ret;
-  server = "smaug";
+  char *server = "smaug";
   tree_name = "tepcs";
   char str[100];
   char sig_name[200];
@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
   double lcfs_z[N_LCFS_MAX];
   int lcfs_n = 0;
   double coef[N_COEF];
+  set_server_name(server);
 
   /* Convert input argument to unsigned long long with base 10; */
   // check_pulseNo_validity(argv[1], filename, &pulseNo);
@@ -99,13 +100,13 @@ int main(int argc, char *argv[]) {
 
   /* use get_signal_length to get size of sig_name */
   snprintf(sig_name, signal_name_len, "%s.CH%03d", pcs1, 1);
-  len_pcs1_sign = get_signal_length(server, tree_name, pulseNo, sig_name);
+  len_pcs1_sign = get_signal_length(tree_name, pulseNo, sig_name);
   if (len_pcs1_sign < 1) {
     errorExit("Error retrieving length of sig_name pcs1 channel 1.");
   }
   /* use get_signal_length to get size of sig_name */
   snprintf(sig_name, signal_name_len, "%s.CH%03d", pcs2, 1);
-  len_pcs2_sign = get_signal_length(server, tree_name, pulseNo, sig_name);
+  len_pcs2_sign = get_signal_length(tree_name, pulseNo, sig_name);
   if (len_pcs2_sign < 1) {
     errorExit("Error retrieving length of sig_name pcs2 channel 1.");
   }
@@ -120,7 +121,7 @@ int main(int argc, char *argv[]) {
   if (!pcs1_data) {
     errorExit("Failed to allocate memory block for pcs1 data.");
   }
-  ret = get_dtacqbox(pulseNo, server, tree_name, pcs1, num_pcs1_channels,
+  ret = get_dtacqbox(pulseNo, tree_name, pcs1, num_pcs1_channels,
     len_pcs1_sign, pcs1_data, &size_pcs1_data);
   if (ret == EXIT_FAILURE) {
     errorExit("pcs1 data not returned");
@@ -133,14 +134,14 @@ int main(int argc, char *argv[]) {
   if (!pcs2_data) {
     errorExit("Failed to allocate memory block for pcs2 data.");
   }
-  ret = get_dtacqbox(pulseNo, server, tree_name, pcs2, num_pcs2_channels,
+  ret = get_dtacqbox(pulseNo, tree_name, pcs2, num_pcs2_channels,
     len_pcs2_sign, pcs2_data, &size_pcs2_data);
   if (ret == EXIT_FAILURE) {
     errorExit("pcs2 data not returned");
   }
 
   /* get decimate parameter */
-  ret = get_value(pulseNo, server, tree_name, decm_sig, &decimate);
+  ret = get_value(pulseNo, tree_name, decm_sig, &decimate);
   if(ret == EXIT_FAILURE) {
     errorExit("Failed to get decimate value.");
   }
@@ -211,35 +212,34 @@ int main(int argc, char *argv[]) {
         meas[i] = 0;
       }
     }
-    double pf160 = (double)(pcs_dec_data[dec_N_iter * 160 + idx]) * gains[160];
-    double pf161 = (double)(pcs_dec_data[dec_N_iter * 161 + idx]) * gains[161];
-    double pf162 = (double)(pcs_dec_data[dec_N_iter * 162 + idx]) * gains[162];
-    double pf163 = (double)(pcs_dec_data[dec_N_iter * 163 + idx]) * gains[163];
-    double pf164 = (double)(pcs_dec_data[dec_N_iter * 164 + idx]) * gains[164];
-    double pf165 = (double)(pcs_dec_data[dec_N_iter * 165 + idx]) * gains[165];
-    double pf166 = (double)(pcs_dec_data[dec_N_iter * 166 + idx]) * gains[166];
-    double pf167 = (double)(pcs_dec_data[dec_N_iter * 167 + idx]) * gains[167];
-    double pf168 = (double)(pcs_dec_data[dec_N_iter * 168 + idx]) * gains[168];
-    printf("160 %lf, 161 %lf, 162 %lf, 163 %lf, 164 %lf, 165 %lf, 166 %lf, 167 %lf, 168 %lf\n",
-     pf160, pf161, pf162, pf163, pf164, pf165, pf166, pf167, pf168);
     for (i = 0; i < N_COIL; ++i) {
       coil_curr[i] = (double)(pcs_dec_data[dec_N_iter * coil_idx[i] + idx]) * gains[coil_idx[i]];
-       printf("coil_curr %lf coil_idx %d %f\n", coil_curr[i], coil_idx[i], gains[coil_idx[i]]);
     }
     clock_gettime(CLOCK_MONOTONIC, &t0);
     rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z,
         &lcfs_n, coef);
+    // printf("er %lf, lcin %d\n", error_in, lcfs_n_in);
+    // printf("size of int is %d\n", sizeof(int));
+    // rtgsfit_simulink(meas, coil_curr, flux_norm_in, flux_norm_out, mask_in, mask_out,
+    //   psi_total_in, psi_total_out, error_in, &error_out, lcfs_r, lcfs_z,
+    //   lcfs_n_in, &lcfs_n_out, coef);
+    //   memcpy(flux_norm_in, flux_norm_out, N_GRID * sizeof(double));
+    //   memcpy(mask_in, mask_out, N_GRID * sizeof(int));
+    //   memcpy(psi_total_in, psi_total_out, N_GRID * sizeof(double));
+    //   error_in = error_out;
+    //   lcfs_n_in = lcfs_n_out;
+
     clock_gettime(CLOCK_MONOTONIC, &t1);
-    snprintf(str, sizeof(str), "%s_%01.4f", fn_psi_total_out, pcs1_dec_time[idx]);
-    printf("%s_%01.3f\n", fn_psi_total_out, pcs1_dec_time[idx]);
+    snprintf(str, sizeof(str), "%s2_%01.4f", fn_psi_total_out, pcs1_dec_time[idx]);
+    printf("%s_%01.3f time %lf\n", fn_psi_total_out, pcs1_dec_time[idx], istep * data_step);
     p_fid = fopen(str, "w");
     for (i = 0; i < N_GRID; ++i) {
       fprintf(p_fid, "%lf\n", psi_total[i]);
     }
     fclose(p_fid);
-    // t10[istep] = (long)
-    //   ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
-    //   printf("here time %ld\n", t10[istep]);
+    // // t10[istep] = (long)
+    // //   ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
+    // //   printf("here time %ld\n", t10[istep]);
     // istep++;
   }
   // }
