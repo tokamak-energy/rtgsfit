@@ -207,7 +207,7 @@ void find_null_in_gradient_march(
         )
 {
 
-    int idx, i_row, i_col, ii, jj;
+    int idx, i_row, i_col; 
     double gr_patch[NP], gz_patch[NP], grs_row[NP], gzs_row[NP], grs_col[NP], gzs_col[NP];
     double grad_z[N_GRID], grad_r[N_GRID], hess_zz[N_GRID], hess_rr[N_GRID], hess_rz[N_GRID];
     double hess_det_at_null;
@@ -262,22 +262,22 @@ void find_null_in_gradient_march(
                 n_comb(count_r, &n_comb_r, idx_r_start, idx_r_end);
                 n_comb(count_z, &n_comb_z, idx_z_start, idx_z_end);
 
-                for (ii = 0; ii < n_comb_r; ii++)
+                for (int r_idx = 0; r_idx < n_comb_r; r_idx++)
                 {
-                    gr_row_start = grs_row[idx_r_start[ii]];
-                    gr_row_end = grs_row[idx_r_end[ii]];
+                    gr_row_start = grs_row[idx_r_start[r_idx]];
+                    gr_row_end = grs_row[idx_r_end[r_idx]];
 
-                    gr_col_start = grs_col[idx_r_start[ii]];
-                    gr_col_end = grs_col[idx_r_end[ii]];
+                    gr_col_start = grs_col[idx_r_start[r_idx]];
+                    gr_col_end = grs_col[idx_r_end[r_idx]];
 
-                    for (jj = 0; jj < n_comb_z; jj++)
+                    for (int z_idx = 0; z_idx < n_comb_z; z_idx++)
                     {
 
-                        gz_row_start = gzs_row[idx_z_start[ii]];
-                        gz_row_end = gzs_row[idx_z_end[ii]];
+                        gz_row_start = gzs_row[idx_z_start[z_idx]];
+                        gz_row_end = gzs_row[idx_z_end[z_idx]];
 
-                        gz_col_start = gzs_col[idx_z_start[ii]];
-                        gz_col_end = gzs_col[idx_z_end[ii]];
+                        gz_col_start = gzs_col[idx_z_start[z_idx]];
+                        gz_col_end = gzs_col[idx_z_end[z_idx]];
 
                         if ((min(gz_row_start, gz_row_end) <= max(gr_row_start, gr_row_end)) &&
                                 (min(gr_row_start, gr_row_end) <= max(gz_row_start, gz_row_end)) &&
