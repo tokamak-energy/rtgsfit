@@ -55,3 +55,9 @@ dkms.conf
 src/constants.c
 tests/c_*.py
 **/__pycache__
+
+# Editor files
+.vscode/
+
+# Binary data files
+*.nc

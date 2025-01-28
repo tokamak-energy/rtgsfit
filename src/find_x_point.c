@@ -273,11 +273,11 @@ void find_null_in_gradient_march(
                     for (jj = 0; jj < n_comb_z; jj++)
                     {
 
-                        gz_row_start = gzs_row[idx_z_start[ii]];
-                        gz_row_end = gzs_row[idx_z_end[ii]];
+                        gz_row_start = gzs_row[idx_z_start[jj]];
+                        gz_row_end = gzs_row[idx_z_end[jj]];
 
-                        gz_col_start = gzs_col[idx_z_start[ii]];
-                        gz_col_end = gzs_col[idx_z_end[ii]];
+                        gz_col_start = gzs_col[idx_z_start[jj]];
+                        gz_col_end = gzs_col[idx_z_end[jj]];
 
                         if ((min(gz_row_start, gz_row_end) <= max(gr_row_start, gr_row_end)) &&
                                 (min(gr_row_start, gr_row_end) <= max(gz_row_start, gz_row_end)) &&
