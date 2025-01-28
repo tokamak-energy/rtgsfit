@@ -8,14 +8,13 @@ int main(int argc, char *argv[]) {
   /* local vars */
   int i, ret;
   char *server = "smaug";
-  tree_name = "tepcs";
+  char *tree = "tepcs";
   char str[100];
   char sig_name[200];
   double lcfs_r[N_LCFS_MAX];
   double lcfs_z[N_LCFS_MAX];
   int lcfs_n = 0;
   double coef[N_COEF];
-  set_server_name(server);
 
   /* Convert input argument to unsigned long long with base 10; */
   // check_pulseNo_validity(argv[1], filename, &pulseNo);
@@ -27,12 +26,12 @@ int main(int argc, char *argv[]) {
   rtgsfit_step = atof(argv[3]);
   t_end = atof(argv[4]);
   printf("t_start %f t_step %f\n", t_start, rtgsfit_step);
-  if ((t_start < 0.0) || (t_start > 0.5)) {
+  if ((t_start < -1.1) || (t_start > 0.5)) {
     snprintf(error_msg, sizeof(error_msg), "There is no plasma in selected time"
       " %f\n", t_start);
     errorExit(error_msg);
   }
-  if ((rtgsfit_step < 0.0001) || (rtgsfit_step > 0.1)) {
+  if ((rtgsfit_step < 0.00005) || (rtgsfit_step > 0.1)) {
     snprintf(error_msg, sizeof(error_msg), "rtgsfit_step is not set correctly "
       "%f\n", rtgsfit_step);
     errorExit(error_msg);
@@ -100,13 +99,13 @@ int main(int argc, char *argv[]) {
 
   /* use get_signal_length to get size of sig_name */
   snprintf(sig_name, signal_name_len, "%s.CH%03d", pcs1, 1);
-  len_pcs1_sign = get_signal_length(tree_name, pulseNo, sig_name);
+  len_pcs1_sign = get_signal_length(server, pulseNo, tree, sig_name);
   if (len_pcs1_sign < 1) {
     errorExit("Error retrieving length of sig_name pcs1 channel 1.");
   }
   /* use get_signal_length to get size of sig_name */
   snprintf(sig_name, signal_name_len, "%s.CH%03d", pcs2, 1);
-  len_pcs2_sign = get_signal_length(tree_name, pulseNo, sig_name);
+  len_pcs2_sign = get_signal_length(server, pulseNo, tree, sig_name);
   if (len_pcs2_sign < 1) {
     errorExit("Error retrieving length of sig_name pcs2 channel 1.");
   }
@@ -121,7 +120,7 @@ int main(int argc, char *argv[]) {
   if (!pcs1_data) {
     errorExit("Failed to allocate memory block for pcs1 data.");
   }
-  ret = get_dtacqbox(pulseNo, tree_name, pcs1, num_pcs1_channels,
+  ret = get_dtacqbox(server, pulseNo, tree, pcs1, num_pcs1_channels,
     len_pcs1_sign, pcs1_data, &size_pcs1_data);
   if (ret == EXIT_FAILURE) {
     errorExit("pcs1 data not returned");
@@ -134,14 +133,14 @@ int main(int argc, char *argv[]) {
   if (!pcs2_data) {
     errorExit("Failed to allocate memory block for pcs2 data.");
   }
-  ret = get_dtacqbox(pulseNo, tree_name, pcs2, num_pcs2_channels,
+  ret = get_dtacqbox(server, pulseNo, tree, pcs2, num_pcs2_channels,
     len_pcs2_sign, pcs2_data, &size_pcs2_data);
   if (ret == EXIT_FAILURE) {
     errorExit("pcs2 data not returned");
   }
 
   /* get decimate parameter */
-  ret = get_value(pulseNo, tree_name, decm_sig, &decimate);
+  ret = get_value(server, pulseNo, tree, decm_sig, &decimate);
   if(ret == EXIT_FAILURE) {
     errorExit("Failed to get decimate value.");
   }
@@ -218,16 +217,6 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &t0);
     rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z,
         &lcfs_n, coef);
-    // printf("er %lf, lcin %d\n", error_in, lcfs_n_in);
-    // printf("size of int is %d\n", sizeof(int));
-    // rtgsfit_simulink(meas, coil_curr, flux_norm_in, flux_norm_out, mask_in, mask_out,
-    //   psi_total_in, psi_total_out, error_in, &error_out, lcfs_r, lcfs_z,
-    //   lcfs_n_in, &lcfs_n_out, coef);
-    //   memcpy(flux_norm_in, flux_norm_out, N_GRID * sizeof(double));
-    //   memcpy(mask_in, mask_out, N_GRID * sizeof(int));
-    //   memcpy(psi_total_in, psi_total_out, N_GRID * sizeof(double));
-    //   error_in = error_out;
-    //   lcfs_n_in = lcfs_n_out;
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
     snprintf(str, sizeof(str), "%s2_%01.4f", fn_psi_total_out, pcs1_dec_time[idx]);

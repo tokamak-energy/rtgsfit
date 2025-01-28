@@ -150,7 +150,7 @@ void rtgsfit(
     double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
     double g_pls_grid[N_PLS*N_GRID];
     int info, i_grid, i_opt, i_xpt, i_meas;
-    long int rank;
+    int rank;
     double rcond = -1.0;
     double xpt_flux_max;
     double single_vals[N_COEF], meas_no_coil_cp[N_MEAS];
