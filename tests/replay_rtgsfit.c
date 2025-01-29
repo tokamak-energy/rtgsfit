@@ -211,23 +211,10 @@ int main(int argc, char *argv[]) {
 
 
   // Dynamically allocate memory for "output" arrays
-  double *time_out = (double *)malloc(n_iter+1 * sizeof(double));
-  double *psi_b_out = (double *)malloc(n_iter+1 * sizeof(double));
-
-  int ***mask_out = (int ***)malloc((n_iter+1) * sizeof(int **));
-  for (int i_time = 0; i_time < n_iter+1; i_time++) {
-      mask_out[i_time] = (int **)malloc(N_Z * sizeof(int *));
-      for (int i_z = 0; i_z < N_Z; i_z++) {
-          mask_out[i_time][i_z] = (int *)malloc(N_R * sizeof(int));
-      }
-  }
-  double ***psi_total_out = (double ***)malloc((n_iter+1) * sizeof(double **));
-  for (int i_time = 0; i_time < n_iter+1; i_time++) {
-      psi_total_out[i_time] = (double **)malloc(N_Z * sizeof(double *));
-      for (int z = 0; z < N_Z; z++) {
-          psi_total_out[i_time][z] = (double *)malloc(N_R * sizeof(double));
-      }
-  }
+  double *time_out = (double *)malloc((n_iter+1) * sizeof(double));
+  double *flux_boundary_out = (double *)malloc((n_iter+1) * sizeof(double));
+  double *flux_total_out = (double *)malloc((n_iter+1)*N_R*N_Z * sizeof(double));
+  double *mask_out = (double *)malloc((n_iter+1)*N_R*N_Z * sizeof(double));
 
   // Loop over time
   int i_time = 0;
@@ -261,17 +248,23 @@ int main(int argc, char *argv[]) {
         &lcfs_n, coef, &psi_b);
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
+    // // Store 3d arrays
+    // for (int i_z = 0; i_z < N_Z; ++i_z) {
+    //   for (int i_r = 0; i_r < N_R; ++i_r) {
+    //     int index = i_z * N_R + i_r;
+    //     int index_out = i_time* N_Z * N_R + i_z * N_R + i_r;
+    //     flux_total_out[index_out] = psi_total[index];
+    //     mask_out[index_out] = mask_out[index];
+    //   }
+    // }
     // Store 3d arrays
-    for (int i_z = 0; i_z < N_Z; ++i_z) {
-      for (int i_r = 0; i_r < N_R; ++i_r) {
-        int index = i_z * N_R + i_r;
-        psi_total_out[i_time][i_z][i_r] = psi_total[i_z * N_R + i_r];
-        mask_out[i_time][i_z][i_r] = mask[i_z * N_R + i_r];
-      }
+    for (int i_rz = 0; i_rz < N_GRID; ++i_rz) {
+      flux_total_out[i_time* N_Z * N_R + i_rz] = psi_total[i_rz];
+      mask_out[i_time* N_Z * N_R + i_rz] = mask_out[i_rz];
     }
 
     time_out[i_time] = (double)pcs1_dec_time[idx];
-    psi_b_out[i_time] = psi_b;
+    flux_boundary_out[i_time] = psi_b;
 
     snprintf(str, sizeof(str), "%s_%01.4f", fn_coef_out, pcs1_dec_time[idx]);
     p_fid = fopen(str, "w");
@@ -293,6 +286,9 @@ int main(int argc, char *argv[]) {
       fprintf(p_fid, "%lf\n", lcfs_z[i]);
     }
     fclose(p_fid);
+
+    printf("i_time=%d\n", i_time);
+    printf("n_iter=%d\n", n_iter);
 
     i_time++;
   }
@@ -323,10 +319,10 @@ int main(int argc, char *argv[]) {
   int dimids_z[1] = {dimid_z};
 
   // Define variables
-  nc_def_var(ncid, "psi_total", NC_DOUBLE, 3, dimids_time_z_r, &varid_psi);
+  nc_def_var(ncid, "flux_total", NC_DOUBLE, 3, dimids_time_z_r, &varid_psi);
   nc_def_var(ncid, "mask", NC_INT, 3, dimids_time_z_r, &varid_mask);
   nc_def_var(ncid, "time", NC_DOUBLE, 1, dimids_time, &varid_time);
-  nc_def_var(ncid, "psi_b", NC_DOUBLE, 1, dimids_time, &varid_psi_b);
+  nc_def_var(ncid, "flux_boundary", NC_DOUBLE, 1, dimids_time, &varid_psi_b);
   nc_def_var(ncid, "r", NC_DOUBLE, 1, dimids_r, &varid_r);
   nc_def_var(ncid, "z", NC_DOUBLE, 1, dimids_z, &varid_z);
 
@@ -334,10 +330,10 @@ int main(int argc, char *argv[]) {
   nc_enddef(ncid);
 
   // Write data into NetCDF file
-  nc_put_var_double(ncid, varid_psi, psi_total_out);
+  nc_put_var_double(ncid, varid_psi, flux_total_out);
   nc_put_var_int(ncid, varid_mask, mask_out);
   nc_put_var_double(ncid, varid_time, time_out);
-  nc_put_var_double(ncid, varid_psi_b, psi_b_out);
+  nc_put_var_double(ncid, varid_psi_b, flux_boundary_out);
   nc_put_var_double(ncid, varid_r, R_VEC);
   nc_put_var_double(ncid, varid_z, Z_VEC);
 
@@ -360,10 +356,10 @@ int main(int argc, char *argv[]) {
   free((void *)t21);
   free((void *)t32);
 
-  free((void *)psi_total_out);
-  // free(psi_b_out);  // TODO: this causes segmenation fault??
-  // free((void *)mask_out);  // TODO: this causes segmenation fault??
-  // free((void *)time_out);  // TODO: this causes segmenation fault??
+  free((void *)flux_total_out);
+  free(flux_boundary_out);
+  free((void *)mask_out);
+  free((void *)time_out);
 
   /* done */
   return EXIT_SUCCESS;
