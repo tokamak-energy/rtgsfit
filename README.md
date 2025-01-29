@@ -99,3 +99,50 @@ R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
 * vessel filaments
 
 
+# To compile
+(Peter's notes)
+```bash
+git checkout replay_rtgsfit
+scl enable devtoolset-11 bash
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/
+cd src/
+make
+```
+
+To check out PCS
+/home/peter.buxton/0_Version_Controlled/pcs/model/ST40PCS
+gcc -c -o bin/mds_tools.o src/mds_tools.c -Iinclude -I/usr/local/mdsplus/include
+gcc -c -o bin/utils.o src/utils.c -Iinclude
+
+To compile tests
+```bash
+cd ../tests/
+make -f makefile_test PCS_PATH=/home/peter.buxton/0_Version_Controlled/pcs
+```
+
+./replay_rtgsfit 12050 0.01 0.002 0.2
+
+
+# Important
+"const_to_file.py" is what adds the constants into the c
+
+
+
+make DATAFILE=/home/peter.buxton/0_Version_Controlled/rtgsfit/data/12001000_RUN04_for_c.mat
+
+
+One line running:
+```bash
+cd src/; make DATAFILE=/home/peter.buxton/0_Version_Controlled/rtgsfit/data/12001000_RUN04_for_c.mat; cd ../tests/; rm replay_rtgsfit; make -f makefile_test PCS_PATH=/home/peter.buxton/0_Version_Controlled/pcs; ./replay_rtgsfit 12050 0.01 0.0004 0.2; cd ../
+```
+
+plotting
+```bash
+python3 ../py-files/plot_timed_data.py
+````
+
+
+backtrace
+gdb --args ./replay_rtgsfit 12050 0.02 0.0005 0.2;
+run
+bt
