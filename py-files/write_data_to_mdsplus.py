@@ -6,9 +6,20 @@ import numpy as np
 
 # Variables to write to MDSplus
 pulseNo = 12_050
-pulseNo_write = pulseNo + 11_000_000
-run_name = "RUN03"
-run_description = "test writing"
+
+username = "peter.buxton"
+# username = "filip.janky"
+
+if username == "filip.janky":
+    data_file_name = f"/home/filip.janky/ops/rtgsfit/tests/rtgsfit_results_{pulseNo}.nc"
+    pulseNo_write = pulseNo + 30_000_000
+    run_name = "RUN01"
+    run_description = "test writing"
+elif username == "peter.buxton":
+    data_file_name = f"/home/peter.buxton/0_Version_Controlled/rtgsfit_github/tests/rtgsfit_results_{pulseNo}.nc"
+    pulseNo_write = pulseNo + 11_000_000
+    run_name = "RUN01"
+    run_description = "test writing"
 
 # Load data from netCDF file
 data_file_name = f"/home/peter.buxton/0_Version_Controlled/rtgsfit_github/tests/rtgsfit_results_{pulseNo}.nc"
@@ -16,8 +27,8 @@ with Dataset(data_file_name, "r") as nc:
     print("Variables in netCDF file:")
     for var in nc.variables:
         print(var)
-    psi = np.array(nc.variables["psi_total"][:])
-    psi_b = np.array(nc.variables["psi_b"][:])
+    psi = np.array(nc.variables["flux_total"][:])
+    psi_b = np.array(nc.variables["flux_boundary"][:])
     mask = np.array(nc.variables["mask"][:])
     time = np.array(nc.variables["time"][:])
     r = np.array(nc.variables["r"][:])
