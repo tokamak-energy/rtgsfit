@@ -1,0 +1,9 @@
+set_global_conda
+
+conda create -n py311 python=3.11
+conda activate py311
+
+pip install standard_utility diagnostics_analysis_base matplotlib netCDF4
+
+cd /TO/MDSPLUS/
+pip install .
