@@ -251,9 +251,12 @@ int main(int argc, char *argv[]) {
       gains[coil_idx[i]];
     }
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z,
+    ret = rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z,
         &lcfs_n, coef, &flux_boundary);
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    if (ret) {
+      printf("lapack returns %d", ret);
+    }
     // t10[iter] = (long)
     //     ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
 

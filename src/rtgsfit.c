@@ -131,7 +131,7 @@ void normalise_flux(
 
 
 
-void rtgsfit(
+int rtgsfit(
         double* meas,
         double* coil_curr,
         double* flux_norm,
@@ -372,5 +372,5 @@ void rtgsfit(
 
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
-
+  return info;
 }
