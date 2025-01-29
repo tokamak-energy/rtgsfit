@@ -472,7 +472,7 @@ void find_null_in_gradient(
 
 
 void find_lcfs_rz(
-        double* flux_orig,
+        double* flux,
         double flux_lcfs,
         double* lcfs_r,
         double* lcfs_z,
@@ -482,47 +482,62 @@ void find_lcfs_rz(
 
     int i_row, i_col, idx;
     double off;
-    double flux[N_GRID];
+    double flux_offset[N_GRID];
 
     *lcfs_n = 0;
 
+    // Offset the flux. The boundary is where `flux_offset = 0`
     for (idx=0; idx<(N_Z*N_R); idx++)
     {
-        flux[idx] = flux_orig[idx] - flux_lcfs;
+        flux_offset[idx] = flux[idx] - flux_lcfs;
     }
 
+    // Loop over z
+    // We are excluding the last row because we will be comparing the flux at this gird point (r, z) to the flux at (r + d_r, z)
     for (i_row=0; i_row<N_Z-1; i_row++)
     {
+        // Loop over z
+        // We are excluding the last row because we will be comparing the flux at this gird point (r, z) to the flux at (r, z + d_z)
         for (i_col=0; i_col<N_R-1; i_col++)
         {
             idx = i_row*N_R + i_col;
 
-            if ((fabs(flux[idx]) < THRESH)  && MASK_LIM[idx])
+            // If flux is small and within the vacuum vessel add grid point to lcfs
+            // THRESH=1e-10; Is there any point in this? Or should we always do linear interpolation?
+            // I can't see any reason it would fail?
+            if ((fabs(flux_offset[idx]) < THRESH)  && MASK_LIM[idx])
             {
-
                 lcfs_r[*lcfs_n] = R_VEC[i_col];
                 lcfs_z[*lcfs_n] = Z_VEC[i_row];
                 *lcfs_n = *lcfs_n + 1;
             }
             else
             {
-                if ((flux[idx] * flux[idx+1] < 0)  && (MASK_LIM[idx] || MASK_LIM[idx+1]))
+                // Compare the flux at this grid point (r, z) to the flux at (r + d_r, z).
+                // If there is a sign change then the lcfs must be between grid points
+                // Also needs to be within the vacuum vessel
+                if ((flux_offset[idx] * flux_offset[idx+1] < 0.0)  && (MASK_LIM[idx] || MASK_LIM[idx+1]))
                 {
-                    off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+1]));
+                    // Calculate the ratio of the flux at this grid point to the flux at (R+dR, Z)
+                    // frac will be between 0.0 and 1.0; but won't be very close to 0.0 otherwise
+                    // it would have been picked up by the first test `fabs(flux[idx]) < THRESH`
+                    off = fabs(flux_offset[idx]) / (fabs(flux_offset[idx]) + fabs(flux_offset[idx+1]));
                     if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+1]))
                     {
-                        lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;
+                        lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;  // linear interpolation
                         lcfs_z[*lcfs_n ] = Z_VEC[i_row];
                         *lcfs_n = *lcfs_n + 1;
                     }
                 }
-                if ((flux[idx] * flux[idx+N_R] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+N_R]))
+                // Compare the flux at this grid point (r, z) to the flux at (r, z + d_z).
+                // If there is a sign change then the lcfs must be between grid points
+                if ((flux_offset[idx] * flux_offset[idx+N_R] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+N_R]))
                 {
-                    off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+N_R]));
+                    off = fabs(flux_offset[idx]) / (fabs(flux_offset[idx]) + fabs(flux_offset[idx+N_R]));
                     if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+N_R]))
                     {
                         lcfs_r[*lcfs_n] = R_VEC[i_col];
-                        lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ;
+                        lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ; // linear interpolation
                         *lcfs_n = *lcfs_n + 1;
                     }
                 }
@@ -531,50 +546,31 @@ void find_lcfs_rz(
         }
     }
 
+    // Loop over z (excluding maximum z) with r at the last grid point
+    // Checking the mesh points missed in the first loop; (max(r), max(z)) checked in next loop
     for (i_row=0; i_row<N_Z-1; i_row++)
     {
         idx = i_row*N_R + N_R - 1;
 
-        if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx])
+        if ((fabs(flux_offset[idx]) < THRESH) && MASK_LIM[idx])
         {
-
-            lcfs_r[*lcfs_n] = R_VEC[i_col];
+            lcfs_r[*lcfs_n] = R_VEC[N_R - 1];
             lcfs_z[*lcfs_n] = Z_VEC[i_row];
             *lcfs_n = *lcfs_n + 1;
         }
-        else if ((flux[idx] * flux[idx+N_R] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+N_R]))
-        {
-            off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+N_R]));
-            if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+N_R]))
-            {
-                lcfs_r[*lcfs_n] = R_VEC[i_col];
-                lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off*DZ;
-                *lcfs_n = *lcfs_n + 1;
-            }
-        }
-
     }
 
-    for (i_col=0; i_col<N_R-1; i_col++)
+    // Loop over r with z at the last grid point
+    // Checking the mesh points missed in the first loop
+    for (i_col=0; i_col<N_R; i_col++)
     {
         idx = (N_Z-1)*N_R + i_col;
 
-        if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx])
+        if ((fabs(flux_offset[idx]) < THRESH) && MASK_LIM[idx])
         {
-
             lcfs_r[*lcfs_n] = R_VEC[i_col];
-            lcfs_z[*lcfs_n] = Z_VEC[i_row];
+            lcfs_z[*lcfs_n] = Z_VEC[N_Z - 1];
             *lcfs_n = *lcfs_n + 1;
-        }
-        else if ((flux[idx] * flux[idx+1] < 0) && (MASK_LIM[idx] || MASK_LIM[idx+1]))
-        {
-            off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+1]));
-            if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx+1]))
-            {
-                lcfs_r[*lcfs_n] = R_VEC[i_col] + off*DR;
-                lcfs_z[*lcfs_n ] = Z_VEC[i_row];
-                *lcfs_n = *lcfs_n + 1;
-            }
         }
     }
 }
