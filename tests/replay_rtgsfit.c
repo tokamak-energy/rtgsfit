@@ -9,14 +9,14 @@ int main(int argc, char *argv[]) {
   /* local vars */
   int i, ret;
   char *server = "smaug";
-  char *tree_name = "tepcs";
+  char *tree = "tepcs";
   char str[100];
   char sig_name[200];
   double lcfs_r[N_LCFS_MAX];
   double lcfs_z[N_LCFS_MAX];
   int lcfs_n = 0;
   double coef[N_COEF];
-  double psi_b;
+  double flux_boundary = 0;
 
   /* Convert input argument to unsigned long long with base 10; */
   // check_pulseNo_validity(argv[1], filename, &pulseNo);
@@ -28,12 +28,12 @@ int main(int argc, char *argv[]) {
   rtgsfit_step = atof(argv[3]);
   t_end = atof(argv[4]);
   printf("t_start %f t_step %f\n", t_start, rtgsfit_step);
-  if ((t_start < 0.0) || (t_start > 0.5)) {
+  if ((t_start < -1.1) || (t_start > 0.5)) {
     snprintf(error_msg, sizeof(error_msg), "There is no plasma in selected time"
       " %f\n", t_start);
     errorExit(error_msg);
   }
-  if ((rtgsfit_step < 0.0001) || (rtgsfit_step > 0.1)) {
+  if ((rtgsfit_step < 0.00005) || (rtgsfit_step > 0.1)) {
     snprintf(error_msg, sizeof(error_msg), "rtgsfit_step is not set correctly "
       "%f\n", rtgsfit_step);
     errorExit(error_msg);
@@ -101,13 +101,13 @@ int main(int argc, char *argv[]) {
 
   /* use get_signal_length to get size of sig_name */
   snprintf(sig_name, signal_name_len, "%s.CH%03d", pcs1, 1);
-  len_pcs1_sign = get_signal_length(server, tree_name, pulseNo, sig_name);
+  len_pcs1_sign = get_signal_length(server, pulseNo, tree, sig_name);
   if (len_pcs1_sign < 1) {
     errorExit("Error retrieving length of sig_name pcs1 channel 1.");
   }
   /* use get_signal_length to get size of sig_name */
   snprintf(sig_name, signal_name_len, "%s.CH%03d", pcs2, 1);
-  len_pcs2_sign = get_signal_length(server, tree_name, pulseNo, sig_name);
+  len_pcs2_sign = get_signal_length(server, pulseNo, tree, sig_name);
   if (len_pcs2_sign < 1) {
     errorExit("Error retrieving length of sig_name pcs2 channel 1.");
   }
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
   if (!pcs1_data) {
     errorExit("Failed to allocate memory block for pcs1 data.");
   }
-  ret = get_dtacqbox(pulseNo, server, tree_name, pcs1, num_pcs1_channels,
+  ret = get_dtacqbox(server, pulseNo, tree, pcs1, num_pcs1_channels,
     len_pcs1_sign, pcs1_data, &size_pcs1_data);
   if (ret == EXIT_FAILURE) {
     errorExit("pcs1 data not returned");
@@ -135,14 +135,14 @@ int main(int argc, char *argv[]) {
   if (!pcs2_data) {
     errorExit("Failed to allocate memory block for pcs2 data.");
   }
-  ret = get_dtacqbox(pulseNo, server, tree_name, pcs2, num_pcs2_channels,
+  ret = get_dtacqbox(server, pulseNo, tree, pcs2, num_pcs2_channels,
     len_pcs2_sign, pcs2_data, &size_pcs2_data);
   if (ret == EXIT_FAILURE) {
     errorExit("pcs2 data not returned");
   }
 
   /* get decimate parameter */
-  ret = get_value(pulseNo, server, tree_name, decm_sig, &decimate);
+  ret = get_value(server, pulseNo, tree, decm_sig, &decimate);
   if(ret == EXIT_FAILURE) {
     errorExit("Failed to get decimate value.");
   }
@@ -177,7 +177,6 @@ int main(int argc, char *argv[]) {
   /* ST40PCS part */
   /* timing vectors */
   struct timespec t0, t1, t2, t3;
-  uint32_t istep = 0;
 
   long *t21 = calloc((size_t)N_iter, sizeof(long));
   if (t21 == NULL) {
@@ -194,7 +193,6 @@ int main(int argc, char *argv[]) {
   long int t_end_idx = (long int) ((t_end - pcs1_dec_time[0]) / data_step);
   uint32_t rtgsfit_step_idx = (uint32_t) (rtgsfit_step / data_step);
   printf("Starting check t_start %ld t_end %ld step %u\n", t_start_idx, t_end_idx, rtgsfit_step_idx);
-  long int idx = 0;
   uint32_t n_iter = (uint32_t) ((t_end_idx - t_start_idx) / (rtgsfit_step_idx));
   printf("iters %u\n", n_iter);
   long *t10 = (long *)calloc((size_t)n_iter, sizeof(long));
@@ -202,23 +200,19 @@ int main(int argc, char *argv[]) {
     errorExit("test_st40pcs: Error! memory t10 not allocated.");
   }
 
-  char *fn_psi_total_out = "../data/results_psi_total_";
-  char *fn_mask_out = "../data/results_mask_";
   char *fn_coef_out = "../data/results_coef_";
   char *fn_lcfs_r = "../data/results_lcfs_r_";
   char *fn_lcfs_z = "../data/results_lcfs_z_";
-  char *fn_psi_b = "../data/results_psi_b_";
-
 
   // Dynamically allocate memory for "output" arrays
-  double *time_out = (double *)malloc((n_iter+1) * sizeof(double));
-  double *flux_boundary_out = (double *)malloc((n_iter+1) * sizeof(double));
-  double *flux_total_out = (double *)malloc((n_iter+1)*N_R*N_Z * sizeof(double));
-  double *mask_out = (double *)malloc((n_iter+1)*N_R*N_Z * sizeof(double));
+  double *time_out = (double *)malloc((n_iter+1) * sizeof(double)); // why plus one?
+  double *flux_boundary_out = (double *)malloc((n_iter+1) * sizeof(double)); // why plus one?
+  double *flux_total_out = (double *) malloc((n_iter+1) * sizeof(double) * N_GRID);
+  int *mask_out = (int *) malloc((n_iter+1) * sizeof(int) * N_GRID);
 
   // Loop over time
-  int i_time = 0;
-  for (idx = t_start_idx; idx < t_end_idx;  idx += rtgsfit_step_idx) {
+  int iter = 0;
+  for (long int idx = t_start_idx; idx < t_end_idx;  idx += rtgsfit_step_idx, iter++) {
     printf("t_actual %f, t_end %lf, t_start_idx %ld t_end_idx %ld step %u idx %ld\n",
     pcs1_dec_time[idx], pcs1_dec_time[t_end_idx], t_start_idx, t_end_idx, rtgsfit_step_idx, idx);
     for (i = 0; i < sensors_idx_num; ++i) {
@@ -228,72 +222,58 @@ int main(int argc, char *argv[]) {
         meas[i] = 0;
       }
     }
-    double pf160 = (double)(pcs_dec_data[dec_N_iter * 160 + idx]) * gains[160];
-    double pf161 = (double)(pcs_dec_data[dec_N_iter * 161 + idx]) * gains[161];
-    double pf162 = (double)(pcs_dec_data[dec_N_iter * 162 + idx]) * gains[162];
-    double pf163 = (double)(pcs_dec_data[dec_N_iter * 163 + idx]) * gains[163];
-    double pf164 = (double)(pcs_dec_data[dec_N_iter * 164 + idx]) * gains[164];
-    double pf165 = (double)(pcs_dec_data[dec_N_iter * 165 + idx]) * gains[165];
-    double pf166 = (double)(pcs_dec_data[dec_N_iter * 166 + idx]) * gains[166];
-    double pf167 = (double)(pcs_dec_data[dec_N_iter * 167 + idx]) * gains[167];
-    double pf168 = (double)(pcs_dec_data[dec_N_iter * 168 + idx]) * gains[168];
-    printf("160 %lf, 161 %lf, 162 %lf, 163 %lf, 164 %lf, 165 %lf, 166 %lf, 167 %lf, 168 %lf\n",
-     pf160, pf161, pf162, pf163, pf164, pf165, pf166, pf167, pf168);
+    // double pf160 = (double)(pcs_dec_data[dec_N_iter * 160 + idx]) * gains[160];
+    // double pf161 = (double)(pcs_dec_data[dec_N_iter * 161 + idx]) * gains[161];
+    // double pf162 = (double)(pcs_dec_data[dec_N_iter * 162 + idx]) * gains[162];
+    // double pf163 = (double)(pcs_dec_data[dec_N_iter * 163 + idx]) * gains[163];
+    // double pf164 = (double)(pcs_dec_data[dec_N_iter * 164 + idx]) * gains[164];
+    // double pf165 = (double)(pcs_dec_data[dec_N_iter * 165 + idx]) * gains[165];
+    // double pf166 = (double)(pcs_dec_data[dec_N_iter * 166 + idx]) * gains[166];
+    // double pf167 = (double)(pcs_dec_data[dec_N_iter * 167 + idx]) * gains[167];
+    // double pf168 = (double)(pcs_dec_data[dec_N_iter * 168 + idx]) * gains[168];
     for (i = 0; i < N_COIL; ++i) {
-      coil_curr[i] = (double)(pcs_dec_data[dec_N_iter * coil_idx[i] + idx]) * gains[coil_idx[i]];
-       printf("coil_curr %lf coil_idx %d %f\n", coil_curr[i], coil_idx[i], gains[coil_idx[i]]);
+      coil_curr[i] = (double)(pcs_dec_data[dec_N_iter * coil_idx[i] + idx]) *
+      gains[coil_idx[i]];
     }
     clock_gettime(CLOCK_MONOTONIC, &t0);
     rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z,
-        &lcfs_n, coef, &psi_b);
+        &lcfs_n, coef, &flux_boundary);
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    // t10[iter] = (long)
+    //     ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
 
-    // // Store 3d arrays
-    // for (int i_z = 0; i_z < N_Z; ++i_z) {
-    //   for (int i_r = 0; i_r < N_R; ++i_r) {
-    //     int index = i_z * N_R + i_r;
-    //     int index_out = i_time* N_Z * N_R + i_z * N_R + i_r;
-    //     flux_total_out[index_out] = psi_total[index];
-    //     mask_out[index_out] = mask_out[index];
-    //   }
-    // }
     // Store 3d arrays
-    for (int i_rz = 0; i_rz < N_GRID; ++i_rz) {
-      flux_total_out[i_time* N_Z * N_R + i_rz] = psi_total[i_rz];
-      mask_out[i_time* N_Z * N_R + i_rz] = mask_out[i_rz];
-    }
+    memcpy(&flux_total_out[iter * N_GRID], psi_total, N_GRID * sizeof(double));
+    memcpy(&mask_out[iter * N_GRID], mask, N_GRID * sizeof(int));
 
-    time_out[i_time] = (double)pcs1_dec_time[idx];
-    flux_boundary_out[i_time] = psi_b;
-
+    time_out[iter] = (double)pcs1_dec_time[idx];
+    flux_boundary_out[iter] = flux_boundary;
     snprintf(str, sizeof(str), "%s_%01.4f", fn_coef_out, pcs1_dec_time[idx]);
     p_fid = fopen(str, "w");
     for (i = 0; i < 3; ++i) {
       fprintf(p_fid, "%lf\n", coef[i]);
     }
     fclose(p_fid);
-    
+
     snprintf(str, sizeof(str), "%s_%01.4f", fn_lcfs_r, pcs1_dec_time[idx]);
     p_fid = fopen(str, "w");
     for (i = 0; i < lcfs_n; ++i) {
       fprintf(p_fid, "%lf\n", lcfs_r[i]);
     }
     fclose(p_fid);
-    
+
     snprintf(str, sizeof(str), "%s_%01.4f", fn_lcfs_z, pcs1_dec_time[idx]);
     p_fid = fopen(str, "w");
     for (i = 0; i < lcfs_n; ++i) {
       fprintf(p_fid, "%lf\n", lcfs_z[i]);
     }
     fclose(p_fid);
-
-    printf("i_time=%d\n", i_time);
-    printf("n_iter=%d\n", n_iter);
-
-    i_time++;
+    printf("idx steps %ld iter %d\n", (idx - t_start_idx)/rtgsfit_step_idx, iter);
   }
-
-  printf("about to write to netcdf\n");
+  printf("finished loop\n");
+// printf("here!! iter %d s-e %ld\n", iter, (t_end_idx - t_start_idx)/rtgsfit_step_idx);
+// stash_st40runner_long("510", filename, sizeof(long), (size_t)dec_N_iter, t10);
+//   printf("about to write to netcdf\n");
 
   int ncid; // NetCDF file ID
   char netcdf_file_name[100];
@@ -307,7 +287,7 @@ int main(int argc, char *argv[]) {
 
   // Define base dimensions
   int dimid_time, dimid_z, dimid_r;
-  nc_def_dim(ncid, "n_time", n_iter+1, &dimid_time);
+  nc_def_dim(ncid, "n_time", n_iter, &dimid_time);
   nc_def_dim(ncid, "n_z", N_Z, &dimid_z);
   nc_def_dim(ncid, "n_r", N_R, &dimid_r);
 
@@ -352,14 +332,14 @@ int main(int argc, char *argv[]) {
   free((void *)pcs2_dec_time);
   free((void *)pcs2_time);
   free((void *)pcs_dec_data);
-  // free((void *)t10);  // TODO: this causes segmenation fault??
-  free((void *)t21);
-  free((void *)t32);
+  // free((void *)t10);
+  // free((void *)t21);
+  // free((void *)t32);
 
   free((void *)flux_total_out);
-  free(flux_boundary_out);
+  // free(flux_boundary_out);
   free((void *)mask_out);
-  free((void *)time_out);
+  // free((void *)time_out);  // TODO: this causes segmenation fault??
 
   /* done */
   return EXIT_SUCCESS;
