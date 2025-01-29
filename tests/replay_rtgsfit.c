@@ -205,29 +205,16 @@ int main(int argc, char *argv[]) {
   char *fn_lcfs_z = "../data/results_lcfs_z_";
 
   // Dynamically allocate memory for "output" arrays
-  double *time_out = (double *)malloc(n_iter * sizeof(double)); // why plus one?
-  double *flux_boundary_out = (double *)malloc(n_iter * sizeof(double)); // why plus one?
+  double *time_out = (double *)malloc(n_iter * sizeof(double));
+  double *flux_boundary_out = (double *)malloc(n_iter * sizeof(double));
+  double *flux_total_out = (double *) malloc(n_iter * sizeof(double) * N_GRID);
+  int *mask_out = (int *) malloc(n_iter * sizeof(int) * N_GRID);
 
-  int ***mask_out = (int ***)malloc(n_iter * sizeof(int **));
-  for (int i_time = 0; i_time < n_iter; ++i_time) {
-      mask_out[i_time] = (int **)malloc(N_Z * sizeof(int *));
-      for (int i_z = 0; i_z < N_Z; i_z++) {
-          mask_out[i_time][i_z] = (int *)malloc(N_R * sizeof(int));
-      }
-  }
-  double ***flux_total_out = (double ***)malloc(n_iter * sizeof(double **));
-  for (int i_time = 0; i_time < n_iter; i_time++) {
-      flux_total_out[i_time] = (double **)malloc(N_Z * sizeof(double *));
-      for (int z = 0; z < N_Z; z++) {
-          flux_total_out[i_time][z] = (double *)malloc(N_R * sizeof(double));
-      }
-  }
-
-// double *flux_total_out = (double *) malloc(n_iter * sizeof(double) * N_GRID);
-// int *mask_out = (int *) malloc(n_iter * sizeof(int) * N_GRID);
   // Loop over time
+  /****************************************************************************/
   int iter = 0;
-  for (long int idx = t_start_idx; idx < t_end_idx;  idx += rtgsfit_step_idx, iter++) {
+  for (long int idx = t_start_idx; idx < (t_end_idx - rtgsfit_step_idx);
+        idx += rtgsfit_step_idx, ++iter) {
     printf("t_actual %f, t_end %lf, t_start_idx %ld t_end_idx %ld step %u idx %ld\n",
     pcs1_dec_time[idx], pcs1_dec_time[t_end_idx], t_start_idx, t_end_idx, rtgsfit_step_idx, idx);
     for (i = 0; i < sensors_idx_num; ++i) {
@@ -237,15 +224,6 @@ int main(int argc, char *argv[]) {
         meas[i] = 0;
       }
     }
-    // double pf160 = (double)(pcs_dec_data[dec_N_iter * 160 + idx]) * gains[160];
-    // double pf161 = (double)(pcs_dec_data[dec_N_iter * 161 + idx]) * gains[161];
-    // double pf162 = (double)(pcs_dec_data[dec_N_iter * 162 + idx]) * gains[162];
-    // double pf163 = (double)(pcs_dec_data[dec_N_iter * 163 + idx]) * gains[163];
-    // double pf164 = (double)(pcs_dec_data[dec_N_iter * 164 + idx]) * gains[164];
-    // double pf165 = (double)(pcs_dec_data[dec_N_iter * 165 + idx]) * gains[165];
-    // double pf166 = (double)(pcs_dec_data[dec_N_iter * 166 + idx]) * gains[166];
-    // double pf167 = (double)(pcs_dec_data[dec_N_iter * 167 + idx]) * gains[167];
-    // double pf168 = (double)(pcs_dec_data[dec_N_iter * 168 + idx]) * gains[168];
     for (i = 0; i < N_COIL; ++i) {
       coil_curr[i] = (double)(pcs_dec_data[dec_N_iter * coil_idx[i] + idx]) *
       gains[coil_idx[i]];
@@ -260,16 +238,8 @@ int main(int argc, char *argv[]) {
     // t10[iter] = (long)
     //     ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
 
-    // Store 3d arrays
-    for (int i_z = 0; i_z < N_Z; ++i_z) {
-      for (int i_r = 0; i_r < N_R; ++i_r) {
-        int index = i_z * N_R + i_r;
-        flux_total_out[iter][i_z][i_r] = psi_total[index];
-        mask_out[iter][i_z][i_r] = mask[index];
-      }
-    }
-    // memcpy(&flux_total_out[iter * N_GRID], psi_total, N_GRID * sizeof(double));
-    // memcpy(&mask_out[iter * N_GRID], mask, N_GRID * sizeof(int));
+    memcpy(&flux_total_out[iter * N_GRID], psi_total, N_GRID * sizeof(double));
+    memcpy(&mask_out[iter * N_GRID], mask, N_GRID * sizeof(int));
 
     time_out[iter] = (double)pcs1_dec_time[idx];
     flux_boundary_out[iter] = flux_boundary;
@@ -293,9 +263,10 @@ int main(int argc, char *argv[]) {
       fprintf(p_fid, "%lf\n", lcfs_z[i]);
     }
     fclose(p_fid);
-    printf("idx steps %ld iter %d\n", (idx - t_start_idx)/rtgsfit_step_idx, iter);
+    printf("idx steps %ld iter %d n_iter %u\n", (idx - t_start_idx)/rtgsfit_step_idx, iter, n_iter);
   }
-printf("here!! iter %d s-e %ld\n", iter, (t_end_idx - t_start_idx)/rtgsfit_step_idx);
+  /****************************************************************************/
+  // End of the loop
 // stash_st40runner_long("510", filename, sizeof(long), (size_t)dec_N_iter, t10);
 //   printf("about to write to netcdf\n");
 
