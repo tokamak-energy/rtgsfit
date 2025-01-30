@@ -1,7 +1,8 @@
-#include "mds_tools.h"
-#include "replay_rtgsfit.h"
 #include <netcdf.h>
 #include <stdlib.h>
+#include "mds_tools.h"
+#include "replay_rtgsfit.h"
+#include "utils.h"
 
 int count_lines(char *, uint32_t *);
 
@@ -235,8 +236,8 @@ int main(int argc, char *argv[]) {
     if (ret) {
       printf("lapack returns %d", ret);
     }
-    // t10[iter] = (long)
-    //     ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
+    t10[iter] = (long)
+        ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
 
     memcpy(&flux_total_out[iter * N_GRID], psi_total, N_GRID * sizeof(double));
     memcpy(&mask_out[iter * N_GRID], mask, N_GRID * sizeof(int));
@@ -267,12 +268,13 @@ int main(int argc, char *argv[]) {
   }
   /****************************************************************************/
   // End of the loop
-// stash_st40runner_long("510", filename, sizeof(long), (size_t)dec_N_iter, t10);
-//   printf("about to write to netcdf\n");
+  stash_st40runner("510", filename, sizeof(long), (size_t)iter, (void *)t10);
+    printf("about to write to netcdf\n");
 
   int ncid; // NetCDF file ID
   char netcdf_file_name[100];
-  snprintf(netcdf_file_name, sizeof(netcdf_file_name), "rtgsfit_results_%d.nc", pulseNo);
+  snprintf(netcdf_file_name, sizeof(netcdf_file_name),
+    "../results/rtgsfit_results_%d.nc", pulseNo);
 
   // Create the NetCDF file
   if (nc_create(netcdf_file_name, NC_CLOBBER, &ncid) != NC_NOERR) {
@@ -327,14 +329,14 @@ int main(int argc, char *argv[]) {
   free((void *)pcs2_dec_time);
   free((void *)pcs2_time);
   free((void *)pcs_dec_data);
-  // free((void *)t10);
+  free((void *)t10);
   // free((void *)t21);
   // free((void *)t32);
 
-  // free((void *)flux_total_out);
-  // free(flux_boundary_out);
-  // free((void *)mask_out);
-  // free((void *)time_out);  // TODO: this causes segmenation fault??
+  free((void *)flux_total_out);
+  free((void *)flux_boundary_out);
+  free((void *)mask_out);
+  free((void *)time_out);
 
   /* done */
   return EXIT_SUCCESS;
