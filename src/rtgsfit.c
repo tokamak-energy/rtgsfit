@@ -142,7 +142,8 @@ int rtgsfit(
         double* lcfs_z,
         int* lcfs_n,
         double* coef,
-        double* flux_boundary
+        double* flux_boundary,
+        double* plasma_current
         )
 {
     double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
@@ -277,12 +278,13 @@ int rtgsfit(
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid,
             N_GRID, coef, 1, 0.0, source, 1);
 
-    // Sum the variable "source" and print to screen; should be plasma current???
+    // `source` is the current density in each grid cell;
+    // plasma_current = sum(source) * d_area
     double source_sum = 0.0;
     for (i_grid = 0; i_grid < N_GRID; i_grid++) {
         source_sum += source[i_grid];
     }
-    printf("Sum of source: %lf\n", source_sum * 9e-4); // BUXTON: this is close to plasma current
+    *plasma_current = source_sum * DR * DZ;
 
 
     // modelled measurements

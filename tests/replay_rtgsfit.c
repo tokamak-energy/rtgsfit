@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
   int lcfs_n = 0;
   double coef[N_COEF];
   double flux_boundary = 0;
+  double plasma_current = 0;
 
   /* Convert input argument to unsigned long long with base 10; */
   // check_pulseNo_validity(argv[1], filename, &pulseNo);
@@ -208,6 +209,7 @@ int main(int argc, char *argv[]) {
   // Dynamically allocate memory for "output" arrays
   double *time_out = (double *)malloc(n_iter * sizeof(double));
   double *flux_boundary_out = (double *)malloc(n_iter * sizeof(double));
+  double *plasma_current_out = (double *)malloc(n_iter * sizeof(double));
   double *flux_total_out = (double *) malloc(n_iter * sizeof(double) * N_GRID);
   int *mask_out = (int *) malloc(n_iter * sizeof(int) * N_GRID);
 
@@ -231,7 +233,7 @@ int main(int argc, char *argv[]) {
     }
     clock_gettime(CLOCK_MONOTONIC, &t0);
     ret = rtgsfit(meas, coil_curr, flux_norm, mask, psi_total, &error, lcfs_r, lcfs_z,
-        &lcfs_n, coef, &flux_boundary);
+        &lcfs_n, coef, &flux_boundary, &plasma_current);
     clock_gettime(CLOCK_MONOTONIC, &t1);
     if (ret) {
       printf("lapack returns %d", ret);
@@ -244,6 +246,7 @@ int main(int argc, char *argv[]) {
 
     time_out[iter] = (double)pcs1_dec_time[idx];
     flux_boundary_out[iter] = flux_boundary;
+    plasma_current_out[iter] = plasma_current;
     snprintf(str, sizeof(str), "%s_%01.4f", fn_coef_out, pcs1_dec_time[idx]);
     p_fid = fopen(str, "w");
     for (i = 0; i < 3; ++i) {
@@ -269,7 +272,7 @@ int main(int argc, char *argv[]) {
   /****************************************************************************/
   // End of the loop
   stash_st40runner("510", filename, sizeof(long), (size_t)iter, (void *)t10);
-    printf("about to write to netcdf\n");
+    printf("about to write to netcdf 01\n");
 
   int ncid; // NetCDF file ID
   char netcdf_file_name[100];
@@ -289,7 +292,7 @@ int main(int argc, char *argv[]) {
   nc_def_dim(ncid, "n_r", N_R, &dimid_r);
 
   // Define compound dimensions
-  int varid_psi, varid_mask, varid_time, varid_psi_b, varid_r, varid_z;
+  int varid_psi, varid_mask, varid_time, varid_psi_b, varid_plasma_current, varid_r, varid_z;
   int dimids_time_z_r[3] = {dimid_time, dimid_z, dimid_r};
   int dimids_time[1] = {dimid_time};
   int dimids_r[1] = {dimid_r};
@@ -300,6 +303,7 @@ int main(int argc, char *argv[]) {
   nc_def_var(ncid, "mask", NC_INT, 3, dimids_time_z_r, &varid_mask);
   nc_def_var(ncid, "time", NC_DOUBLE, 1, dimids_time, &varid_time);
   nc_def_var(ncid, "flux_boundary", NC_DOUBLE, 1, dimids_time, &varid_psi_b);
+  nc_def_var(ncid, "plasma_current", NC_DOUBLE, 1, dimids_time, &varid_plasma_current);
   nc_def_var(ncid, "r", NC_DOUBLE, 1, dimids_r, &varid_r);
   nc_def_var(ncid, "z", NC_DOUBLE, 1, dimids_z, &varid_z);
 
@@ -311,6 +315,7 @@ int main(int argc, char *argv[]) {
   nc_put_var_int(ncid, varid_mask, mask_out);
   nc_put_var_double(ncid, varid_time, time_out);
   nc_put_var_double(ncid, varid_psi_b, flux_boundary_out);
+  nc_put_var_double(ncid, varid_plasma_current, plasma_current_out);
   nc_put_var_double(ncid, varid_r, R_VEC);
   nc_put_var_double(ncid, varid_z, Z_VEC);
 
