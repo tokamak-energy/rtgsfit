@@ -410,7 +410,7 @@ void find_lcfs_rz(
   for (int i_row = 0; i_row < N_Z - 1; i_row++) {
     idx = i_row * N_R + N_R - 1;
     if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx]) {
-      lcfs_r[*lcfs_n] = R_VEC[N_R - 2];
+      lcfs_r[*lcfs_n] = R_VEC[N_R_MIN_1];
       lcfs_z[*lcfs_n] = Z_VEC[i_row];
       (*lcfs_n)++;
     } else if ((flux[idx] * flux[idx + N_R] < 0) && \
