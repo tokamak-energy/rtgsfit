@@ -35,6 +35,7 @@
 *.i*86
 *.x86_64
 *.hex
+tests/replay_rtgsfit
 
 # Debug files
 *.dSYM/
@@ -55,3 +56,9 @@ dkms.conf
 src/constants.c
 tests/c_*.py
 **/__pycache__
+
+# Editor files
+.vscode/
+
+# Binary data files
+*.nc

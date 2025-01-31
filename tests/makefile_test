@@ -32,7 +32,7 @@ replay_rtgsfit: replay_rtgsfit.o
 	$(CC) -o $@ $< $(CFLAGS) $(RTGSFIT)/rtgsfit.o $(RTGSFIT)/gradient.o \
 		$(RTGSFIT)/constants.o $(RTGSFIT)/poisson_solver.o $(RTGSFIT)/find_x_point.o \
 		$(RTGSFIT)/solve_tria.o -L$(MDSPLUS_LDFLAG) $(MDSPLUS_SYSLIB) \
-		$(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o  -lopenblas
+		$(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o  -lopenblas -lnetcdf
 
 replay_rtgsfit.o: replay_rtgsfit.c
 	$(info %% $(CC) $(CFLAGS) $(INCLUDES) -I$(TE_INCLUDES) -I$(MDSPLUS_ROOT)/include -c -o $@ $^)
