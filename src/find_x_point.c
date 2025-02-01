@@ -507,12 +507,16 @@ int inside_lcfs(
 
   if (!error) {
     for (int i_col = col_start; i_col <= col_end; i_col++) {
+      count = 0;
       for (int i_lcfs = 0; i_lcfs < lcfs_n; i_lcfs++) {
         if (fabs(lcfs_r[i_lcfs] - R_VEC[i_col]) < THRESH) {
           z_tmp[count] = lcfs_z[i_lcfs];
           count++;
         }
       }
+
+      z_start = -DBL_MAX;
+      z_end = DBL_MAX;
 
       for (int i_count = 0; i_count< count; i_count++) {
         if (z_tmp[i_count] < z_opt) {

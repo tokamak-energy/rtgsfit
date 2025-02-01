@@ -222,11 +222,11 @@ int rtgsfit(
     // }
 
 
-    g_coef_meas_w_with_regularisation[69*4-5] = 15.0 * 0.001 * 20.0;
-    g_coef_meas_w_with_regularisation[69*4-5 + 69 + 1] = 15.0 * 0.001 * 20.0;
-    g_coef_meas_w_with_regularisation[69*4-5 + 69*2 + 2] = 15.0 * 0.001 * 20.0;
-    g_coef_meas_w_with_regularisation[69*4-5 + 69*3 + 3] = 15.0 * 0.001 * 20.0;
-    g_coef_meas_w_with_regularisation[69*4-5 + 69*4 + 4] = 15.0 * 0.001 * 20.0;
+    g_coef_meas_w_with_regularisation[69*4-5] = 15.0 * 0.001 * 20.0 / 6.28;
+    g_coef_meas_w_with_regularisation[69*4-5 + 69 + 1] = 15.0 * 0.001 * 20.0 / 6.28;
+    g_coef_meas_w_with_regularisation[69*4-5 + 69*2 + 2] = 15.0 * 0.001 * 20.0 / 6.28;
+    g_coef_meas_w_with_regularisation[69*4-5 + 69*3 + 3] = 15.0 * 0.001 * 20.0 / 6.28;
+    g_coef_meas_w_with_regularisation[69*4-5 + 69*4 + 4] = 15.0 * 0.001 * 20.0 / 6.28;
     // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 2) - 1] = 15.0 * 0.001 * 20.0;
     // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 3) - 1] = 15.0 * 0.001 * 20.0;
     // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 4) - 1] = 15.0 * 0.001 * 20.0;
@@ -270,6 +270,7 @@ int rtgsfit(
 
     // BUXTON: copy "meas_no_coil_cp" into "coef"
     memcpy(coef, meas_no_coil_cp_with_regularisation, sizeof(double) * N_COEF);
+    // memcpy(coef, meas_no_coil_cp, sizeof(double) * N_COEF);
 
     // apply coeff to find current
     // BUXTON: matrix-vector multiplication; result stored in "source"

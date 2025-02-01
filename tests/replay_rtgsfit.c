@@ -211,6 +211,9 @@ int main(int argc, char *argv[]) {
   double *flux_boundary_out = (double *)malloc(n_iter * sizeof(double));
   double *plasma_current_out = (double *)malloc(n_iter * sizeof(double));
   double *flux_total_out = (double *) malloc(n_iter * sizeof(double) * N_GRID);
+  double *flux_loops_measured_out = (double *) malloc(n_iter * sizeof(double) * 29);
+  double *bp_probes_measured_out = (double *) malloc(n_iter * sizeof(double) * 24);
+  double *rogowski_coils_measured_out = (double *) malloc(n_iter * sizeof(double) * 9);
   int *mask_out = (int *) malloc(n_iter * sizeof(int) * N_GRID);
 
   // Loop over time
@@ -241,32 +244,16 @@ int main(int argc, char *argv[]) {
     t10[iter] = (long)
         ((t1.tv_sec * 1e9 + t1.tv_nsec - t0.tv_sec * 1e9 - t0.tv_nsec) / 1e3);
 
+    // Store results for writing to NetCDF later
     memcpy(&flux_total_out[iter * N_GRID], psi_total, N_GRID * sizeof(double));
     memcpy(&mask_out[iter * N_GRID], mask, N_GRID * sizeof(int));
-
+    memcpy(&flux_loops_measured_out[iter * 29], meas, 29 * sizeof(double));
+    memcpy(&bp_probes_measured_out[iter * 24], &meas[29], 24 * sizeof(double));
+    memcpy(&rogowski_coils_measured_out[iter * 9], &meas[29+24], 9 * sizeof(double));
     time_out[iter] = (double)pcs1_dec_time[idx];
     flux_boundary_out[iter] = flux_boundary;
     plasma_current_out[iter] = plasma_current;
-    snprintf(str, sizeof(str), "%s_%01.4f", fn_coef_out, pcs1_dec_time[idx]);
-    p_fid = fopen(str, "w");
-    for (i = 0; i < 3; ++i) {
-      fprintf(p_fid, "%lf\n", coef[i]);
-    }
-    fclose(p_fid);
 
-    snprintf(str, sizeof(str), "%s_%01.4f", fn_lcfs_r, pcs1_dec_time[idx]);
-    p_fid = fopen(str, "w");
-    for (i = 0; i < lcfs_n; ++i) {
-      fprintf(p_fid, "%lf\n", lcfs_r[i]);
-    }
-    fclose(p_fid);
-
-    snprintf(str, sizeof(str), "%s_%01.4f", fn_lcfs_z, pcs1_dec_time[idx]);
-    p_fid = fopen(str, "w");
-    for (i = 0; i < lcfs_n; ++i) {
-      fprintf(p_fid, "%lf\n", lcfs_z[i]);
-    }
-    fclose(p_fid);
     printf("idx steps %ld iter %d n_iter %u\n", (idx - t_start_idx)/rtgsfit_step_idx, iter, n_iter);
   }
   /****************************************************************************/
@@ -286,17 +273,23 @@ int main(int argc, char *argv[]) {
   }
 
   // Define base dimensions
-  int dimid_time, dimid_z, dimid_r;
+  int dimid_time, dimid_z, dimid_r, dimid_flux_loops, dimid_bp_probes, dimid_rogowski_coils;
   nc_def_dim(ncid, "n_time", n_iter, &dimid_time);
   nc_def_dim(ncid, "n_z", N_Z, &dimid_z);
   nc_def_dim(ncid, "n_r", N_R, &dimid_r);
+  nc_def_dim(ncid, "n_flux_loops", 29, &dimid_flux_loops);
+  nc_def_dim(ncid, "n_bp_probes", 24, &dimid_bp_probes);
+  nc_def_dim(ncid, "n_rogowski_coils", 9, &dimid_rogowski_coils);
 
   // Define compound dimensions
-  int varid_psi, varid_mask, varid_time, varid_psi_b, varid_plasma_current, varid_r, varid_z;
+  int varid_psi, varid_mask, varid_time, varid_psi_b, varid_plasma_current, varid_r, varid_z, varid_flux_loops, varid_bp_probes, varid_rogowski_coils;
   int dimids_time_z_r[3] = {dimid_time, dimid_z, dimid_r};
   int dimids_time[1] = {dimid_time};
   int dimids_r[1] = {dimid_r};
   int dimids_z[1] = {dimid_z};
+  int dimids_flux_loops[2] = {dimid_time, dimid_flux_loops};
+  int dimids_bp_probes[2] = {dimid_time, dimid_bp_probes};
+  int dimids_rogowski_coils[2] = {dimid_time, dimid_rogowski_coils};
 
   // Define variables
   nc_def_var(ncid, "flux_total", NC_DOUBLE, 3, dimids_time_z_r, &varid_psi);
@@ -306,6 +299,9 @@ int main(int argc, char *argv[]) {
   nc_def_var(ncid, "plasma_current", NC_DOUBLE, 1, dimids_time, &varid_plasma_current);
   nc_def_var(ncid, "r", NC_DOUBLE, 1, dimids_r, &varid_r);
   nc_def_var(ncid, "z", NC_DOUBLE, 1, dimids_z, &varid_z);
+  nc_def_var(ncid, "flux_loops_measured", NC_DOUBLE, 2, dimids_flux_loops, &varid_flux_loops);
+  nc_def_var(ncid, "bp_probes_measured", NC_DOUBLE, 2, dimids_bp_probes, &varid_bp_probes);
+  nc_def_var(ncid, "rogowski_coils_measured", NC_DOUBLE, 2, dimids_rogowski_coils, &varid_rogowski_coils);
 
   // End definitions
   nc_enddef(ncid);
@@ -318,6 +314,9 @@ int main(int argc, char *argv[]) {
   nc_put_var_double(ncid, varid_plasma_current, plasma_current_out);
   nc_put_var_double(ncid, varid_r, R_VEC);
   nc_put_var_double(ncid, varid_z, Z_VEC);
+  nc_put_var_double(ncid, varid_flux_loops, flux_loops_measured_out);
+  nc_put_var_double(ncid, varid_bp_probes, bp_probes_measured_out);
+  nc_put_var_double(ncid, varid_rogowski_coils, rogowski_coils_measured_out);
 
   // Close the NetCDF file
   nc_close(ncid);
