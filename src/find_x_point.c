@@ -11,6 +11,8 @@
 #define N_R_PLS_1 (N_R + 1)
 #define N_Z_MIN_1 (N_Z - 1)
 #define N_Z_PLS_1 (N_Z + 1)
+#define N_R_TIMES_2 (N_R * 2 - 1)
+#define N_Z_TIMES_2 (N_Z * 2 - 1)
 #define MIN(aa,bb) ((aa)<=(bb)?(aa):(bb))
 #define MAX(aa,bb) ((aa)>=(bb)?(aa):(bb))
 #define ERR_MID_BDRY 0b000001
@@ -466,16 +468,14 @@ int inside_lcfs(
   double z_nearest;
   double r_start = -DBL_MAX;
   double r_end = DBL_MAX;
-  double r_tmp[N_XPT_MAX];
-  double z_tmp[N_XPT_MAX];
+  double r_tmp[N_R_TIMES_2];
+  double z_tmp[N_Z_TIMES_2];
   int n_mid_plane_bdry = 0;
   int col_start;
   int col_end;
   int row_start;
   int row_end;
 
-  memset(r_tmp, 0.0, N_XPT_MAX * sizeof(double));  // consider removing this; it is unnecessary; but slowdown is negligible
-  memset(z_tmp, 0.0, N_XPT_MAX * sizeof(double));  // consider removing this; it is unnecessary; but slowdown is negligible
   memset(mask, 0, N_GRID * sizeof(int));
 
   // Find the z grid point closest to the o-point (magnetic axis)
@@ -527,8 +527,7 @@ int inside_lcfs(
   if (col_end < col_start) {
     error |= ERR_COL_START_END;
   }
-  if (!error) {
-  } else {
+  if (error) {
     return error;
   }
 
