@@ -13,6 +13,12 @@
 #define N_Z_PLS_1 (N_Z + 1)
 #define MIN(aa,bb) ((aa)<=(bb)?(aa):(bb))
 #define MAX(aa,bb) ((aa)>=(bb)?(aa):(bb))
+#define ERR_MID_BDRY 0b000001
+#define ERR_COL_START 0b000010
+#define ERR_COL_END 0b000100
+#define ERR_COL_START_END 0b001000
+#define ERR_VERT_BDRY 0b010000
+#define ERR_MASK_INDEX 0b100000
 
 void find_zero_on_edge(
     double* grad_patch,
@@ -365,81 +371,86 @@ void find_null_in_gradient(
 
 
 void find_lcfs_rz(
-    double* flux_orig,
+    double* flux,
     double flux_lcfs,
     double* lcfs_r,
     double* lcfs_z,
     int* lcfs_n) {
   int idx = 0;
   double off;
-  double flux[N_GRID];
+  double flux_offset[N_GRID];
 
   *lcfs_n = 0;
+
+  // Offset the flux. The boundary is where `flux_offset = 0`
   for (int idx = 0; idx < (N_GRID); idx++) {
-    flux[idx] = flux_orig[idx] - flux_lcfs;
+    flux_offset[idx] = flux[idx] - flux_lcfs;
   }
+
+  // Loop over z
+  // We are excluding the last row because we will be comparing the flux at this gird point (r, z) to the flux at (r + d_r, z)
   for (int i_row = 0; i_row < N_Z_MIN_1; i_row++) {
+    // Loop over r
+    // We are excluding the last column because we will be comparing the flux at this gird point (r, z) to the flux at (r, z + d_z)
     for (int i_col = 0; i_col < N_R_MIN_1; i_col++) {
       idx = i_row * N_R + i_col;
-      if ((fabs(flux[idx]) < THRESH)  && MASK_LIM[idx]) {
+
+      // If flux is small and within the vacuum vessel add grid point to lcfs
+      // THRESH=1e-10 is really small; so it won't happen often; is there any point in doing this? or should we always do linear interpolation?
+      if ((fabs(flux_offset[idx]) < THRESH)  && MASK_LIM[idx]) {
         lcfs_r[*lcfs_n] = R_VEC[i_col];
         lcfs_z[*lcfs_n] = Z_VEC[i_row];
         (*lcfs_n)++;
       } else {
-        if ((flux[idx] * flux[idx + 1] < 0)  && (MASK_LIM[idx] || MASK_LIM[idx + 1])) {
-          off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx + 1]));
+        // Compare the flux at this grid point (r, z) to the flux at (r + d_r, z).
+        // If there is a sign change then the lcfs must be between grid points
+        // Also needs to be within the vacuum vessel
+        if ((flux_offset[idx] * flux_offset[idx + 1] < 0)  && (MASK_LIM[idx] || MASK_LIM[idx + 1])) {
+          // Calculate the ratio of the flux at this grid point to the flux at (R+dR, Z)
+          // frac will be between 0.0 and 1.0; but can't be very close to 0.0 otherwise
+          // it would have been picked up by the first test `fabs(flux[idx]) < THRESH`
+          off = fabs(flux_offset[idx]) / (fabs(flux_offset[idx]) + fabs(flux_offset[idx + 1]));
           if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && MASK_LIM[idx + 1])) {
-            lcfs_r[*lcfs_n] = R_VEC[i_col] + off * DR;
+            lcfs_r[*lcfs_n] = R_VEC[i_col] + off * DR; // linear interpolation
             lcfs_z[*lcfs_n ] = Z_VEC[i_row];
             (*lcfs_n)++;
           }
         }
-        if ((flux[idx] * flux[idx + N_R] < 0) &&
+        // Compare the flux at this grid point (r, z) to the flux at (r, z + d_z).
+        // If there is a sign change then the lcfs must be between grid points
+        if ((flux_offset[idx] * flux_offset[idx + N_R] < 0) &&
              (MASK_LIM[idx] || MASK_LIM[idx + N_R])) {
-          off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx + N_R]));
+          off = fabs(flux_offset[idx]) / (fabs(flux_offset[idx]) + fabs(flux_offset[idx + N_R]));
           if (((off <= 0.5) && MASK_LIM[idx]) ||
               ((off >= 0.5) && MASK_LIM[idx + N_R])) {
             lcfs_r[*lcfs_n] = R_VEC[i_col];
-            lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off * DZ;
+            lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off * DZ; // linear interpolation
             (*lcfs_n)++;
           }
         }
       }
     }
   }
+
+  // Loop over z (excluding maximum z) with r at the last grid point
+  // Checking the mesh points missed in the first loop; (max(r), max(z)) checked in next loop
   for (int i_row = 0; i_row < N_Z - 1; i_row++) {
     idx = i_row * N_R + N_R - 1;
-    if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx]) {
+    if ((fabs(flux_offset[idx]) < THRESH) && MASK_LIM[idx]) {
       lcfs_r[*lcfs_n] = R_VEC[N_R_MIN_1];
       lcfs_z[*lcfs_n] = Z_VEC[i_row];
       (*lcfs_n)++;
-    } else if ((flux[idx] * flux[idx + N_R] < 0) && \
-        (MASK_LIM[idx] || MASK_LIM[idx + N_R])) {
-      off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx+N_R]));
-      if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && \
-          MASK_LIM[idx + N_R])) {
-        lcfs_r[*lcfs_n] = R_VEC[N_R_MIN_1];
-        lcfs_z[*lcfs_n ] = Z_VEC[i_row] + off * DZ;
-        (*lcfs_n)++;
-      }
     }
   }
 
-  for (int i_col = 0; i_col < N_R - 1; i_col++) {
+  // Loop over r with z at the last grid point
+  // Checking the mesh points missed in the first loop
+  for (int i_col = 0; i_col < N_R; i_col++) {
     idx = (N_Z - 1) * N_R + i_col;
-    if ((fabs(flux[idx]) < THRESH) && MASK_LIM[idx]) {
+    if ((fabs(flux_offset[idx]) < THRESH) && MASK_LIM[idx]) {
       lcfs_r[*lcfs_n] = R_VEC[i_col];
       lcfs_z[*lcfs_n] = Z_VEC[N_Z_MIN_1];
       (*lcfs_n)++;
-    } else if ((flux[idx] * flux[idx + 1] < 0) && \
-        (MASK_LIM[idx] || MASK_LIM[idx + 1])) {
-      off = fabs(flux[idx]) / (fabs(flux[idx]) + fabs(flux[idx + 1]));
-      if (((off <= 0.5) && MASK_LIM[idx]) || ((off >= 0.5) && \
-          MASK_LIM[idx + 1])) {
-        lcfs_r[*lcfs_n] = R_VEC[i_col] + off * DR;
-        lcfs_z[*lcfs_n ] = Z_VEC[N_Z_MIN_1];
-        (*lcfs_n)++;
-      }
     }
   }
 }
@@ -456,33 +467,41 @@ int inside_lcfs(
   double r_start = -DBL_MAX;
   double r_end = DBL_MAX;
   double r_tmp[N_XPT_MAX];
-  double z_start = -DBL_MAX;
-  double z_end = DBL_MAX;
   double z_tmp[N_XPT_MAX];
-  int count = 0;
+  int n_mid_plane_bdry = 0;
   int col_start;
   int col_end;
   int row_start;
   int row_end;
 
-  memset(r_tmp, 0, N_XPT_MAX * sizeof(double));
-  memset(z_tmp, 0, N_XPT_MAX * sizeof(double));
+  memset(r_tmp, 0.0, N_XPT_MAX * sizeof(double));  // consider removing this; it is unnecessary; but slowdown is negligible
+  memset(z_tmp, 0.0, N_XPT_MAX * sizeof(double));  // consider removing this; it is unnecessary; but slowdown is negligible
   memset(mask, 0, N_GRID * sizeof(int));
-  // for (int i_grid=0; i_grid<N_GRID; i_grid++)
-  // {
-  //     mask[i_grid] = 0;
-  // }
+
+  // Find the z grid point closest to the o-point (magnetic axis)
   z_nearest = round((z_opt - Z_VEC[0]) / DZ) * DZ + Z_VEC[0];
 
+  // Add r points to `r_tmp` which are at the same z as the o-point
+  // Note: there should be at least the LFS and HFS points. If not, then there is an error
+  // But there may be more points (around the solenoid)
   for (int i_lcfs = 0; i_lcfs < lcfs_n; i_lcfs++) {
     if (fabs(lcfs_z[i_lcfs] - z_nearest) < THRESH) {
-      r_tmp[count] = lcfs_r[i_lcfs];
-      count++;
+      r_tmp[n_mid_plane_bdry] = lcfs_r[i_lcfs];
+      n_mid_plane_bdry++;
     }
   }
 
-  for (int i_count=0; i_count< count; i_count++) {
+  // If we have not found the LFS and HFS boundary points, then there is an error
+  // we cannot continue and should exit
+  if (n_mid_plane_bdry < 2) {
+    error |= ERR_MID_BDRY;
+    return error;
+  }
+
+  // `r_start` = LFS; `r_end` = HFS
+  for (int i_count=0; i_count< n_mid_plane_bdry; i_count++) {
     if (r_tmp[i_count] < r_opt) {
+      // For the LFS, we prefer points closer to the magnetic axis, i.e. not the solenoid
       if (r_tmp[i_count] > r_start) {
         r_start = r_tmp[i_count];
       }
@@ -493,47 +512,77 @@ int inside_lcfs(
     }
   }
 
+  // `col_start` and `col_end` are the indexes of the LFS and HFS
   col_start = (int) ceil((r_start - R_VEC[0] ) / DR);
   col_end = (int) floor((r_end - R_VEC[0]) / DR);
+  // Check that indexing is within bounds; will only happen under exotic condtions
+  // such as the plasma extending outside the (R, Z) grid. But we cannot continue
+  // under such conditions and should exit
   if ((col_start < 0) || (col_start > N_R)) {
-    error = 1;
+    error |= ERR_COL_START;
   }
   if ((col_end < 0) || (col_end > N_R)) {
-    error = 2;
+    error |= ERR_COL_END;
   }
   if (col_end < col_start) {
-    error = 3;
+    error |= ERR_COL_START_END;
+  }
+  if (!error) {
+  } else {
+    return error;
   }
 
-  if (!error) {
-    for (int i_col = col_start; i_col <= col_end; i_col++) {
-      for (int i_lcfs = 0; i_lcfs < lcfs_n; i_lcfs++) {
-        if (fabs(lcfs_r[i_lcfs] - R_VEC[i_col]) < THRESH) {
-          z_tmp[count] = lcfs_z[i_lcfs];
-          count++;
-        }
+  // Assume plasma is widest at the magnetic axis -> if this is not true then the present algorithm
+  // will miss part of the plasma boundary
+  // Loop in r from LFS to HFS
+  for (int i_col = col_start; i_col <= col_end; i_col++) {
+    // Loop over all possible boundary points and find the z's which could be the boundary
+    // Note there should be at least 2 points (upper and lower),
+    // but there may be more points (espescially around the private flux region)
+    int n_vert_bdry = 0;
+    for (int i_lcfs = 0; i_lcfs < lcfs_n; i_lcfs++) {
+      if (fabs(lcfs_r[i_lcfs] - R_VEC[i_col]) < THRESH) {
+        z_tmp[n_vert_bdry] = lcfs_z[i_lcfs];
+        n_vert_bdry++;
       }
+    }
+    if (n_vert_bdry < 2) {
+      error |= ERR_VERT_BDRY;
+      return error;
+    }
 
-      for (int i_count = 0; i_count< count; i_count++) {
-        if (z_tmp[i_count] < z_opt) {
-          if (z_tmp[i_count] > z_start) {
-            z_start = z_tmp[i_count];
-          }
-        } else {
-          if (z_tmp[i_count] < z_end) {
-            z_end = z_tmp[i_count];
-          }
-        }
+    // Find the two points which are vertically closest to the magnetic axis
+    double min_diff = DBL_MAX;
+    double second_min_diff = DBL_MAX;
+    double z_closest = DBL_MAX; // initial value shouldn't matter
+    double z_second_closest = DBL_MAX; // initial value shouldn't matter
+    for (int i_count = 0; i_count < n_vert_bdry; i_count++) {
+      double diff = fabs(z_tmp[i_count] - z_opt);
+      if (diff < min_diff) {
+        second_min_diff = min_diff;
+        z_second_closest = z_closest;
+        z_closest = z_tmp[i_count];
+        min_diff = diff;
+      } else if (diff < second_min_diff) {
+        second_min_diff = diff;
+        z_second_closest = z_tmp[i_count];
       }
-      row_start = (int) ceil((z_start - Z_VEC[0] ) / DZ);
-      row_end = (int) floor((z_end - Z_VEC[0]) / DZ);
-      if ((row_start >= 0) && (row_start <= row_end) && (row_end <= N_Z)) {
-        for (int i_row = row_start; i_row <= row_end; i_row++) {
-          mask[i_row * N_R + i_col] = 1;
-        }
-      } else {
-        error = 4;
+    }
+    double z_start = MIN(z_closest, z_second_closest);
+    double z_end = MAX(z_closest, z_second_closest);
+
+    // March vertically and apply the mask
+    row_start = (int) ceil((z_start - Z_VEC[0] ) / DZ);
+    row_end = (int) floor((z_end - Z_VEC[0]) / DZ);
+    if ((row_start >= 0) && (row_start <= row_end) && (row_end <= N_Z)) {
+      for (int i_row = row_start; i_row <= row_end; i_row++) {
+        mask[i_row * N_R + i_col] = 1;
       }
+    } else {
+      // This error should not be reachable because it is handled by
+      // `ERR_VERT_BDRY` error check (n_vert_bdry<2)
+      error = ERR_MASK_INDEX;
+      return error;
     }
   }
   return error;
