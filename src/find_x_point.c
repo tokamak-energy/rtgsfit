@@ -229,10 +229,12 @@ void find_null_in_gradient_march(
                   (*opt_n)++;
                 }
                 else if (hess_det_at_null < 0.0) {
-                  xpt_r[*xpt_n] = R_VEC[i_col] + DR * col_off;
-                  xpt_z[*xpt_n] = Z_VEC[i_row] + DZ * row_off;
-                  xpt_flux[*xpt_n] = lin_intrp_2(flux, idx, col_off, row_off);
-                  (*xpt_n)++;
+                  if (MASK_LIM[idx]) {
+                    xpt_r[*xpt_n] = R_VEC[i_col] + DR * col_off;
+                    xpt_z[*xpt_n] = Z_VEC[i_row] + DZ * row_off;
+                    xpt_flux[*xpt_n] = lin_intrp_2(flux, idx, col_off, row_off);
+                    (*xpt_n)++;
+                  }
                 }
               }
             }
