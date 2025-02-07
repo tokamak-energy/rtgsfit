@@ -40,10 +40,10 @@ $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_p
 	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 $(OBJS): %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
 
 rtgsfit.o: rtgsfit.c
-	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke
+	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< -I/usr/include/lapacke
 
 constants.c: constants.h
 	python ../utility/const_to_file.py $(DATAFILE)
