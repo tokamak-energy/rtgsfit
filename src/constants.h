@@ -13,6 +13,15 @@ extern const int N_GRID;
 /* N_MEAS : number of measurements */
 extern const int N_MEAS;
 
+/* N_FLUX_LOOPS : number of flux loop measurements */
+extern const int N_FLUX_LOOPS;
+
+/* N_BP_PROBES : number of bp-probe measurements */
+extern const int N_BP_PROBES;
+
+/* N_ROGOWSKI_COILS : number of Rogowski coil measurements */
+extern const int N_ROGOWSKI_COILS;
+
 /* N_COIL : number of PF coils */
 extern const int N_COIL;
 
@@ -100,6 +109,7 @@ extern const double G_MEAS_COIL[];
 /* G_GRID_COIL : greens matrix (N_GRID, N_COIL) */
 extern const double G_GRID_COIL[];
 
+/* G_GRID_VESSEL : Greens matrix between grid and vessel degrees of freedom (N_GRID, N_VESS) */
 extern const double G_GRID_VESSEL[];
 
 /* LOWER_BAND : lower triangular matrix (N_GRID, N_COL) CHECK!*/
