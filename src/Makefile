@@ -1,8 +1,10 @@
 # Check if FILENAME is defined as a command line argument
-ifndef DATAFILE
-    ifneq ($(MAKECMDGOALS),clean)
-    $(error DATAFILE is not defined. Please provide a value using 'make DATAFILE=<your_file_name>')
-    endif
+ifndef SHOT
+	ifndef RUN_NAME
+		ifneq ($(MAKECMDGOALS),clean)
+		$(error SHOT and RUN_NAME are not defined. Please provide values using 'make SHOT=<integer> RUN_NAME=<string>')
+		endif
+	endif
 endif
 
 CC = gcc
@@ -46,7 +48,7 @@ rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< -I/usr/include/lapacke
 
 constants.c: constants.h
-	python ../utility/const_to_file.py $(DATAFILE)
+	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
 
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc
