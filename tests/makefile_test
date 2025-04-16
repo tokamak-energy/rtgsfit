@@ -26,7 +26,7 @@ SYSLIB := -lm
 
 MYLIB = -L../lib
 INCLUDES := -I$(RTGSFIT)
-all: replay_rtgsfit rtgsfit_fileIO
+all: replay_rtgsfit
 
 replay_rtgsfit: replay_rtgsfit.o $(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o
 	$(CC) -o $@ $< $(CFLAGS) $(RTGSFIT)/rtgsfit.o $(RTGSFIT)/gradient.o \
@@ -37,10 +37,3 @@ replay_rtgsfit: replay_rtgsfit.o $(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o
 replay_rtgsfit.o: replay_rtgsfit.c
 	$(info %% $(CC) $(CFLAGS) $(INCLUDES) -I$(TE_INCLUDES) -I$(MDSPLUS_ROOT)/include -c -o $@ $^)
 	$(CC) $(CFLAGS) $(INCLUDES) -I$(TE_INCLUDES) -I$(MDSPLUS_ROOT)/include -c -o $@ $^
-
-rtgsfit_fileIO: rtgsfit_fileIO.o
-	$(info %% $(CC) -o $@ $< $(MYLIB) -lrtgsfit $(TE_OBJS)/utils.o)
-	$(CC) -g -o $@ $< $(MYLIB) -lrtgsfit $(TE_OBJS)/utils.o
-rtgsfit_fileIO.o: rtgsfit_fileIO.c
-	$(info %% BINSRC $(CFLAGS) -c -g -o $@ $^)
-	$(CC) $(CFLAGS) $(INCLUDES) -I$(TE_INCLUDES) -c -o $@ $<
