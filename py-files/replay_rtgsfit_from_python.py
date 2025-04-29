@@ -14,7 +14,7 @@ if username == "peter.buxton":
 elif username == "alex.prokopyszyn":
     pulseNo = 12_050
     pulseNo_write = pulseNo + 52_000_000
-    run_name = "RUN05"
+    run_name = "GJ_EIG12345"
     run_description = "test run"
 
 # Load the shared library
@@ -44,39 +44,15 @@ times_to_reconstruct = np.arange(16e-3, 150e-3, 1e-3)
 # times_to_reconstruct = np.array([80.0e-3])
 n_time = len(times_to_reconstruct)
 
-psi_list = [
-    "FLOOP.L001.PSI",
-    "FLOOP.L002.PSI",
-    "FLOOP.L003.PSI",
-    "FLOOP.L004.PSI",
-    "FLOOP.L005.PSI",
-    "FLOOP.L006.PSI",
-    "FLOOP.L007.PSI",
-    "FLOOP.L008.PSI",
-    "FLOOP.L009.PSI",
-    "FLOOP.L010.PSI",
-    "FLOOP.L011.PSI",
-    "FLOOP.L012.PSI",
-    "FLOOP.L013.PSI",
-    "FLOOP.L014.PSI",
-    "FLOOP.L015.PSI",
-    "FLOOP.L016.PSI",
-    "FLOOP.L017.PSI",
-    "FLOOP.L018.PSI",
-    "FLOOP.L019.PSI",
-    "FLOOP.L020.PSI",
-    "FLOOP.L021.PSI",
-    "FLOOP.L023.PSI",
-    "FLOOP.L024.PSI",
-    "FLOOP.L025.PSI",
-    "FLOOP.L026.PSI",
-    "FLOOP.L027.PSI",
-    "FLOOP.L029.PSI",
-    # "FLOOP.L101.PSI",
-    # "FLOOP.L106.PSI",
-    "FLOOP.L201.PSI",
-    "FLOOP.L212.PSI",
-]
+psi_list = ["PSI_FLOOP_001 ","PSI_FLOOP_002 ","PSI_FLOOP_004 ","PSI_FLOOP_005 ","PSI_FLOOP_006 ","PSI_FLOOP_007 ","PSI_FLOOP_008 ","PSI_FLOOP_009 ","PSI_FLOOP_010 ","PSI_FLOOP_011 ","PSI_FLOOP_012 ","PSI_FLOOP_013 ","PSI_FLOOP_014 ","PSI_FLOOP_015 ","PSI_FLOOP_016 ","PSI_FLOOP_017 ","PSI_FLOOP_018 ","PSI_FLOOP_019 ","PSI_FLOOP_020 ","PSI_FLOOP_021 ","PSI_FLOOP_023 ","PSI_FLOOP_024 ","PSI_FLOOP_025 ","PSI_FLOOP_026 ","PSI_FLOOP_027 ","PSI_FLOOP_029 ","PSI_FLOOP_101 ","PSI_FLOOP_106"]
+def convert_psi_list_format(inpsi_list):
+    outpsi_list = []
+    for item in inpsi_list:
+        number_part = item.split('_')[-1].strip()
+        new_format = f"FLOOP.L{number_part}.PSI"
+        outpsi_list.append(new_format)
+    return outpsi_list
+psi_list = convert_psi_list_format(psi_list)
 n_psi = len(psi_list)
 psi_data = np.zeros((n_time, n_psi))
 time_experimental = mag.get("TIME")
@@ -86,32 +62,15 @@ for i_psi in range(0, n_psi):
     psi_data[:, i_psi] = psi_recon_time
 
 
-bp_probes_names = [
-    "BPPROBE.P101.B",
-    "BPPROBE.P102.B",
-    "BPPROBE.P104.B",
-    "BPPROBE.P105.B",
-    "BPPROBE.P109.B",
-    "BPPROBE.P112.B",
-    "BPPROBE.P113.B",
-    "BPPROBE.P114.B",
-    "BPPROBE.P115.B",
-    "BPPROBE.P116.B",
-    "BPPROBE.P118.B",
-    "BPPROBE.P119.B",
-    "BPPROBE.P120.B",
-    "BPPROBE.P121.B",
-    "BPPROBE.P122.B",
-    "BPPROBE.P124.B",
-    "BPPROBE.P125.B",
-    "BPPROBE.P126.B",
-    "BPPROBE.P127.B",
-    "BPPROBE.P128.B",
-    "BPPROBE.P130.B",
-    "BPPROBE.P131.B",
-    "BPPROBE.P132.B",
-    "BPPROBE.P134.B",
-]
+bp_probes_names = ["B_BPPROBE_101 ","B_BPPROBE_102 ","B_BPPROBE_103 ","B_BPPROBE_104 ","B_BPPROBE_105 ","B_BPPROBE_109 ","B_BPPROBE_112 ","B_BPPROBE_113 ","B_BPPROBE_114 ","B_BPPROBE_115 ","B_BPPROBE_118 ","B_BPPROBE_119 ","B_BPPROBE_120 ","B_BPPROBE_121 ","B_BPPROBE_122 ","B_BPPROBE_124 ","B_BPPROBE_125 ","B_BPPROBE_126 ","B_BPPROBE_127 ","B_BPPROBE_128 ","B_BPPROBE_131 ","B_BPPROBE_134 "]
+def convert_bp_list_format(inbp_list):
+    outbp_list = []
+    for item in inbp_list:
+        number_part = item.split('_')[-1].strip()
+        new_format = f"BPPROBE.P{number_part}.B"
+        outbp_list.append(new_format)
+    return outbp_list
+bp_probes_names = convert_bp_list_format(bp_probes_names)
 n_bp_probe = len(bp_probes_names)
 bp_probe_data = np.zeros((n_time, n_bp_probe))
 time_experimental = mag.get("TIME")
@@ -132,14 +91,26 @@ rogowski_coils_names = [
     "ROG.DIVPSRT.I",
     "ROG.DIVPSRB.I",
 ]
+# rogowski_coils_names = ["I_ROG_INIVC000",
+#                         "I_ROG_BVLT ",
+#                         "I_ROG_BVLB ",
+#                         "I_ROG_GASBFLT ",
+#                         "I_ROG_GASBFLB ",
+#                         "I_ROG_HFSPSRT ",
+#                         "I_ROG_HFSPSRB ",
+#                         "I_ROG_DIVPSRT ",
+#                         "I_ROG_DIVPSRB ",
+#                         "REG_I_ROG_IVC ",
+#                         "REG_I_ROG_OVC "]
 n_rogowski_coil = len(rogowski_coils_names)
-rogowski_coil_data = np.zeros((n_time, n_rogowski_coil))
+rogowski_coil_data = np.zeros((n_time, n_rogowski_coil + 2))
 time_experimental = mag.get("TIME")
 for i_rogowski_coil in range(0, n_rogowski_coil):
     rogowski_coil_experimental = mag.get(rogowski_coils_names[i_rogowski_coil])
     rogowski_coil_recon_time = np.interp(times_to_reconstruct, time_experimental, rogowski_coil_experimental)
     rogowski_coil_data[:, i_rogowski_coil] = rogowski_coil_recon_time
-
+# Make the last two columns zero as 
+rogowski_coil_data[:, -2:] = np.zeros((n_time, 2))
 rogowski_coil_data[:, 0] = rogowski_coil_data[:, 0] - 8.0e3
 
 
@@ -267,7 +238,8 @@ results["GLOBAL"]["IP"] = plasma_current_output
 results["GLOBAL"]["PSI_B"] = psi_b_output
 results["GLOBAL"]["GS_ERROR"] = gs_error
 
-
+print("Writing to MDSplus")
+print("Creating script nodes")
 # Write to MDSplus
 util.create_script_nodes(
     script_name="RTGSFIT",
@@ -278,6 +250,7 @@ util.create_script_nodes(
     workflows=None,
     link_best=False,
 )
+print("Writing data to MDSplus")
 util.write_script_data(
     script_name="RTGSFIT",
     pulseNo_write=pulseNo_write,
@@ -286,3 +259,4 @@ util.write_script_data(
     run_name=run_name,
     run_description=run_description,
 )
+print("Finished writing to MDSplus")
