@@ -40,7 +40,7 @@ rtgsfit_lib.rtgsfit.restype = ctypes.c_int
 
 mag = GetData(pulseNo, "MAG#BEST")
 
-times_to_reconstruct = np.arange(16e-3, 150e-3, 1e-3)
+times_to_reconstruct = np.arange(30e-3, 150e-3, 1e-3)
 # times_to_reconstruct = np.array([80.0e-3])
 n_time = len(times_to_reconstruct)
 
