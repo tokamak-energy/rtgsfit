@@ -222,21 +222,11 @@ int rtgsfit(
     // }
 
 
-    // g_coef_meas_w_with_regularisation[69*4-5] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[69*4-5 + 69 + 1] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[69*4-5 + 69*2 + 2] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[69*4-5 + 69*3 + 3] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[69*4-5 + 69*4 + 4] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 2) - 1] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 3) - 1] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 4) - 1] = 15.0 * 0.001 * 20.0;
-    // g_coef_meas_w_with_regularisation[N_COEF * (N_MEAS + 5) - 1] = 15.0 * 0.001 * 20.0;
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 - 5 + N_MEAS * 0 + 0] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_01
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 - 5 + N_MEAS * 1 + 1] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_02
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 - 5 + N_MEAS * 2 + 2] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_03
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 - 5 + N_MEAS * 3 + 3] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_04
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 - 5 + N_MEAS * 4 + 4] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_05
-
+    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 3 + N_MEAS + 0] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_01
+    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 + N_MEAS + 1] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_02
+    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 5 + N_MEAS + 2] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_03
+    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 6 + N_MEAS + 3] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_04
+    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 7 + N_MEAS + 4] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_05
 
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
