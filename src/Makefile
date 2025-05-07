@@ -11,8 +11,8 @@ CC = gcc
 DEBUG = 1
 
 ifeq ($(DEBUG), 1)
-	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread
-	LDFLAGS = -pg -shared
+	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread -g3 -O0 -DDEBUG
+	LDFLAGS = -pg -shared -g3
 else
 	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
 	LDFLAGS = -shared -Wl,-Ofast -pthread
