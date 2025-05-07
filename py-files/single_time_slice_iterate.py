@@ -86,14 +86,14 @@ print(bp_probe_data)
 
 rogowski_coils_names = [
     "ROG.INIVC000.I",
-    "ROG.BVLT.I",
-    "ROG.BVLB.I",
-    "ROG.GASBFLT.I",
-    "ROG.GASBFLB.I",
-    "ROG.HFSPSRT.I",
-    "ROG.HFSPSRB.I",
-    "ROG.DIVPSRT.I",
-    "ROG.DIVPSRB.I",
+    "ROG.BVLT.I", # B vertical lower coil top
+    "ROG.BVLB.I", # B vertical lower coil bottom
+    "ROG.GASBFLT.I", # Gas baffle top
+    "ROG.GASBFLB.I", # Gas baffle bottom
+    "ROG.HFSPSRT.I", # High field side pass support ring top
+    "ROG.HFSPSRB.I", # High field side pass support ring bottom
+    "ROG.DIVPSRT.I", # Divertor pass support ring top
+    "ROG.DIVPSRB.I", # Divertor pass support ring bottom
 ]
 n_rogowski_coil = len(rogowski_coils_names)
 rogowski_coil_data = np.zeros(n_rogowski_coil)
@@ -128,7 +128,7 @@ flux_norm = np.loadtxt('/home/alex.prokopyszyn/GitHub/rtgsfit/data/flux_norm.txt
 mask = np.loadtxt('/home/alex.prokopyszyn/GitHub/rtgsfit/data/mask.txt', dtype=np.float64)
 psi_total = np.loadtxt('/home/alex.prokopyszyn/GitHub/rtgsfit/data/psi_total.txt', dtype=np.float64)
 
-n_iter = 100
+n_iter = 1
 psi_output = np.zeros((n_iter, 65, 33))
 psi_b_output = np.zeros((n_iter))
 plasma_current_output = np.zeros((n_iter))
