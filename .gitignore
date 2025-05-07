@@ -65,3 +65,5 @@ tests/c_*.py
 
 # Virtual environment
 venv_rtgsfit/
+
+plots/
