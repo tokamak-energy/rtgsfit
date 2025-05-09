@@ -146,3 +146,7 @@ backtrace
 gdb --args ./replay_rtgsfit 12050 0.02 0.0005 0.2;
 run
 bt
+
+# Instructions for aleksei
+
+source /opt/intel/oneapi/setvars.sh
