@@ -8,7 +8,7 @@ ifndef SHOT
 endif
 
 CC = gcc
-DEBUG = 1
+DEBUG = 0
 
 ifeq ($(DEBUG), 1)
 	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread -g3 -O0 -DDEBUG
