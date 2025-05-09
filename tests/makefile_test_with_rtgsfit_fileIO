@@ -1,5 +1,5 @@
 CC = gcc
-DEBUG = 1
+DEBUG = 0
 ifeq ($(DEBUG), 1)
 	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread
 	LDFLAGS = -pg -shared
