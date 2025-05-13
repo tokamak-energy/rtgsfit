@@ -18,7 +18,7 @@ rm src/*.o
 rm src/constants.c
 rm lib/*.so
 # make -C src/ DATAFILE=/home/peter.buxton/0_Version_Controlled/rtgsfit/data/12001000_RUN05_for_c.mat
-make -C src/ SHOT=52012050 RUN_NAME=GJ_EIG12345
+make -C src/ SHOT=52012050 RUN_NAME=GJ_EIG12345 # sed_tag:pulse_num_run_name_replay_range_of_pulses
 
 # Make the test program
 rm tests/*.o

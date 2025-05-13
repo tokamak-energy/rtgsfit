@@ -16,6 +16,10 @@ elif username == "alex.prokopyszyn":
     pulseNo_write = pulseNo + 52_000_000
     run_name = "GJ_EIG12345"
     run_description = "test run"
+pulseNo = 13349 # sed_tag:pulse_num_replay_range_of_pulses
+pulseNo_write = 52013349 # sed_tag:pulse_num_write_replay_range_of_pulses
+run_name = 'SCAN3' # sed_tag:run_name_replay_range_of_pulses
+run_description = 'Part of a scan of pulses to test the RT-GSFit code. Starting at a later time, namely, 60e-3 s. Also changed MC current from equal to MCT to average of MCB and MCT. Now using pulse number 99000230 instead of 12001000 in the RT-GSFit Matlab setup code also using elmag_run=RUN18 instead of RUN16. Where the aim is to fix the issue of assuming the MCB and MCT currents are equal when they are actually of opposite sign in the latter part of the pulse.' # sed_tag:run_description_replay_range_of_pulses
 
 # Load the shared library
 rtgsfit_lib = ctypes.CDLL(os.path.dirname(os.path.abspath(__file__)) + '/../lib/librtgsfit.so')
@@ -40,7 +44,7 @@ rtgsfit_lib.rtgsfit.restype = ctypes.c_int
 
 mag = GetData(pulseNo, "MAG#BEST")
 
-times_to_reconstruct = np.arange(30e-3, 150e-3, 1e-3)
+times_to_reconstruct = np.arange(60e-3, 150e-3, 1e-3)
 # times_to_reconstruct = np.array([80.0e-3])
 n_time = len(times_to_reconstruct)
 
@@ -115,13 +119,14 @@ rogowski_coil_data[:, 0] = rogowski_coil_data[:, 0] - 8.0e3
 
 
 ## PF coil currents
-psu2coil = GetData(pulseNo, "PSU2COIL#RUN01")
+psu2coil = GetData(pulseNo, "PSU2COIL#RUN05")
 
 # Order:
 # SOL, MC, DIV, BVL, BVUT, BVUB, PSH
 i_pf_rtgsfit_order = np.vstack((
     np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.SOL.I")),   # SOL
-    np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.MC.I")),    # MC
+    np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.MCT.I")),    # MCT
+    np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.MCT.I")),    # MCB
     np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.DIV.I")),   # DIV
     np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.BVL.I")),   # BVL
     np.interp(times_to_reconstruct, time_experimental, psu2coil.get("PF.BVUT.I")),  # BVUT
