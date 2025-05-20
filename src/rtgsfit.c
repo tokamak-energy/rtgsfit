@@ -164,6 +164,47 @@ int rtgsfit(
     double g_coef_meas_w_with_regularisation[N_COEF*(N_MEAS+5)];  // order: [(i_coef=0, i_meas=0), (i_coef=0, i_meas=1), (i_coef=0, i_meas=2), ...]
     double meas_no_coil_cp_with_regularisation[N_MEAS + 5];
 
+    FILE *meas_file = fopen("meas_dump.txt", "w");
+    if (meas_file != NULL) {
+        for (i_meas = 0; i_meas < N_MEAS; i_meas++) {
+            fprintf(meas_file, "%.16e\n", meas[i_meas]);
+        }
+        fclose(meas_file);
+    }
+    FILE *coil_file = fopen("coil_dump.txt", "w");
+    if (coil_file != NULL) {
+        for (i_meas = 0; i_meas < N_COIL; i_meas++) {
+            fprintf(coil_file, "%.16e\n", coil_curr[i_meas]);
+        }
+        fclose(coil_file);
+    }
+    FILE *flux_file = fopen("flux_norm_dump.txt", "w");
+    if (flux_file != NULL) {
+        for (i_meas = 0; i_meas < N_GRID; i_meas++) {
+            fprintf(flux_file, "%.16e\n", flux_norm[i_meas]);
+        }
+        fclose(flux_file);
+    }
+    FILE *mask_file = fopen("mask_dump.txt", "w");
+    if (mask_file != NULL) {
+        for (i_meas = 0; i_meas < N_GRID; i_meas++) {
+            fprintf(mask_file, "%d\n", mask[i_meas]);
+        }
+        fclose(mask_file);
+    }
+    FILE *flux_total_file = fopen("flux_total_dump.txt", "w");
+    if (flux_total_file != NULL) {
+        for (i_meas = 0; i_meas < N_GRID; i_meas++) {
+            fprintf(flux_total_file, "%.16e\n", flux_total[i_meas]);
+        }
+        fclose(flux_total_file);
+    }
+    printf("Mask values:\n");
+    for (int i = 0; i < N_GRID; i++) {
+        printf("%d ", mask[i]);
+    }
+    printf("\n");
+
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
 
