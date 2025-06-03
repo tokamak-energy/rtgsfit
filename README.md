@@ -90,12 +90,6 @@ R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
 |...|...|...|...|=|...|...|...|...|=
 |Z_GRID[N_R*(N_Z-1)+0]|Z_GRID[N_R*(N_Z-1)+1]|...|Z_GRID[N_R*(N_Z-1)+N_R-1]|=|Z_VEC[N_Z-1]|Z_VEC[N_Z-1]|...|Z_VEC[N_Z-1]|
 
-<!--
-You can extend this table to show more rows/columns as needed. 
-Markdown tables are rendered nicely on GitHub, but for large matrices, 
-consider showing only a representative section.
---> R_GRID[1 + N_R], ..., N_R - 1 + N_R, ]
- 
 ## Boundary Convention 
 * LTRB
 * (R_MIN, Z_MIN) -> (R_MIN, Z_MAX) -> (R_MAX, Z_MAX) -> (R_MAX, Z_MIN) -> (R_MIN, Z_MIN)
