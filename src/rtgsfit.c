@@ -67,6 +67,7 @@ void make_basis(
         if (mask[i_grid] && MASK_LIM[i_grid])
         {
             basis[i_grid] = (1 - flux_norm[i_grid]) * R_GRID[i_grid]; // BUXTON: probably p_prime
+            // PROKOPYSZYN: Why not divide by R instead of (R * mu0)?
             basis[i_grid + N_GRID] = (1 -  flux_norm[i_grid]) * INV_R_MU0[i_grid];  // BUXTON: probably ff_prime
         }
         else
@@ -132,18 +133,18 @@ void normalise_flux(
 
 
 int rtgsfit(
-        double* meas,
-        double* coil_curr,
-        double* flux_norm,
-        int* mask,
-        double* flux_total,
-        double* error,
-        double* lcfs_r,
-        double* lcfs_z,
-        int* lcfs_n,
-        double* coef,
-        double* flux_boundary,
-        double* plasma_current
+        double* meas, // input
+        double* coil_curr, // input
+        double* flux_norm, // input/output
+        int* mask, // input/output
+        double* flux_total, // output
+        double* error, // output
+        double* lcfs_r, // output
+        double* lcfs_z, // output
+        int* lcfs_n, // output
+        double* coef, // output
+        double* flux_boundary, // output
+        double* plasma_current // output
         )
 {
     double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
@@ -161,13 +162,14 @@ int rtgsfit(
     int xpt_n = 0;
     int opt_n = 0;
 
-    double g_coef_meas_w_with_regularisation[N_COEF*(N_MEAS+5)];  // order: [(i_coef=0, i_meas=0), (i_coef=0, i_meas=1), (i_coef=0, i_meas=2), ...]
-    double meas_no_coil_cp_with_regularisation[N_MEAS + 5];
-
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
 
     // subtract PF (vessel) contributions from measurements
+    // PROKOPYSZYN: Why is "vessel" in brackets in the above comment?
+    // PROKOPYSZYN: I think this is a mistake, it should be "PF coil" instead of "PF (vessel)".
+    // PROKOPYSZYN: The rm_coil_from_meas only removes the PF coil contributions from the measurements.
+    // PROKOPYSZYN: The passive vessel contributions are not removed
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
     // make basis
@@ -195,77 +197,22 @@ int rtgsfit(
     // BUXTON: GSFit.rs uses "dgelss" = same!!
     // "single_vals" = singular values, not used
     // "rcond" = -1 == machine precision
-
-    // Add regularisations
-    for (int i_coef = 0; i_coef < N_COEF; i_coef++) {
-        for (int i_meas = 0; i_meas < N_MEAS; i_meas++) {
-            g_coef_meas_w_with_regularisation[i_coef * (N_MEAS + 5) + i_meas] = g_coef_meas_w[i_coef*N_MEAS + i_meas];
-        }
-        for (int i_meas = N_MEAS; i_meas < N_MEAS + 5; i_meas++) {
-            g_coef_meas_w_with_regularisation[i_coef * (N_MEAS + 5) + i_meas] = 0.0;
-        }
-    }
-
-
-
-
-
-    // for (int i_meas = 0; i_meas < N_MEAS; i_meas++) {
-    //     for (int i_coef = 0; i_coef < N_COEF; i_coef++) {
-    //         g_coef_meas_w_with_regularisation[i_meas * (N_COEF) + i_coef] = g_coef_meas_w[i_meas * N_COEF + i_coef];
-    //     }
-    // }
-    // for (int i_meas = N_MEAS; i_meas < N_MEAS + 5; i_meas++) {
-    //     for (int i_coef = 0; i_coef < N_COEF; i_coef++) {
-    //         g_coef_meas_w_with_regularisation[i_meas * (N_COEF) + i_coef] = 0.0;
-    //     }
-    // }
-
-
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 3 + N_MEAS + 0] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_01
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 4 + N_MEAS + 1] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_02
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 5 + N_MEAS + 2] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_03
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 6 + N_MEAS + 3] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_04
-    g_coef_meas_w_with_regularisation[(N_MEAS + 5) * 7 + N_MEAS + 4] = 15.0 * 0.001 * 20.0 * 6.28;  // IVC eig_05
-
-    for (i_meas=0; i_meas<N_MEAS; i_meas++)
-    {
-        meas_no_coil_cp_with_regularisation[i_meas] = meas_no_coil_cp[i_meas];
-    }
-    for (i_meas=N_MEAS; i_meas<N_MEAS + 5; i_meas++)
-    {
-        meas_no_coil_cp_with_regularisation[i_meas] = 0.0;
-    }
-
-    // info = LAPACKE_dgelss(
-    //   LAPACK_COL_MAJOR,
-    //   N_MEAS,
-    //   N_COEF,
-    //   1,
-    //   g_coef_meas_w,
-    //   N_MEAS,
-    //   meas_no_coil_cp,
-    //   N_MEAS,
-    //   single_vals,
-    //   rcond,
-    //   &rank
-    // );
     info = LAPACKE_dgelss(
       LAPACK_COL_MAJOR,
-      N_MEAS+5,
+      N_MEAS,
       N_COEF,
       1,
-      g_coef_meas_w_with_regularisation,
-      N_MEAS+5,
-      meas_no_coil_cp_with_regularisation,
-      N_MEAS+5,
+      g_coef_meas_w,
+      N_MEAS,
+      meas_no_coil_cp,
+      N_MEAS,
       single_vals,
       rcond,
       &rank
     );
 
     // BUXTON: copy "meas_no_coil_cp" into "coef"
-    memcpy(coef, meas_no_coil_cp_with_regularisation, sizeof(double) * N_COEF);
+    memcpy(coef, meas_no_coil_cp, sizeof(double) * N_COEF);
 
     // apply coeff to find current
     // BUXTON: matrix-vector multiplication; result stored in "source"
