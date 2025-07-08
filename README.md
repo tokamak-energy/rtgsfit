@@ -75,7 +75,21 @@ R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
  [ (N_Z - 2, 0), (N_Z - 2, 1)  , ... , (N_Z - 2, N_R -1)],
                     ...
  [ (0, 0)      , (0, 1)       , ... , (0, N_R -1)       ]]
- 
+
+| | | | | | | | | |
+|-|-|-|-|-|-|-|-|-|
+|R_GRID[0]|R_GRID[1]|...|R_GRID[N_R-1]|=|R_VEC[0]|R_VEC[1]|...|R_VEC[N_R-1]|
+|R_GRID[N_R+0]|R_GRID[N_R+1]|...|R_GRID[N_R+N_R-1]|=|R_VEC[0]|R_VEC[1]|...|R_VEC[N_R-1]|
+|...|...|...|...|=|...|...|...|...|=
+|R_GRID[N_R*(N_Z-1)+0]|R_GRID[N_R*(N_Z-1)+1]|...|R_GRID[N_R*(N_Z-1)+N_R-1]|=|R_VEC[0]|R_VEC[1]|...|R_VEC[N_R-1]|
+
+| | | | | | | | | |
+|-|-|-|-|-|-|-|-|-|
+|Z_GRID[0]|Z_GRID[1]|...|Z_GRID[N_R-1]|=|Z_VEC[0]|Z_VEC[0]|...|Z_VEC[0]|
+|Z_GRID[N_R+0]|Z_GRID[N_R+1]|...|Z_GRID[N_R+N_R-1]|=|Z_VEC[1]|Z_VEC[1]|...|Z_VEC[1]|
+|...|...|...|...|=|...|...|...|...|=
+|Z_GRID[N_R*(N_Z-1)+0]|Z_GRID[N_R*(N_Z-1)+1]|...|Z_GRID[N_R*(N_Z-1)+N_R-1]|=|Z_VEC[N_Z-1]|Z_VEC[N_Z-1]|...|Z_VEC[N_Z-1]|
+
 ## Boundary Convention 
 * LTRB
 * (R_MIN, Z_MIN) -> (R_MIN, Z_MAX) -> (R_MAX, Z_MAX) -> (R_MAX, Z_MIN) -> (R_MIN, Z_MIN)
