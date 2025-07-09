@@ -48,7 +48,11 @@ rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< -I/usr/include/lapacke
 
 constants.c: constants.h
-	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
+ifeq ($(RUN_NAME),no_mds)
+    @echo "Skipping constants.c generation because RUN_NAME is 'no_mds'"
+else
+    python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
+endif
 
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc
