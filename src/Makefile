@@ -50,9 +50,9 @@ rtgsfit.o: rtgsfit.c
 constants.c: constants.h
 	@if [ "$(RUN_NAME)" = "no_mds" ]; then \
 		echo "Skipping constants.c generation because RUN_NAME is 'no_mds'"; \
-    else \
+	else \
 		python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME); \
-    fi
+	fi
 
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc
