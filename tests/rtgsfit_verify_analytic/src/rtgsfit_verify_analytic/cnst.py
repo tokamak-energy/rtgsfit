@@ -10,6 +10,7 @@ import scipy
 REPO_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(REPO_PATH, 'data')
 PLOTS_DIR = os.path.join(REPO_PATH, 'plots')
+RTGSFIT_PATH = os.path.join(REPO_PATH, '..', '..')
 
 # Replay parameters
 N_ITERS = 10

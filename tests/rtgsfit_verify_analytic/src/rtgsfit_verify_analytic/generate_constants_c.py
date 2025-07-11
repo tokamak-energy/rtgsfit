@@ -382,4 +382,5 @@ def const_to_file(const_dict,
 
 if __name__ == "__main__":
     data_dictionary = generate_data_dictionary()
-    const_to_file(data_dictionary)
+    constant_h_path = os.path.join(cnst.RTGSFIT_PATH, 'src', 'constants.h')
+    const_to_file(data_dictionary, file_read=constant_h_path)

@@ -24,7 +24,7 @@ def initial_flux_norm(r_vec, z_vec):
 
 if __name__ == "__main__":
 
-    librtgsfit_path = os.path.join(cnst.REPO_PATH, '..', '..', 'rtgsfit', 'lib', 'librtgsfit.so')
+    librtgsfit_path = os.path.join(cnst.RTGSFIT_PATH, 'lib', 'librtgsfit.so')
     constants_c_path = os.path.join(cnst.REPO_PATH, 'data', 'constants.c')
 
     rtgsfit_lib = ctypes.CDLL(librtgsfit_path)
