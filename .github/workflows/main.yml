@@ -30,6 +30,7 @@ jobs:
     - name: Install and run tests in venv
       run: |
         cd tests/rtgsfit_verify_analytic
+        pwd
         uv venv --python 3.13
         source .venv/bin/activate
         uv pip install -e "."
