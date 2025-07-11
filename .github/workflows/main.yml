@@ -27,9 +27,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libopenblas-dev        
-        sudo apt-get install -y liblapacke-dev
-
+        sudo apt-get install -y libopenblas-dev liblapacke-dev     
 
     - name: Install uv
       run: pip install uv
