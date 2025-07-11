@@ -32,7 +32,7 @@ def run_pipeline(tmp_path_factory):
 
     # Step 4: Compile RTGSFIT
     subprocess.run(
-        'make SHOT=0 RUN_NAME=no_mds',
+        "make SHOT=0 RUN_NAME=no_mds LDFLAGS='-shared -Wl,-Ofast -pthread -llapacke -llapack -lblas -lm'",
         cwd=rtgsfit_src,
         check=True,
         shell=True
