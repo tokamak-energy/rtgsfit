@@ -38,6 +38,11 @@ jobs:
         echo "Linker search path contents:"
         ls -lh /usr/lib/x86_64-linux-gnu/liblapack*
 
+    - name: Symlink LAPACKE headers to match Makefile expectation
+      run: |
+        sudo mkdir -p /usr/include/lapacke
+        sudo ln -sf /usr/include/lapacke.h /usr/include/lapacke/lapacke.h
+
     - name: Install uv
       run: pip install uv
 
