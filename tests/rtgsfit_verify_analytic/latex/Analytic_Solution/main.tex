@@ -1,0 +1,254 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[a4paper, margin=1in]{geometry}
+
+\title{Analytic Test of RT-GSFit}
+\author{Alexander Prokopyszyn}
+\date{May 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{Deriving Bessel's Eqn from the Grad-Shafranov Eqn}
+
+The Grad-Shafranov equation is given by
+\[\frac{\partial^2 \psi}{\partial R^2} - \frac{1}{R}\frac{\partial \psi}{\partial R} + \frac{\partial^2 \psi}{\partial z^2} = -\mu_oR^2p'(\psi) - F(\psi)F'(\psi).\]
+We will assume a plasma beta, $\beta=0$. We are interested in solving the Grad-Shafranov equation inside the LCFS. 
+% Let $R=R_o$, $z=z_o$ be the coordinates of the o-point. 
+% We will assume that
+% \[\frac{|R-R_o|}{R_o} = O(\epsilon),\]
+% \[R\frac{\partial}{\partial R} = O\left(\frac{1}{\epsilon}\right)\]
+% \[R\frac{\partial}{\partial z} = O\left(\frac{1}{\epsilon}\right)\]
+% \[\frac{|R-R_o|}{R_o} \ll 1,\]
+% \[\implies \frac{1}{R} = \frac{1}{R-R_0 + R_0} = \frac{1}{R_0}\left(\frac{1}{1+\frac{R-R_0}{R}}\right)\]
+We will take the large aspect-ratio limit and assume $R\rightarrow \infty$.
+Hence, we can simplify the Grad-Shafranov to
+\[\frac{\partial^2 \psi}{\partial R^2} + \frac{\partial^2 \psi}{\partial z^2} = -F(\psi)F'(\psi).\]
+We will assume poloidal symmetry, and so we assume $\psi=\psi(\rho)$.
+Let
+\[\rho = \sqrt{(R-R_o)^2+(z-z_o)^2}.\]
+\[R-R_o = \rho\cos(\theta),\]
+\[z-z_o = \rho \sin(\theta),\]
+% \[\theta = \tan^{-1}(z-z_o, R-R_o)\]
+\[\mathbf{\hat{\rho}} = \cos(\theta) \mathbf{\hat{R}} + \sin(\theta)\mathbf{\hat{z}},\]
+\[\mathbf{\hat{\theta}} = -\sin(\theta) \mathbf{\hat{R}} + \cos(\theta)\mathbf{\hat{z}}.\]
+Note that
+\[\begin{aligned}
+\frac{\partial \psi}{\partial R} &= \frac{\partial \rho}{\partial R}\frac{d \psi}{d \rho} \\
+&= \frac{(R-R_o)}{\sqrt{(R-R_o)^2+(z-z_o)^2}}\frac{d \psi}{d \rho} \\
+&= \cos(\theta)\frac{d \psi}{d \rho},
+\end{aligned}\]
+\[\begin{aligned}
+\frac{\partial \psi}{\partial z} &= \frac{\partial \rho}{\partial z}\frac{d \psi}{d \rho} \\
+&= \frac{(z-z_o)}{\sqrt{(R-R_o)^2+(z-z_o)^2}}\frac{d \psi}{d \rho} \\
+&= \sin(\theta)\frac{d \psi}{d \rho},
+\end{aligned}\]
+\[\begin{aligned}
+    \frac{\partial \psi}{\partial R}\mathbf{\hat{R}} + \frac{\partial \psi}{\partial z}\mathbf{\hat{z}} &= \frac{d \psi}{d \rho}(\cos(\theta) \mathbf{\hat{R}} + \sin(\theta)\mathbf{\hat{z}}) \\
+    &= \frac{d \psi}{d \rho}\mathbf{\hat{\rho}},
+\end{aligned}
+\]
+\[\begin{aligned}
+\mathbf{\hat{R}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial R} &= \frac{\partial}{\partial R}\left(\frac{R-R_o}{\sqrt{(R-R_o^2)+(z-z_o^2)}}\right)\\
+&= \frac{\sin^2\theta}{\rho}
+\end{aligned}\]
+\[\begin{aligned}
+\mathbf{\hat{z}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial z} &= \frac{\partial}{\partial z}\left(\frac{z-R_o}{\sqrt{(R-R_o^2)+(z-z_o^2)}}\right)\\
+&= \frac{\cos^2\theta}{\rho}
+\end{aligned}\]
+\[\begin{aligned}
+\frac{\partial^2\psi}{\partial R^2} + \frac{\partial^2 \psi}{\partial z^2} &= \left(\mathbf{\hat{R}}\frac{\partial }{\partial R} + \mathbf{\hat{z}}\frac{\partial }{\partial z}\right)
+\cdot\left(\frac{\partial \psi}{\partial R}\mathbf{\hat{R}} + \frac{\partial \psi}{\partial z}\mathbf{\hat{z}}\right) \\ 
+&= \left(\mathbf{\hat{R}}\frac{\partial }{\partial R} + \mathbf{\hat{z}}\frac{\partial }{\partial z}\right) \cdot \left(\frac{d \psi}{d \rho}\mathbf{\hat{\rho}}\right) \\
+&= \cos(\theta)\frac{\partial}{\partial R}\left(\frac{d \psi}{d \rho}\right)
++ \frac{d \psi}{d \rho}\mathbf{\hat{R}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial R}
++ \sin(\theta)\frac{\partial}{\partial z}\left(\frac{d \psi}{d \rho}\right)
++ \frac{d \psi}{d \rho}\mathbf{\hat{z}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial z} \\
+&= \frac{d^2\psi}{d \rho^2} + \frac{1}{\rho}\frac{d \psi}{d \rho}.
+\end{aligned}\]
+Hence,
+we can rewrite the Grad-Shafranov equation as
+\[\frac{d^2\psi}{d \rho^2} + \frac{1}{\rho}\frac{d \psi}{d \rho} = -F(\psi)F'(\psi).\]
+
+RTGSFit assumes $FF'$ is of the form
+\[FF' = a(1-\psi_N),\]
+where $a$ is a constant and
+\[\psi_N = \frac{\psi_o-\psi}{\psi_o-\psi_b},\]
+where $\psi_b$ is $\psi$ at the last closed flux surface and $\psi_o$ is the value of $\psi$ at the o-point.
+Let
+\[\psi(\rho)=\psi'(\rho)+\psi_b,\]
+\[a'=\frac{a}{(\psi_o - \psi_b)},\]
+hence by substituting our expression for $\psi$ in terms of $\psi'$ and $a$ in terms of a' we get
+\[\frac{d^2\psi'}{d \rho^2} + \frac{1}{\rho}\frac{d \psi'}{d \rho} = -a'\psi'.\]
+Multiplying through by $\rho^2$ and rearranging we arrive at an equation that is nearly Bessel's equation of order 0
+\[\rho^2\frac{d^2\psi'}{d \rho^2} + \rho\frac{d \psi'}{d \rho} + a'\rho^2\psi'= 0.\]
+Let 
+\[s=\frac{a'}{|a'|}\sqrt{|a'|}\rho,\]
+\[\implies \rho=\frac{a'}{|a'|}\frac{1}{\sqrt{|a'|}}s\]
+\[\implies \frac{\partial }{\partial \rho} =\frac{a'}{|a'|}\sqrt{|a'|}\frac{\partial }{\partial s},\]
+\[\implies \frac{\partial^2 }{\partial \rho^2} =a'\frac{\partial^2 }{\partial s^2},\]
+\[\implies \rho^2 = \frac{s^2}{a'}\]
+Hence, the Grad-Shafranov equation becomes
+\[s^2\frac{\partial^2\psi'}{\partial s^2} + s\frac{\partial \psi'}{\partial s} + s^2\psi'= 0,\]
+which is exactly of the same form as Bessel's equation of order 0.
+
+\section{Solving Bessels' equation}
+
+We know that $\psi'$ is of the form
+\[\psi' = C_1J_0(s) + C_2Y_0(s),\]
+where $J_0$ and $Y_0$ are Bessel function of order zero of the first and second kind respectively. We know that $\psi$ is finite at $R=R_o$, $z=z_o$, hence, $C_2=0$.
+Past the last closed flux surface, there is no plasma current. 
+Hence, the full solution for $\psi'$ is
+\[\psi'(\rho) = C_1J_0(\sqrt{a'}\rho).\]
+% Note that RT-GSFit assumes $\psi$ is a monotonically decreasing function away from the o-point inside the LCFS, but $J_0(\sqrt{a'}\rho)$ oscillates. This means the corodinate of the LCFS, $\rho=\rho_b$, must be less than the value of $\rho$ where $J_0(\sqrt{a'}\rho)$ has its first turning point (besides the turning point at $\rho=0$). Note that
+% \[\frac{d }{d x}J_0(x) = -J_1(x),\]
+% and $J_1(x)$ has its first root at about $x=\pm3.8317$ (besides the root at $x=0$). Hence, we require
+% \[\sqrt{a'}\rho < 3.8317 \implies \rho < \frac{3.8317}{\sqrt{a'}}.\]
+% Note that
+% \[a = \frac{\psi_o-\psi_b}{\rho_b^2}.\]
+% we assume that $\psi_o>\psi_b  a>0$.
+
+\section{Tidying up solution}
+
+We know that
+\[\psi = C_1J_0(\sqrt{a'}\rho) + \psi_b,\]
+which we can rewrite as
+\[\psi = C_1J_0\left(a^*\frac{\rho}{\rho_b}\right) + \psi_b,\]
+where
+\[a^* = \sqrt{\frac{a\rho_b^2}{\psi_o-\psi_b}}.\]
+We know that $\psi(\rho_b)=\psi_b$, hence,
+\[ C_1J_0(a^*)=0.\]
+We will assume that we have chosen $a$ such that $a^*$ is a zero of $J_0$.
+We know that $\psi(0) = \psi_o$, hence
+\[\psi = (\psi_o - \psi_b)J_0\left(a^*\frac{\rho}{\rho_b}\right) + \psi_b,\]
+
+
+% Let us choose $a$ such that
+% \[J_0(\sqrt{a'}\rho_b)=0,\]
+% Specifically, the first positive zero of $J_0$.
+% Note that
+% \[a' = \frac{a}{\psi_o-\psi_b}.\]
+% Let
+% \[a^* = \sqrt{\frac{a\rho_b^2}{\psi_o-\psi_b}},\]
+% \[\implies J_0(\sqrt{a'}\rho) = J_0\left(a^*\frac{\rho}{\rho_b}\right),\]
+% hence, $a^*$ needs to be the coordinate of the first positive zero of $J_0$ and
+% \[a = \frac{\psi_o - \psi_b}{\rho_b^2}(a^*)^2,\]
+% \[\psi = (\psi_o-\psi_b)J_0\left(a^*\frac{\rho}{\rho_b}\right) + \psi_b\]
+
+% \[a = \frac{\psi_o}{\rho_b^2}(a^*)^2\]
+
+% Without loss of generality, we will set $\psi_b=0$. Hence
+% \[\psi = \psi_oJ_0\left(\sqrt{\frac{a}{\psi_o}}\rho\right).\]
+% Let
+% \[a = \frac{\psi_o}{\rho_b^2}(a^*)^2,\]
+% where $a^*>0$,
+% \[\implies a^* = \sqrt{\frac{a\rho_b^2}{\psi_o}}.\]
+% Hence,
+% \[\psi = \psi_oJ_0\left(a^*\frac{\rho}{\rho_b}\right).\]
+% Since $\psi(\rho_b)=\psi_b=0$ we know that
+% \[J_0(a^*)=0,\]
+% \[\implies a^* \approx 2.404825557695772768621631879326454643124244909146\]
+
+\section{Solution for $\rho>\rho_b$}
+
+For $\rho>\rho_b$ there is no plasma current and the Grad-Shafranov equation is given by
+\[\rho^2\frac{d^2\psi}{d \rho^2} + \rho\frac{d \psi}{d \rho} = 0\]
+The equation has the solution
+\[\psi = C_1\ln\left(\frac{\rho}{\rho_b}\right) + \psi_b,\]
+and satisfies continuity at $\rho=\rho_b$.
+We also require continuity of the derivative of $\psi$, note that
+\[\frac{d}{d\rho}\left[(\psi_o-\psi_b)J_0\left(a^*\frac{\rho}{\rho_b}\right)\right]=-\frac{(\psi_o-\psi_b)a^*}{\rho_b}J_1\left(a^*\frac{\rho}{\rho_b}\right),\]
+\[\frac{d}{d\rho} C_1\ln\left(\frac{\rho}{\rho_b}\right) = \frac{C_1}{\rho},\]
+hence,
+\[\frac{C_1}{\rho_b} = -\frac{(\psi_o-\psi_b)a^*}{\rho_b}J_1(a^*),\]
+\[\implies C_1 = -(\psi_o-\psi_b)a^*J_1(a^*),\]
+% Note that
+% \[J_1(a^*) \approx 0.519147497289466788140202640208624244569819046868.\]
+Hence, for $\rho\ge\rho_b$
+\[\psi = -(\psi_o-\psi_b)a^*J_1(a^*)\ln\left(\frac{\rho}{\rho_b}\right) + \psi_b.\]
+
+\section{Total current}
+
+For $\rho>\rho_b$, the poloidal field is given by
+\[\begin{aligned}
+B_\theta &= \frac{1}{R}\frac{d\psi}{d\rho}, \\
+&= -\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{(R_o+\rho\cos\theta)\rho}.
+\end{aligned}\]
+Using Ampere's law, namely,
+\[2\pi\rho B_\theta = \mu_0 I_\text{total},\]
+\[\begin{aligned}
+\oint_{\rho=\rho_0}B_\theta \rho_0d\theta &= \frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o}\frac{2\pi}{\sqrt{1-\frac{\rho_0^2}{R_o^2}}}\\
+&= 2\pi\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o}\quad (\text{for } \rho_0/R_o\rightarrow0)  \\
+&=\mu_0 I_\text{total}.
+\end{aligned}\]
+% \[\begin{aligned}
+% \oint_{\rho=\rho_0}B_\theta \rho_0 d\theta &= 2\pi\rho_o\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o\rho_0} + \oint_{\rho=\rho_0}\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o\rho_0}\left(\frac{\rho\cos\theta}{R_o}\right)^2 d\theta + ...\\
+% &=\mu_0 I_\text{total}.
+% \end{aligned}\]
+Taking the leading-order term, we know that
+\[I_{total} = \frac{2\pi}{R_o\mu_0}(\psi_o-\psi_b)a^*J_1(a^*),\]
+\[\implies \psi_o-\psi_b = \frac{\mu_0I_\text{total} R_o}{2\pi a^*J_1(a^*)}\]
+
+\section{Calculating expressions for $\psi_o$, $\psi_b$}
+
+We need to ensure that $\psi$ is zero at $(R, z) = (0,0)$. Where we assume this is outside the region $\rho<\rho_b$.
+Let
+\[d = \sqrt{R_o^2-z_o^2}.\]
+We impose $\psi(d) = 0$. Hence
+\[\psi_b = \frac{\mu_0I_\text{total}R_o}{2\pi}\ln\left(\frac{d}{\rho_b}\right),\]
+\[\implies \psi_o = \frac{\mu_0I_\text{total}R_o}{2\pi}\left[\ln\left(\frac{d}{\rho_b}\right)+\frac{1}{a^*J_1(a^*)}\right]\]
+
+\section{Full solution}
+
+The full solution for $\psi$ is given by
+\[
+\psi(\rho) = \begin{cases}
+\Delta_\psi J_0\left(a^*\dfrac{\rho}{\rho_b}\right) + \psi_b, &\rho\le\rho_b, \\
+-\Delta_\psi a^*J_1(a^*)\ln\left(\dfrac{\rho}{\rho_b}\right) + \psi_b, & \rho\ge\rho_b,
+\end{cases}
+\]
+where
+\[\Delta_\psi = \psi_o - \psi_b\]
+\[\psi_o = \frac{\mu_0}{2\pi}I_\text{total}R_o\left[\ln\left(\frac{d}{\rho_b}\right)+\frac{1}{a^*J_1(a^*)}\right],\]
+\[\psi_b = \frac{\mu_0}{2\pi}I_\text{total}R_o\ln\left(\frac{d}{\rho_b}\right),\]
+\[\Delta_\psi = \frac{\mu_0I_\text{total}R_o}{2\pi a^* J_1(a^*)},\]
+\[\begin{aligned}
+a &= \frac{(a^*)^2(\psi_o-\psi_b)}{\rho_b^2} \\
+&= \frac{\mu_0 a^* I_\text{total}R_o}{2\pi J_1(a^*)\rho_b^2},
+\end{aligned}\]
+and $a^*$ is the coordinate of a positive zero of $J_0$. Hence, the solution is not unique but if we impose that $\psi$ needs to decrease monotonically away from $\psi_o$ then this forces $a^*$ to be the first positive zero of $J_0$.
+
+% Now we will write our solution for $\psi$ in the form we will use in RTGSFIT. We will set $\psi = 0$ at $(R, Z) = (0, 0)$. Let
+% \[d = \sqrt{R_o^2-z_o^2}.\]
+% Hence, for $\rho \ge \rho_b$
+% \[\begin{aligned}
+% \psi &= -\psi_oa^*J_1(a^*)\left[\ln\left(\frac{\rho}{\rho_b}\right)-\ln\left(\frac{d}{\rho_b}\right)\right] \\
+% &= -\psi_oa^*J_1(a^*)\ln\left(\frac{\rho}{d}\right)
+% \end{aligned}\]
+% and for $\rho\le\rho_b$
+% \[
+% \psi = \psi_oJ_0\left(a^*\frac{\rho}{\rho_b}\right) +\psi_oa^*J_1(a^*)\ln\left(\frac{d}{\rho_b}\right).
+% \]
+% Hence,
+% \[\psi_b = \psi_oa^*J_1(a^*)\ln\left(\frac{d}{\rho_b}\right).\]
+
+\section{Magnetic field}
+
+The magnetic field is given by
+\[\begin{aligned} 
+    B_R &= B_\theta \vec{\hat{\theta}}\cdot \vec{\hat{R}} \\
+    &= -\frac{1}{R}\sin(\theta) \frac{d\psi}{d\rho} \\
+    &= -\frac{1}{R}\frac{z - z_o}{\rho}\frac{d\psi}{d\rho}
+\end{aligned}\]
+\[\begin{aligned} 
+B_z &= B_\theta \vec{\hat{\theta}}\cdot \vec{\hat{z}} \\
+&= \frac{1}{R}\cos(\theta)\frac{d\psi}{d\rho} \\
+&= \frac{1}{R}\frac{R-R_o}{\rho}\frac{d\psi}{d\rho}
+\end{aligned}\]
+% \[\begin{aligned}
+% B_\theta &= -\sin(\theta)B_R + \cos(\theta)B_z \\
+% &= -\frac{1}{R}\frac{d\psi}{d\rho}.
+% \end{aligned}\]
+
+\end{document}
