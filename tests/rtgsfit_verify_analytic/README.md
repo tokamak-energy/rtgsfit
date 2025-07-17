@@ -18,3 +18,17 @@ python -m rtgsfit_verify_analytic.generate_constants_c
 ```
 
 This works from **any directory** as long as the package has been installed in editable mode (e.g. via `uv pip install -e .`).
+
+## Generating plots
+
+First you need to make sure you have created the `output_dict.npy`. The easiest way is to simply run `pytest`, this has the added benefit of checking the code has been installed ok.
+
+You can make plots of the current, magnetic field and $\psi$ values using
+```
+python -m rtgsfit_verify_analytic.plot.current
+```
+and replacing `current` with `b_field` and `psi` respectively.
+
+## Maths
+
+The derivation of the analytic solution as well as the formulas we used for the mutual induction and self inductance are the in `latex` directory.
