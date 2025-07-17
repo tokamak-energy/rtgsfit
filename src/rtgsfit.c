@@ -173,6 +173,8 @@ int rtgsfit(
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
     // make basis
+    // This makes the transpose of the T_{yg} matrix in eqn. (61) of the Moret et al. (2015)
+    // LIUQE paper, without the Delta_R * Delta_Z factor.
     make_basis(flux_norm, mask, g_pls_grid);
 
     // make meas-pls matrix
