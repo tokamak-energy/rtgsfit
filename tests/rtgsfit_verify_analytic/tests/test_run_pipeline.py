@@ -1,9 +1,3 @@
-"""
-This module contains a pytest fixture to run the full RTGSFIT pipeline.
-In other words, it will generate the constants.c file, then compile RTGSFIT,
-and finally run the replay_rtgsfit.py script to generate the output_dict.npy file.
-"""
-
 import numpy as np
 from pathlib import Path
 from rtgsfit_verify_analytic import cnst
