@@ -2,9 +2,6 @@
 This module contains functions to generate Green's matrices for RTGSFIT, namely the
 G_GRID_MEAS_WEIGHT, G_COEF_MEAS_WEIGHT, G_LTRB, G_MEAS_COIL, G_GRID_COIL and G_GRID_VESSEL
 matrices.
-
-Note that store the Green's matrices on column major order, as this is default in matlab and LAPACK
-so it saves us from having to transpose the matrices when we use them in RTGSFIT.
 """
 import numpy as np
 from rtgsfit_verify_analytic import mutual_inductance
