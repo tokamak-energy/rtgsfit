@@ -38,7 +38,7 @@ def run_pipeline(tmp_path_factory):
     #     shell=True
     # )
     subprocess.run(
-        "make SHOT=0 RUN_NAME=no_mds LDFLAGS='-shared -Wl,-Ofast -pthread -L/usr/lib/x86_64-linux-gnu -llapacke -llapack -lblas -lm'",
+        "make SHOT=0 RUN_NAME=no_mds LDFLAGS='-shared -Wl,-Ofast -pthread -L/usr/lib/x86_64-linux-gnu -lopenblas -llapacke -llapack -lm'",
         cwd=rtgsfit_src,
         check=True,
         shell=True

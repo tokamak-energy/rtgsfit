@@ -27,7 +27,9 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libopenblas-dev liblapacke-dev     
+        sudo apt-get install -y build-essential cmake \
+                                liblapacke-dev libopenblas-dev liblapack-dev \
+                                gfortran
 
     - name: Install uv
       run: pip install uv
