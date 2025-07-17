@@ -7,7 +7,10 @@ from rtgsfit_verify_analytic import cnst
 
 @pytest.fixture(scope="session")
 def run_pipeline():
-    """Run the full RTGSFIT pipeline once per test session."""
+    """
+    Run the full RTGSFIT pipeline once per test session.
+    """
+    
     subprocess.run(
         ["python", "-m", "rtgsfit_verify_analytic.generate_constants_c"],
         check=True
