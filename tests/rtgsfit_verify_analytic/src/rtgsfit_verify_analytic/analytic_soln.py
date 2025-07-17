@@ -106,9 +106,34 @@ def analytic_b_theta(r, z, r_o, z_o, rho_b, total_current):
     
     return b_theta
 
+def analytic_j_phi(r, z, r_o, z_o, rho_b, total_current):
+    """
+    Computes the analytic solution j_φ(r, R) which is given by
 
-def add(a, b):
-    return a + b
+        j_φ(R, z) = FF' / (μ₀ * R)
+                  = a * (1 - ψ_n) / (μ₀ * R)
+
+    where:
+        - we have set the p' term to zero as we assume a plasma beta of zero.
+        - a = μ₀ * a* * I * R₀ / (2π * J₁(a*) * ρ_b²)
+
+    Parameters:
+        r (float): Radial coordinate
+        z (float): Vertical coordinate
+    """
+
+    rho = np.sqrt((r - r_o)**2 + (z - z_o)**2)
+    psi_ana = analytic_psi(
+        r, z, 
+        r_o, z_o,
+        rho_b, 
+        total_current
+    )
+    psi_n_ana = (cnst.PSI_O - psi_ana) / (cnst.PSI_O - cnst.PSI_B) * (rho <= rho_b) \
+              + (rho > rho_b)
+    a_raw = cnst.MU0_BAR * cnst.A_STAR * total_current * r_o / (cnst.J1_A * rho_b**2)
+    
+    return a_raw * (1 - psi_n_ana) / (r * cnst.MU_0)
 
 if __name__ == "__main__":
     # Example usage
