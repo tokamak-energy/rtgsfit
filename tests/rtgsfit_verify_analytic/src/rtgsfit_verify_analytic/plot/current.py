@@ -29,16 +29,22 @@ def vessel_j_j0_j1_j2_j_total_j_ana(output_dict):
     r_grid, z_grid = np.meshgrid(r_vec, z_vec)
     rho = np.sqrt((r_grid - cnst.ANALYTIC_RO)**2 + (z_grid - cnst.ANALYTIC_ZO)**2)
 
-    psi_ana = analytic_soln.analytic_psi(
-        r_grid,
-        z_grid, 
+    # psi_ana = analytic_soln.analytic_psi(
+    #     r_grid,
+    #     z_grid, 
+    #     cnst.ANALYTIC_RO, cnst.ANALYTIC_ZO,
+    #     cnst.ANALYTIC_RHOB, 
+    #     cnst.ANALYTIC_PLASMA_CURRENT
+    # )
+    # psi_n_ana = (cnst.PSI_O - psi_ana) / (cnst.PSI_O - cnst.PSI_B) * (rho <= cnst.ANALYTIC_RHOB) \
+    #           + (rho > cnst.ANALYTIC_RHOB)
+    # curr_dens_ana = cnst.A_RAW * (1 - psi_n_ana) / (r_grid * cnst.MU_0)
+    curr_dens_ana = analytic_soln.analytic_j_phi(
+        r_grid, z_grid,
         cnst.ANALYTIC_RO, cnst.ANALYTIC_ZO,
-        cnst.ANALYTIC_RHOB, 
+        cnst.ANALYTIC_RHOB,
         cnst.ANALYTIC_PLASMA_CURRENT
     )
-    psi_n_ana = (cnst.PSI_O - psi_ana) / (cnst.PSI_O - cnst.PSI_B) * (rho <= cnst.ANALYTIC_RHOB) \
-              + (rho > cnst.ANALYTIC_RHOB)
-    curr_dens_ana = cnst.A_RAW * (1 - psi_n_ana) / (r_grid * cnst.MU_0)
     # Check sum of current density over the grid * D_R * D_Z is 1 MA
     curr_dens_sum = np.sum(curr_dens_ana) * cnst.D_R * cnst.D_Z
     print(f"Sum of analytic current density over the grid: {curr_dens_sum / 1e6:.6f} MA")
