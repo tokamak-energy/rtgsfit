@@ -12,10 +12,10 @@ DEBUG = 0
 
 ifeq ($(DEBUG), 1)
 	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread -g3 -O0 -DDEBUG
-	LDFLAGS = -pg -shared -g3 -llapacke
+	LDFLAGS = -pg -shared -g3
 else
 	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
-	LDFLAGS = -shared -Wl,-Ofast -pthread -llapacke
+	LDFLAGS = -shared -Wl,-Ofast -pthread
 endif
 
 OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o

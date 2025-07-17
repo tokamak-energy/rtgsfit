@@ -27,21 +27,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake gfortran \
-                                liblapacke-dev libopenblas-dev liblapack-dev
-
-    - name: Check LAPACKE symbol exists
-      run: |
-        echo "Looking for LAPACKE_dgelss in liblapacke..."
-        nm -D /usr/lib/x86_64-linux-gnu/liblapacke.so | grep LAPACKE_dgelss || echo "NOT FOUND"
-
-        echo "Linker search path contents:"
-        ls -lh /usr/lib/x86_64-linux-gnu/liblapack*
-
-    - name: Symlink LAPACKE headers to match Makefile expectation
-      run: |
-        sudo mkdir -p /usr/include/lapacke
-        sudo ln -sf /usr/include/lapacke.h /usr/include/lapacke/lapacke.h
+        sudo apt-get install -y libopenblas-dev
 
     - name: Install uv
       run: pip install uv

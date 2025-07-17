@@ -31,18 +31,6 @@ def run_pipeline(tmp_path_factory):
     shutil.copy(constants_c, rtgsfit_src / "constants.c")
 
     # Step 4: Compile RTGSFIT
-    # subprocess.run(
-    #     "make SHOT=0 RUN_NAME=no_mds LDFLAGS='-shared -Wl,-Ofast -pthread -llapacke -llapack -lblas -lm'",
-    #     cwd=rtgsfit_src,
-    #     check=True,
-    #     shell=True
-    # )
-    # subprocess.run(
-    #     "make SHOT=0 RUN_NAME=no_mds LDFLAGS='-shared -Wl,-Ofast -pthread -L/usr/lib/x86_64-linux-gnu -lopenblas -llapacke -llapack -lm'",
-    #     cwd=rtgsfit_src,
-    #     check=True,
-    #     shell=True
-    # )
     subprocess.run(
         "make SHOT=0 RUN_NAME=no_mds",
         cwd=rtgsfit_src,
