@@ -6,7 +6,7 @@ from numpy.testing import assert_allclose
 from rtgsfit_verify_analytic import analytic_soln, cnst
 
 @pytest.fixture(scope="session")
-def output_dict():
+def output_dict(run_pipeline):
     output_file = Path(cnst.DATA_DIR) / "output_dict.npy"
     if not output_file.exists():
         pytest.fail(f"{output_file} does not exist. Run test_run_pipeline first.")
