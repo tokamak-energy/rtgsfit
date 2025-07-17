@@ -31,11 +31,15 @@ ANALYTIC_PLASMA_CURRENT = 1e6
 ANALYTIC_RO = 1e1
 ANALYTIC_ZO = 0.0
 ANALYTIC_RHOB = 0.5
+
+# Analytic constants
 A_STAR = scipy.special.jn_zeros(0, 1)[0] # = 2.4048255576957727
 A_J1_A = A_STAR * scipy.special.j1(A_STAR) # = 1.2484591696955067
 J1_A = scipy.special.j1(A_STAR) # = 0.5191474972894669
 MU0_BAR = 2e-7  # mu_0 / 2pi
 DIST = np.sqrt(ANALYTIC_RO**2 + ANALYTIC_ZO**2)  # Distance from the origin to the o-point
+
+# Analytic derived values
 PSI_O = MU0_BAR * ANALYTIC_PLASMA_CURRENT * ANALYTIC_RO * (np.log(DIST / ANALYTIC_RHOB) + 1 / A_J1_A)
 PSI_B = MU0_BAR * ANALYTIC_PLASMA_CURRENT * ANALYTIC_RO * np.log(DIST / ANALYTIC_RHOB)
 A_RAW = MU0_BAR * A_STAR * ANALYTIC_PLASMA_CURRENT * ANALYTIC_RO / (J1_A * ANALYTIC_RHOB**2)
