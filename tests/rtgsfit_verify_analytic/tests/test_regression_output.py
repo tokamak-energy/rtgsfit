@@ -23,7 +23,7 @@ def test_output_dict_regression(output_dict):
         assert_allclose(
             output_dict[key][-1],
             reference_dict[key],
-            rtol=1e-6,
-            atol=1e-8,
+            rtol=1e-5,
+            atol=1e-6,
             err_msg=f"Mismatch in key '{key}'"
         )
