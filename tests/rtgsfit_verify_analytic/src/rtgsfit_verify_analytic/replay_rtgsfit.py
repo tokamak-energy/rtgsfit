@@ -163,3 +163,17 @@ if __name__ == "__main__":
     # Save output_dict to a file
     output_file = os.path.join(cnst.DATA_DIR, 'output_dict.npy')
     np.save(output_file, output_dict, allow_pickle=True)
+
+    # # Save just the last iteration data to a separate file
+    # # for regression testing
+    # reference_output_dict = {}
+
+    # for key, value in output_dict.items():
+    #     # Get the last iteration's 1D array
+    #     last_iter_value = value[-1]
+    #     print(key)
+    #     print(np.shape(last_iter_value))
+    #     reference_output_dict[key] = last_iter_value.copy()
+
+    # reference_file = os.path.join(cnst.DATA_DIR, 'reference_output_dict.npy')
+    # np.save(reference_file, reference_output_dict, allow_pickle=True)
