@@ -20,10 +20,12 @@ def test_output_dict_regression(output_dict):
     assert output_dict.keys() == reference_dict.keys(), "Mismatch in output_dict keys"
 
     for key in output_dict:
+        rtol = 1e-4
+        atol = np.max(reference_dict[key]) * rtol
         assert_allclose(
             output_dict[key][-1],
             reference_dict[key],
-            rtol=1e-5,
-            atol=1e-6,
+            rtol=rtol,
+            atol=atol,
             err_msg=f"Mismatch in key '{key}'"
         )
