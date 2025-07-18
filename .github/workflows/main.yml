@@ -1,0 +1,42 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout current repository
+      uses: actions/checkout@v4
+
+    - name: Clone rtgsfit repository into subdirectory
+      run: |
+        git clone https://github.com/tokamak-energy/rtgsfit rtgsfit
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libopenblas-dev liblapacke-dev
+
+    - name: Install uv
+      run: pip install uv
+
+    - name: Install and run tests in venv
+      run: |
+        cd tests/rtgsfit_verify_analytic
+        pwd
+        uv venv --python 3.13
+        source .venv/bin/activate
+        uv pip install -e "."
+        pytest

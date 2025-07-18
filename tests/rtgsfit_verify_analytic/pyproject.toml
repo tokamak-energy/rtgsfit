@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools >= 61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rtgsfit_verify_analytic"
+version = "2025.0.0"
+dependencies = [
+  "numpy==2.3.0",
+  "matplotlib==3.10.3",
+  "scipy==1.15.3",
+  "ipython==9.4.0",
+  "jupyter-client==8.6.3",
+  "psutil==7.0.0",
+  "pytest==8.4.1",
+  "pyzmq==27.0.0"
+]
+requires-python = ">=3.9"
+
+authors = [
+  { name = "Alex Prokopyszyn", email = "alex.prokopyszyn@tokamakenergy.com" }
+]
+maintainers = [
+  { name = "Alex Prokopyszyn", email = "alex.prokopyszyn@tokamakenergy.com" }
+]
+
+description = "This repository sets up and runs analytic verification tests for RTGSFIT. Input data based on a known analytic solution to the Grad-Shafranov equation. Runs RTGSFIT and checks that the numerical solution converges to the analytic as the number of iterations increases."
+readme = "README.md"
+license = { text = "GNU GENERAL PUBLIC LICENSE" }
+keywords = ["Grad", "Shafranov"]
+classifiers = [
+  "Programming Language :: Python"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
