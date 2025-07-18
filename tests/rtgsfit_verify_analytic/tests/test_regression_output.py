@@ -21,7 +21,7 @@ def test_output_dict_regression(output_dict):
 
     for key in output_dict:
         rtol = 1e-4
-        atol = np.max(reference_dict[key]) * rtol
+        atol = np.max(np.abs(reference_dict[key])) * rtol
         assert_allclose(
             output_dict[key][-1],
             reference_dict[key],
