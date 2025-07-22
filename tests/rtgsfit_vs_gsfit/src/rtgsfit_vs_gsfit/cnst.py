@@ -15,3 +15,10 @@ PULSE_NUM = 13343
 PULSE_NUM_WRITE = PULSE_NUM + 52_000_000
 RUN_NAME = "RT_V_G_1"
 RUN_DESCRIPTION = "Using a single degree of freedom for p_prime and ff_prime."
+
+# Directory parameters
+REPO_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.path.join(REPO_PATH, 'data')
+PLOTS_DIR = os.path.join(REPO_PATH, 'plots')
+# RTGSFIT_PATH = os.path.join(REPO_PATH, '..', '..')
+RTGSFIT_PATH = os.path.dirname(os.path.dirname(REPO_PATH))
