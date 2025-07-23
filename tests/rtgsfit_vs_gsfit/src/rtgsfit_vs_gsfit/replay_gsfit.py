@@ -22,7 +22,7 @@ def replay_gsfit():
         run_description=cnst.RUN_DESCRIPTION,
         write_to_mds=False,
         pulseNo_write=cnst.PULSE_NUM_WRITE,
-        settings_path="st40_setup_for_rtgsfit",
+        settings_path=cnst.settings_path,
     )
 
     gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["method"] = "user_defined"

@@ -22,7 +22,7 @@ def initialise_rtgsfit_node():
         run_description= cnst.RUN_DESCRIPTION,
         write_to_mds=True,
         pulseNo_write=cnst.PULSE_NUM_WRITE,
-        settings_path="st40_setup_for_rtgsfit",
+        settings_path=cnst.settings_path,
     )
 
     # Change the analysis_name, so that GSFit writes into RT-GSFit MDSplus tree
