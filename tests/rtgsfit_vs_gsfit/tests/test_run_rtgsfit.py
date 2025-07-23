@@ -4,7 +4,7 @@ import mdsthin
 import numpy as np
 import pytest
 
-from rtgsfit_vs_gsfit import cnst
+from rtgsfit_vs_gsfit import cnst, replay_rtgsfit
 
 @pytest.mark.usefixtures("rtgsfit_mds_nodegen")
 def test_rtgsfit_mds_nodegen():
@@ -36,4 +36,17 @@ def test_compile_rtgsfit():
     # Check if constants.c was created
     constants_c_path = os.path.join(cnst.RTGSFIT_SRC_PATH, 'constants.c')
     assert os.path.exists(constants_c_path), f"constants.c was not created: {constants_c_path}"
+
+@pytest.mark.usefixtures("compile_rtgsfit")
+def test_replay_rtgsfit():
+    """
+    Test that replay_rtgsfit runs without errors.
+    """
+
+    # Run the replay function
+    replay_rtgsfit.replay_rtgsfit(cnst.TIME)
+
+    # Check if the output file was created
+    output_file = os.path.join(cnst.DATA_DIR, 'rtgsfit_output_dict.npy')
+    assert os.path.exists(output_file), f"Output file was not created: {output_file}"
     
