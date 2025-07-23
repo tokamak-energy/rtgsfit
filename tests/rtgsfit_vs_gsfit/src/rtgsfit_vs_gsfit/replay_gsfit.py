@@ -20,7 +20,7 @@ def replay_gsfit():
         pulseNo=cnst.PULSE_NUM,
         run_name=cnst.RUN_NAME,
         run_description=cnst.RUN_DESCRIPTION,
-        write_to_mds=False,
+        write_to_mds=True,
         pulseNo_write=cnst.PULSE_NUM_WRITE,
         settings_path=cnst.settings_path,
     )
