@@ -4,6 +4,11 @@ Python module containing a list of constants used throughout this repository.
 
 import os
 
+import numpy as np
+
+# Physical constants
+MU_0 = 4 * np.pi * 1e-7  # Vacuum permeability
+
 # Replay parameters
 TIME = 30e-3 # Time in seconds for which GSFIT and RTGSFIT are run
 
