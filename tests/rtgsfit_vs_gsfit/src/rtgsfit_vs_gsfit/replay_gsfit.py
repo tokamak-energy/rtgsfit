@@ -26,7 +26,7 @@ def replay_gsfit():
     )
 
     gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["method"] = "user_defined"
-    gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["user_defined"] = [100.0e-3]
+    gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["user_defined"] = [cnst.TIME]
     gsfit_controller.settings["GSFIT_code_settings.json"]["database_writer"]["method"] = "tokamak_energy_mdsplus"
 
     gsfit_controller.run()
@@ -49,3 +49,6 @@ def replay_gsfit():
     os.makedirs(cnst.DATA_DIR, exist_ok=True)
     with open(output_file, 'wb') as f:
         np.save(f, output_dict, allow_pickle=True)
+
+if __name__ == "__main__":
+    replay_gsfit()
