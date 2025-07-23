@@ -8,7 +8,11 @@ ifndef SHOT
 endif
 
 CC = gcc
-DEBUG = 0
+ifndef DEBUG
+	DEBUG = 0
+endif
+# print the value of DEBUG
+$(info DEBUG is set to $(DEBUG))
 
 ifeq ($(DEBUG), 1)
 	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread -g3 -O0 -DDEBUG
