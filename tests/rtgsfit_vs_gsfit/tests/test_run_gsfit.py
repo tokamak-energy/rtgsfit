@@ -1,13 +1,12 @@
 import os
-import shutil
-import subprocess
 
 import numpy as np
 import pytest
 
 from rtgsfit_vs_gsfit import cnst
 
-def test_run_gsfit_and_save_dict(run_gsfit_and_save_dict):
+@pytest.mark.usefixtures("run_gsfit_and_save_dict")
+def test_run_gsfit_and_save_dict():
     """
     Test that GSFIT runs and saves the output dictionary correctly.
     """
