@@ -101,6 +101,7 @@ def replay_rtgsfit(time: float):
                    "coef" : np.zeros((cnst.N_ITERS + 1, n_coef), dtype=np.float64),
                    "flux_boundary" : np.zeros((cnst.N_ITERS + 1, 1), dtype=np.float64),
                    "plasma_current" : np.zeros((cnst.N_ITERS + 1, 1), dtype=np.float64)}
+    output_dict["meas"][0, :] = meas
     output_dict["coil_curr"][0, :] = coil_curr
     output_dict["flux_norm"][0, :] = flux_norm
     output_dict["mask"][0, :] = mask
