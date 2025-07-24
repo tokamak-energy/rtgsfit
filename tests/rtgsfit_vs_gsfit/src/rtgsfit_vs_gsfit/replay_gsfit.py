@@ -32,7 +32,16 @@ def replay_gsfit():
     gsfit_controller.run()
 
     plasma = gsfit_controller.plasma
-    
+    flux_loops = gsfit_controller.flux_loops
+    flux_loops_to_include = flux_loops.get_vec_bool(["*", "fit_settings", "include"])
+    flux_loop_names = np.array(flux_loops.keys())
+    flux_loop_names = flux_loop_names[flux_loops_to_include]
+    flux_loop_r = np.zeros(len(flux_loop_names))
+    flux_loop_z = np.zeros(len(flux_loop_names))
+    for i, name in enumerate(flux_loop_names):
+        flux_loop_r[i] = flux_loops.get_array1([name, "geometry", "r"])
+        flux_loop_z[i] = flux_loops.get_array1([name, "geometry", "z"])
+
     output_dict = {}
     output_dict["grid"] = {}
     output_dict["grid"]["r"] = plasma.get_array1(["grid", "r"])
@@ -44,6 +53,10 @@ def replay_gsfit():
     output_dict["p_boundary"]["rbnd"] = plasma.get_array2(["p_boundary", "rbnd"])[0, :]
     output_dict["p_boundary"]["zbnd"] = plasma.get_array2(["p_boundary", "zbnd"])[0, :]
     output_dict["p_boundary"]["nbnd"] = plasma.get_vec_usize(["p_boundary", "nbnd"])[0]
+    output_dict["flux_loops"] = {}
+    output_dict["flux_loops"]["names"] = flux_loop_names
+    output_dict["flux_loops"]["r"] = flux_loop_r
+    output_dict["flux_loops"]["z"] = flux_loop_z
     # Save the output dictionary to a file
     output_file = os.path.join(cnst.DATA_DIR, 'gsfit_output_dict.npy')
     os.makedirs(cnst.DATA_DIR, exist_ok=True)
