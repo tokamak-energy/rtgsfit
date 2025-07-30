@@ -302,6 +302,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
         r_vec = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:R_VEC").data()
         z_vec = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:Z_VEC").data()
         weights = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:WEIGHT").data()
+        n_coef = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:N_COEF").data()
         n_pls = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:N_PLS").data()
         sens_names = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:SENS_NAMES").data()
         rtgsfit_coil_names = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:COIL_NAMES").data()
@@ -345,6 +346,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
     n_ves_dof = len(ivc_dict["dof"].keys())
     n_ves_fil = len(gsfit_output_dict["IVC"]["r"])
     j_ves_gsfit = np.zeros(n_ves_fil)
+    ivc_coef_range = np.arange(n_coef - n_ves_dof - 1, n_coef - 1)
     for i_ivc_dof in range(n_ves_dof):
         current_distribution = ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["current_distribution"]
         calculated = ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["calculated"]
@@ -370,8 +372,6 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
                 gsfit_coil_currents_shorter[i] = coils_dict[name_gs]["i"]
                 break
 
-
-
     for i_iter in range(cnst.N_ITERS + 1):
 
         flux_norm = rtgsfit_output_dict["flux_norm"][i_iter, :]
@@ -389,7 +389,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
         j_ves_rtgsfit = np.zeros(n_ves_fil)
         for i_ivc_dof in range(n_ves_dof):
             current_distribution = ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["current_distribution"]
-            calculated = coef[n_pls + i_ivc_dof]
+            calculated = coef[ivc_coef_range[i_ivc_dof]]
             j_ves_rtgsfit += current_distribution * calculated / ivc_dict["area"]
 
         def plot_vessel_rogowski_coils():
@@ -571,17 +571,17 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
             # | GSFIT             | Current 1 (MA) | Current 2 (MA) | ... | Current n_coils (MA) |
             rtgsfit_vessel_currents = np.zeros(n_ves_dof + 1)
             rtgsfit_vessel_currents[1:] = \
-                [np.sum(coef[n_pls + i_ivc_dof] *
-                        np.sum(ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["current_distribution"]))
+                [np.sum(np.abs(coef[ivc_coef_range[i_ivc_dof]] *
+                        ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["current_distribution"]))
                 for i_ivc_dof in range(n_ves_dof)]
             rtgsfit_vessel_currents[0] = np.sum(np.abs(rtgsfit_vessel_currents[1:]))
             rtgsfit_vessel_currents *= 1e-6
             gsfit_vessel_currents = np.zeros(n_ves_dof + 1)
             gsfit_vessel_currents[1:] = \
-                [np.sum(ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["calculated"] *
-                        ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["current_distribution"])
+                [np.sum(np.abs(ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["calculated"] *
+                        ivc_dict["dof"][f"eig_{i_ivc_dof+1:02d}"]["current_distribution"]))
                 for i_ivc_dof in range(n_ves_dof)]
-            gsfit_vessel_currents[0] = np.sum(gsfit_vessel_currents[1:])
+            gsfit_vessel_currents[0] = np.sum(np.abs(gsfit_vessel_currents[1:]))
             gsfit_vessel_currents *= 1e-6
             
             # Make a table with the vessel currents
@@ -648,6 +648,6 @@ if __name__ == "__main__":
                                 allow_pickle=True).item()
 
     # Call the contour plotting function
-    # plot_flux_loop_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
-    # plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
+    plot_flux_loop_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
+    plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
     plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
