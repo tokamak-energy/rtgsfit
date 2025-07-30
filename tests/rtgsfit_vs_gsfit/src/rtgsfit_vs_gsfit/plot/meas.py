@@ -65,7 +65,7 @@ def plot_flux_loop_at_sensors(rtgsfit_output_dict: dict,
                                                 figsize=(10, 12),
                                                 gridspec_kw={'height_ratios': [2, 1]})
         dot_size = 5
-        ax_top.contour(r_vec, z_vec, flux_total * 2 * np.pi,
+        ax_top.contour(r_vec, z_vec, flux_total,
                        levels=20,
                        colors='tab:blue')
         ax_top.contour(r_vec, z_vec, gsfit_flux_total,
@@ -83,7 +83,7 @@ def plot_flux_loop_at_sensors(rtgsfit_output_dict: dict,
                        label='RTGSFIT Limiter',
                        color='tab:green',
                        s=dot_size)
-        blue_patch = plt.Line2D([], [], color='tab:blue', label='RTGSFIT ψ x 2π')
+        blue_patch = plt.Line2D([], [], color='tab:blue', label='RTGSFIT ψ')
         orange_patch = plt.Line2D([], [], color='tab:orange', label='GSFIT ψ')
         blue_dots = plt.Line2D([], [], marker='o', color='w', label='RTGSFIT LCFS',
                                markerfacecolor='tab:blue', markersize=dot_size)
@@ -106,8 +106,8 @@ def plot_flux_loop_at_sensors(rtgsfit_output_dict: dict,
         ax_bottom.plot(flux_loop_names, pred_meas_fl, label='RTGSFIT Predicted', linestyle='--')
         ax_bottom.plot(flux_loop_names, gsfit_fl_pred, label='GSFIT Predicted', linestyle='-.')
         ax_bottom.plot(flux_loop_names, rtgsfit_fl_meas, label='Measured')
-        ax_bottom.plot(flux_loop_names, flux_total_interp * 2 * np.pi,
-                       label='RTGSFIT Interpolated x 2π', linestyle=':')
+        ax_bottom.plot(flux_loop_names, flux_total_interp,
+                       label='RTGSFIT Interpolated', linestyle=':')
         ax_bottom.set_ylabel('Flux Loop Value')
         ax_bottom.tick_params(axis='x', rotation=90)
         ax_bottom.legend()
@@ -175,9 +175,9 @@ def plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
         flux_total = rtgsfit_output_dict["flux_total"][i_iter, :]
         flux_total = flux_total.reshape((n_z, n_r))
         # br = -(dψ/dz) / r
-        br = -np.gradient(flux_total, z_vec, axis=0) / r_grid
+        br = -np.gradient(flux_total, z_vec, axis=0) / (2 * np.pi * r_grid)
         # bz = dψ/dr / r
-        bz = np.gradient(flux_total, r_vec, axis=1) / r_grid
+        bz = np.gradient(flux_total, r_vec, axis=1) / (2 * np.pi * r_grid)
         br_spline = RectBivariateSpline(z_vec, r_vec, br)
         bz_spline = RectBivariateSpline(z_vec, r_vec, bz)
         br_interp = br_spline.ev(bp_probe_z, bp_probe_r)
@@ -411,7 +411,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
                                         yticks=[])
 
             dot_size = 5
-            ax_top_left.contour(r_vec, z_vec, flux_total * 2 * np.pi,
+            ax_top_left.contour(r_vec, z_vec, flux_total,
                                 levels=20,
                                 alpha=0.5,
                                 colors='tab:blue')
