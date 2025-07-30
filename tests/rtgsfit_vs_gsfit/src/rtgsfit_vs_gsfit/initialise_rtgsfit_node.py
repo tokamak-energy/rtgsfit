@@ -60,3 +60,6 @@ def initialise_rtgsfit_node():
 
     # Run
     gsfit_controller.run()
+
+if __name__ == "__main__":
+    initialise_rtgsfit_node()
