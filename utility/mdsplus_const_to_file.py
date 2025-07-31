@@ -102,5 +102,7 @@ if __name__ == "__main__":
     data_dictionary["g_grid_vessel"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:GREENS.GRID_VESSEL").data()
     data_dictionary["g_ltrb"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:GREENS.LTRB").data()
     data_dictionary["g_meas_coil"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:GREENS.MEAS_COIL").data()
+    data_dictionary["sensor_replacement_matrix"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:SENS_REP_MAT").data()
+    data_dictionary["n_sens_pcs"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_SENS_PCS").data()
 
     const_to_file(data_dictionary)
