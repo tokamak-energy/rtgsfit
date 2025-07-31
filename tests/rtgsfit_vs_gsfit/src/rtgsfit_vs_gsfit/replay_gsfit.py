@@ -73,6 +73,9 @@ def replay_gsfit():
     ivc_angle1 = passives.get_array1(["IVC", "geometry", "angle1"])
     ivc_angle2 = passives.get_array1(["IVC", "geometry", "angle2"])
 
+    ovc_r = passives.get_array1(["OVC", "geometry", "r"])
+    ovc_z = passives.get_array1(["OVC", "geometry", "z"])
+
     elmag = st40_database.GetData(11012050, f"ELMAG#{elmag_run_name}")
     coil_names = typing.cast(list[str], elmag.get("COILS.COIL_NAMES"))
     coils = gsfit_controller.coils
@@ -117,6 +120,11 @@ def replay_gsfit():
             passives.get_array1(["IVC", "dof", f"eig_{i_ivc_dof+1:02d}", "current_distribution"])
         output_dict["IVC"]["dof"][f"eig_{i_ivc_dof+1:02d}"]["calculated"] = \
             passives.get_array1(["IVC", "dof", f"eig_{i_ivc_dof+1:02d}", "calculated"])[0]
+    output_dict["OVC"] = {}
+    output_dict["OVC"]["r"] = ovc_r
+    output_dict["OVC"]["z"] = ovc_z
+    output_dict["OVC"]["current_distribution"] = passives.get_array1(["OVC", "dof", "*", "current_distribution"])
+    output_dict["OVC"]["calculated"] = passives.get_array1(["OVC", "dof", "*", "calculated"])[0]
         
     output_dict["coils"] = {}
     for name in coil_names:
