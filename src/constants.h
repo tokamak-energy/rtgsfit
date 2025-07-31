@@ -88,10 +88,10 @@ extern const double Z_GRID[];
 /* INV_R_MU0 : 1/(mu0 * R_GRID) */
 extern const double INV_R_MU0[];
 
-/* INV_R_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
+/* INV_R_LTRB_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
 extern const double INV_R_LTRB_MU0[];
 
-/* R_MU0_DZ2 : mu0 * R_GRID * D_ROW * D_ROW */
+/* R_MU0_DZ2 : 2pi * mu0 * R_GRID * D_ROW * D_ROW */
 extern const double R_MU0_DZ2[];
 
 /* G_GRID_MEAS_WEIGHT : greens matrix (N_GRID, N_MEAS)
