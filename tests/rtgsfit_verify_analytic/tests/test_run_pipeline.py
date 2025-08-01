@@ -1,8 +1,11 @@
 import numpy as np
 from pathlib import Path
+import pytest
+
 from rtgsfit_verify_analytic import cnst
 
-def test_pipeline_runs_successfully(run_pipeline):
+@pytest.mark.usefixtures("run_pipeline")
+def test_pipeline_runs_successfully():
     constants_c = Path(cnst.DATA_DIR) / "constants.c"
     assert constants_c.exists(), f"{constants_c} not found"
 
