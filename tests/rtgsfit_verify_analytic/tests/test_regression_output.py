@@ -5,13 +5,6 @@ from numpy.testing import assert_allclose
 
 from rtgsfit_verify_analytic import cnst
 
-@pytest.fixture(scope="session")
-def output_dict(run_pipeline):
-    output_file = Path(cnst.DATA_DIR) / "output_dict.npy"
-    if not output_file.exists():
-        pytest.fail(f"{output_file} does not exist. Run test_run_pipeline first.")
-    return np.load(output_file, allow_pickle=True).item()
-
 def test_output_dict_regression(output_dict):
 
     reference_file = Path(cnst.DATA_DIR) / "reference_output_dict.npy"

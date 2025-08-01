@@ -5,13 +5,6 @@ from numpy.testing import assert_allclose
 
 from rtgsfit_verify_analytic import analytic_soln, cnst
 
-@pytest.fixture(scope="session")
-def output_dict(run_pipeline):
-    output_file = Path(cnst.DATA_DIR) / "output_dict.npy"
-    if not output_file.exists():
-        pytest.fail(f"{output_file} does not exist. Run test_run_pipeline first.")
-    return np.load(output_file, allow_pickle=True).item()
-
 def test_psi_matches_expected(output_dict):
     r_vec = np.linspace(cnst.R_MIN, cnst.R_MAX, cnst.N_R)
     z_vec = np.linspace(cnst.Z_MIN, cnst.Z_MAX, cnst.N_Z)

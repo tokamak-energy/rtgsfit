@@ -290,6 +290,9 @@ def generate_data_dictionary():
     ax.set_aspect('equal')
     fig.savefig(os.path.join(cnst.PLOTS_DIR, "grid_and_limiter_points.png"),
                 bbox_inches='tight', dpi=1000)
+
+    n_sens_pcs = cnst.N_MEAS
+    sens_rep_mat = np.eye(cnst.N_MEAS, cnst.N_MEAS, dtype=np.float64)
     
     data_dictionary = {}
     data_dictionary["dr"] = cnst.D_R
@@ -333,6 +336,8 @@ def generate_data_dictionary():
     data_dictionary["g_grid_vessel"] = g_grid_vessel
     data_dictionary["g_ltrb"] = g_ltrb
     data_dictionary["g_meas_coil"] = g_meas_coil
+    data_dictionary["sensor_replacement_matrix"] = sens_rep_mat.flatten()
+    data_dictionary["n_sens_pcs"] = n_sens_pcs
 
     return data_dictionary
 
