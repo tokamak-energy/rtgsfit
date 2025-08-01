@@ -7,7 +7,7 @@ name = "rtgsfit_vs_gsfit"
 version = "2025.0.0"
 dependencies = [
   "numpy ==1.26.4",
-  "matplotlib >=3.8.0",
+  "matplotlib ==3.10.5",
   "scipy >=1.11.0",
   "ipython >=8.20.0",
   "jupyter-client >=8.6.0",
@@ -22,14 +22,14 @@ dependencies = [
   "toml ==0.10.2",
 
   # ST40 Database stack
-  "st40-database ==0.0.61+git.ee889526",
-  "dash >=3.1.1",
+  "st40-database ==0.0.62+git.c8a2a4cb",
+  "dash >=3.2.0",
   "flask >=3.1.1",
   "flexcache ==0.3",
   "flexparser ==0.4",
   "mdsthin ==1.5.0",
-  "mysql-connector-python ==9.3.0",
-  "narwhals ==1.48.0",
+  "mysql-connector-python ==9.4.0",
+  "narwhals ==2.0.1",
   "natsort ==8.4.0",
   "pandas >=2.3.1",
   "pint ==0.24.4",
@@ -40,10 +40,10 @@ dependencies = [
   "xarray >=2025.7.1",
 
   # standard-utility and tooling
-  "standard-utility ==0.3.118+git.0bb6026d",
-  "coverage ==7.9.2",
+  "standard-utility ==0.3.120+git.86abd880",
+  "coverage ==7.10.1",
   "filelock ==3.18.0",
-  "mypy ==1.17.0",
+  "mypy ==1.17.1",
   "mypy-extensions ==1.1.0",
   "pathspec ==0.12.1",
   "pytest-cov ==6.2.1",
