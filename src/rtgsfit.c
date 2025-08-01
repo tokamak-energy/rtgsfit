@@ -243,6 +243,11 @@ int rtgsfit(
     // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
     cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas_w_correction, N_SENS_PCS, 1.0,
             SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
+    // Set regularisation measurements to zero.
+    for (int i = n_meas_w_correction; i < N_MEAS; i++) {
+        meas_no_coil[i] = 0.0;
+    }
+
 
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
