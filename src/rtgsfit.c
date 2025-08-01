@@ -252,6 +252,7 @@ int rtgsfit(
     // PROKOPYSZYN: I think this is a mistake, it should be "PF coil" instead of "PF (vessel)".
     // PROKOPYSZYN: The rm_coil_from_meas only removes the PF coil contributions from the measurements.
     // PROKOPYSZYN: The passive vessel contributions are not removed
+    // Note that this also sets the regularisation elements of meas_no_coil to zero.
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
     // make basis
