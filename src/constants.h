@@ -64,6 +64,12 @@ extern const double Z_VEC[];
 /* WEIGHTS: weight values (length N_MEAS) */
 extern const double WEIGHT[];
 
+/* SENSOR_REPLACEMENT_MATRIX : Replace "bad" sensors with "good" sensors */
+extern const double SENSOR_REPLACEMENT_MATRIX[];
+
+/* N_SENS_PCS : number of sensors read from PCS (i.e. the "good" sensors) */ 
+extern const int N_SENS_PCS;
+
 /* N_LIMIT : number of limit points */
 extern const int N_LIMIT;
 

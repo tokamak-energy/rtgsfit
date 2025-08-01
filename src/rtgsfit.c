@@ -206,7 +206,7 @@ void normalise_flux(
 
 
 int rtgsfit(
-        double* meas, // input
+        double* meas_pcs, // input
         double* coil_curr, // input
         double* flux_norm, // input/output
         int* mask, // input/output
@@ -235,6 +235,14 @@ int rtgsfit(
     double LIMIT_R[N_LIMIT], LIMIT_Z[N_LIMIT];
     int xpt_n = 0;
     int opt_n = 0;
+    // note: N_MEAS is actually the number of constraints, i.e. including regularisations
+    // number of sensors with correction, i.e. meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
+    int n_meas_w_correction = N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS;
+    double meas[n_meas_w_correction];
+
+    // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas_w_correction, N_SENS_PCS, 1.0,
+            SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
 
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
