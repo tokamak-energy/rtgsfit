@@ -227,7 +227,7 @@ int rtgsfit(
     double rcond = -1.0;
     double xpt_flux_max;
     double single_vals[N_COEF], meas_no_coil_cp[N_MEAS];
-    double source[N_GRID], meas_no_coil[N_MEAS];
+    double source[N_GRID], meas_model[N_MEAS];
     double meas_no_coil[N_MEAS] = {0};
     double flux_pls[N_GRID], flux_vessel[N_GRID];
     double lcfs_flux, axis_flux, axis_r, axis_z;
