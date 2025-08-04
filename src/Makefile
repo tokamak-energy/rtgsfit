@@ -8,7 +8,11 @@ ifndef SHOT
 endif
 
 CC = gcc
-DEBUG = 0
+ifndef DEBUG
+	DEBUG = 0
+endif
+# print the value of DEBUG
+$(info DEBUG is set to $(DEBUG))
 
 ifeq ($(DEBUG), 1)
 	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread -g3 -O0 -DDEBUG
@@ -39,7 +43,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
+	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas -llapacke
 
 $(OBJS): %.o : %.c
 	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
