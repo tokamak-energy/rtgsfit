@@ -1,4 +1,4 @@
-% ** Minimum working exaple of RT-GSFit **
+% ** Minimum working example of RT-GSFit **
 %
 % As this is a Minimum working example we deliberately have all of the code
 % in a single file
@@ -6,17 +6,17 @@
 % Reminder: to run this type of file you need to click the big green "Run"
 % button. This is so that the functions at the end of the file are found
 %
-% Muti-dimension array shape:
-% * Matlabe/Fortran are column major and following MDSplus convention, time
+% Multi-dimensional array shape:
+% * Matlab/Fortran are column major and following MDSplus convention, time
 % should be in the last index
-% * C/Python/Rust are row major, with with time in the first index
+% * C/Python/Rust are row major, with time in the first index
 
 clear;
 
 %% Settings
 
 % Choose the pulse and run where to read RT-GSFit setting from
-rtgsfit_setup_pluse = 99000230;
+rtgsfit_setup_pulse = 99000230;
 rtgsfit_setup_run_name = 'RUN01';
 
 % Choose the pulse to read the magnetic sensors from
@@ -44,7 +44,7 @@ end
 
 %% Read RT-GSFit set-up data from MDSplus
 mdsconnect('smaug');
-mdsopen('RTGSFIT', rtgsfit_setup_pluse);
+mdsopen('RTGSFIT', rtgsfit_setup_pulse);
 
 % sensor names PCS should read
 sens_names_pcs = mdsvalue(['\RTGSFIT::TOP.' rtgsfit_setup_run_name '.PRESHOT:SENS_NAMES']);
@@ -66,7 +66,7 @@ initial_condition_flux_psi_total = mdsvalue(['\RTGSFIT::TOP.' rtgsfit_setup_run_
 n_coef = mdsvalue(['\RTGSFIT::TOP.' rtgsfit_setup_run_name '.PRESHOT:N_COEF']);
 n_lcfs_max = mdsvalue(['\RTGSFIT::TOP.' rtgsfit_setup_run_name '.PRESHOT:N_LCFS_MAX']);
 
-% These variables are not needed to run RT-GSFit, but usefult for plotting 
+% These variables are not needed to run RT-GSFit, but useful for plotting 
 % results
 r_vec = mdsvalue(['\RTGSFIT::TOP.' rtgsfit_setup_run_name '.PRESHOT:R_VEC']);
 z_vec = mdsvalue(['\RTGSFIT::TOP.' rtgsfit_setup_run_name '.PRESHOT:Z_VEC']);
@@ -140,7 +140,7 @@ plasma_current = libpointer('doublePtr', 0.0);
 [~, i_time_start] = min(abs(time - time_start));
 [~, i_time_end] = min(abs(time - time_end));
 
-% Figure out the sie of the results
+% Figure out the size of the results
 i_counter = 1;
 for i_time = i_time_start : n_timestepping : i_time_end
     i_counter = i_counter + 1;
