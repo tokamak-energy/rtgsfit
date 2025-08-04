@@ -35,6 +35,14 @@ def convert_rog_list_format(inrog_list):
             raise ValueError(f"Unexpected format: {name}")
     return outrog_list
 
+def convert_v_floop_list_format(invfloop_list):
+    outvfloop_list = []
+    for item in invfloop_list:
+        number_part = item.split('_')[-1].strip()
+        new_format = f"FLOOP.L{number_part}.V"
+        outvfloop_list.append(new_format)
+    return outvfloop_list
+
 def convert_coil_list_format(incoil_list):
     return [f"PF.{name.strip()}.I" for name in incoil_list]
 
@@ -59,24 +67,30 @@ def prep_meas(time: float) -> np.ndarray:
 
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("RTGSFIT", cnst.PULSE_NUM_WRITE)
-        n_meas = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:N_MEAS").data()
         n_flux_loops = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:N_F_LOOPS").data()
         n_bp_probes = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:N_BP_PROBES").data()
         n_rogowski_coils = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:N_ROG_COILS").data()
         sens_names = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:SENS_NAMES").data()
 
-    fl_range = range(n_flux_loops)
-    bp_range = range(n_flux_loops, n_flux_loops + n_bp_probes)
-    rogowski_range = range(n_flux_loops + n_bp_probes,
-                           n_flux_loops + n_bp_probes + n_rogowski_coils)
+    n_meas_pcs = len(sens_names)
+    # fl_range = range(n_flux_loops)
+    # bp_range = range(n_flux_loops, n_flux_loops + n_bp_probes)
+    # rogowski_range = range(n_flux_loops + n_bp_probes,
+    #                        n_flux_loops + n_bp_probes + n_rogowski_coils)
+    fl_range = np.array([i for i, name in enumerate(sens_names) if "PSI_FLOOP" in name])
+    bp_range = np.array([i for i, name in enumerate(sens_names) if "B_BPPROBE" in name])
+    rogowski_range = np.array([i for i, name in enumerate(sens_names) if "I_ROG_" in name])
+    v_floop_range = np.array([i for i, name in enumerate(sens_names) if "V_FLOOP" in name])
     fl_names = convert_fl_list_format(sens_names[fl_range])
     bp_probe_names = convert_bp_list_format(sens_names[bp_range])
     rogowski_coil_names = convert_rog_list_format(sens_names[rogowski_range])
+    v_floop_names = convert_v_floop_list_format(sens_names[v_floop_range])
 
-    meas = np.zeros(n_meas, dtype=np.float64)
+    meas = np.zeros(n_meas_pcs, dtype=np.float64)
     meas[fl_range] = prep_sens_meas(time, fl_names)
     meas[bp_range] = prep_sens_meas(time, bp_probe_names)
     meas[rogowski_range] = prep_sens_meas(time, rogowski_coil_names)
+    meas[v_floop_range] = prep_sens_meas(time, v_floop_names)
 
     print("Flux loop measurements:", meas[fl_range])
     print("BP probe measurements:", meas[bp_range])

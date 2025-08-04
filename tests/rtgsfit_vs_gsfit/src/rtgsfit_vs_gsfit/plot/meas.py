@@ -27,7 +27,7 @@ def plot_flux_loop_at_sensors(rtgsfit_output_dict: dict,
         limit_r = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:LIMIT_R").data()
         limit_z = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:LIMIT_Z").data()
 
-    rtgsfit_fl_meas = rtgsfit_output_dict['meas'][0, :n_flux_loops]
+    rtgsfit_fl_meas = rtgsfit_output_dict['meas_pcs'][0, :n_flux_loops]
 
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cnst.PULSE_NUM_WRITE)
@@ -79,6 +79,7 @@ def plot_flux_loop_at_sensors(rtgsfit_output_dict: dict,
                        label='GSFIT LCFS',
                        color='tab:orange',
                        s=dot_size)
+        print("Limit R:", limit_r)  # DEBUG
         ax_top.scatter(limit_r, limit_z,
                        label='RTGSFIT Limiter',
                        color='tab:green',
@@ -140,13 +141,12 @@ def plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
     r_grid, _ = np.meshgrid(r_vec, z_vec) 
 
     bp_probe_range = np.arange(n_flux_loops, n_flux_loops + n_bp_probes)
-    rtgsfit_bp_meas = rtgsfit_output_dict['meas'][0, bp_probe_range]
+    rtgsfit_bp_meas = rtgsfit_output_dict['meas_pcs'][0, bp_probe_range]
     weights = weights[bp_probe_range]
 
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cnst.PULSE_NUM_WRITE)
         bp_include = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.BPPROBE:INCLUDE").data() == 1
-        gsfit_bp_meas = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.BPPROBE:MVALUE").data()[0, bp_include]
         gsfit_bp_pred = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.BPPROBE:CVALUE").data()[0, bp_include]
         gsfit_br = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.TWO_D:BR").data()[0, :, :]
         gsfit_bz = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.TWO_D:BZ").data()[0, :, :]
@@ -314,7 +314,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
 
     rogowski_range = np.arange(n_flux_loops + n_bp_probes,
                                n_flux_loops + n_bp_probes + n_rogowski_coils)
-    rtgsfit_rog_meas = rtgsfit_output_dict['meas'][0, rogowski_range]
+    rtgsfit_rog_meas = rtgsfit_output_dict['meas_pcs'][0, rogowski_range]
     rtgsfit_rog_meas = [f'{current:.2e}' for current in rtgsfit_rog_meas * 1e0]
     weights = weights[rogowski_range]
     rogovski_names_rt = sens_names[rogowski_range]
