@@ -85,15 +85,15 @@ def replay_rtgsfit(time: float):
     n_z = len(z_vec)
     n_grid = n_r * n_z
     n_meas_pcs = len(meas_pcs)
-    # flux_norm = initial_flux_norm(r_vec, z_vec,
-    #                               cnst.R_AXIS0, cnst.Z_AXIS0,
-    #                               cnst.RHO_BOUNDARY0)
-    # mask = np.ones(n_grid, dtype=np.int32)
-    flux_norm = (psi_a - psi) / (psi_a - psi_b) * mask
-    flux_norm = flux_norm.flatten()
+    flux_norm = initial_flux_norm(r_vec, z_vec,
+                                  cnst.R_AXIS0, cnst.Z_AXIS0,
+                                  cnst.RHO_BOUNDARY0)
+    # flux_norm = (psi_a - psi) / (psi_a - psi_b) * mask
+    # flux_norm = flux_norm.flatten()
+    mask = np.ones(n_grid, dtype=np.int32)
     mask = mask.flatten().astype(np.int32)
-    # flux_total = np.zeros(n_grid, dtype=np.float64)
-    flux_total = psi.flatten()
+    flux_total = np.zeros(n_grid, dtype=np.float64)
+    # flux_total = psi.flatten()
     coef = np.zeros(n_coef, dtype=np.float64)
     error = np.array([0.0], dtype=np.float64)
     lcfs_r = np.zeros(n_lcfs_max, dtype=np.float64)
