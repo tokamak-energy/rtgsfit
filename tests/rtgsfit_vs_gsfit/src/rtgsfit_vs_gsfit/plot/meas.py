@@ -79,7 +79,6 @@ def plot_flux_loop_at_sensors(rtgsfit_output_dict: dict,
                        label='GSFIT LCFS',
                        color='tab:orange',
                        s=dot_size)
-        print("Limit R:", limit_r)  # DEBUG
         ax_top.scatter(limit_r, limit_z,
                        label='RTGSFIT Limiter',
                        color='tab:green',
@@ -345,7 +344,6 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
         for i, rogowski_name_rt in enumerate(rogowski_names_rt):
             for j, rogowski_name_gs in enumerate(rogowski_names_gs):
                 if rogowski_name_rt == rogowski_name_gs:
-                    print(f"Found match: {rogowski_name_rt} == {rogowski_name_gs}")
                     gsfit_rog_meas[i] = gsfit_rog_meas_raw[j]
                     gsfit_rog_pred[i] = gsfit_rog_pred_raw[j]
         gsfit_lcfs_n = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.P_BOUNDARY:NBND").data()[0]
