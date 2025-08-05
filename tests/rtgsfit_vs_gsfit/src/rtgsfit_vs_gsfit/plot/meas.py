@@ -288,7 +288,7 @@ def plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
 def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
     """
     Plot vessel currents as well as the current
-    and in a table below show the current values at the rogovski coils
+    and in a table below show the current values at the rogowski coils
     and the vessel current contribution from each of the eigenvectors.
     """
 
@@ -317,23 +317,35 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
     rtgsfit_rog_meas = rtgsfit_output_dict['meas_pcs'][0, rogowski_range]
     rtgsfit_rog_meas = [f'{current:.2e}' for current in rtgsfit_rog_meas * 1e0]
     weights = weights[rogowski_range]
-    rogovski_names_rt = sens_names[rogowski_range]
+    # rogowski_names_rt = sens_names[rogowski_range]
+    rogowski_names_rt = [
+        "I_ROG_INIVC000",
+        "I_ROG_BVLT",
+        "I_ROG_BVLB",
+        "I_ROG_GASBFLT",
+        "I_ROG_GASBFLB",
+        "I_ROG_HFSPSRT",
+        "I_ROG_HFSPSRB",
+        "I_ROG_DIVPSRT",
+        "I_ROG_DIVPSRB",
+    ]
     # for table replace I_ROG_ part of string with ''
-    rogovski_names_table = [name.replace("I_ROG_", "") for name in rogovski_names_rt]
+    rogowski_names_table = [name.replace("I_ROG_", "") for name in rogowski_names_rt]
 
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cnst.PULSE_NUM_WRITE)
         # rog_include = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:INCLUDE").data() == 1
         # gsfit_rog_meas = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:MVALUE").data()[0, rog_include]
         # gsfit_rog_pred = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:CVALUE").data()[0, rog_include]
-        rogovski_names_gs = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:NAME").data()
+        rogowski_names_gs = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:NAME").data()
         gsfit_rog_meas_raw = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:MVALUE").data()[0, :]
         gsfit_rog_pred_raw = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.CONSTRAINTS.ROG:CVALUE").data()[0, :]
         gsfit_rog_meas = np.zeros(n_rogowski_coils)
         gsfit_rog_pred = np.zeros(n_rogowski_coils)
-        for i, rogovski_name_rt in enumerate(rogovski_names_rt):
-            for j, rogovski_name_gs in enumerate(rogovski_names_gs):
-                if rogovski_name_rt == rogovski_name_gs:
+        for i, rogowski_name_rt in enumerate(rogowski_names_rt):
+            for j, rogowski_name_gs in enumerate(rogowski_names_gs):
+                if rogowski_name_rt == rogowski_name_gs:
+                    print(f"Found match: {rogowski_name_rt} == {rogowski_name_gs}")
                     gsfit_rog_meas[i] = gsfit_rog_meas_raw[j]
                     gsfit_rog_pred[i] = gsfit_rog_pred_raw[j]
         gsfit_lcfs_n = conn.get(f"\\GSFIT::TOP.{cnst.RUN_NAME}.P_BOUNDARY:NBND").data()[0]
@@ -358,7 +370,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
     gsfit_p_current = np.sum(gsfit_coef0 * r_grid * (1 - gsfit_psi_n)) * d_r * d_z * 2 * np.pi
     gsfit_f_current = np.sum(gsfit_coef1 / (r_grid) * (1 - gsfit_psi_n)) * d_r * d_z * 2 * np.pi / cnst.MU_0
 
-    rogovski_coils_dict = gsfit_output_dict["rogowski_coils"]
+    rogowski_coils_dict = gsfit_output_dict["rogowski_coils"]
     coils_dict = gsfit_output_dict["coils"]
     ivc_dict = gsfit_output_dict["IVC"]
     n_ves_dof = len(ivc_dict["dof"].keys())
@@ -458,10 +470,10 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
                                   f"ff'_current = {f_current:.2e} A," '\n'
                                   f'dz_current = {delta_z_current:.2e} A' '\n'
                                   f"OVC = {rtgsfit_total_ovc_current:.2e} A")
-            for name in rogovski_coils_dict.keys():
+            for name in rogowski_coils_dict.keys():
                 if name == "INIVC000": continue  # Skip the INIVC000 coil
-                r = rogovski_coils_dict[name]["r"]
-                z = rogovski_coils_dict[name]["z"]
+                r = rogowski_coils_dict[name]["r"]
+                z = rogowski_coils_dict[name]["z"]
                 r_centroid = np.sum(r) / len(r)
                 z_centroid = np.sum(z) / len(z)
                 ax_top_left.plot(r, z,
@@ -550,12 +562,11 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
                                    f"ff'_current = {gsfit_f_current:.2e} A," '\n'
                                    f'dz = {gsfit_delta_z:.2e} m' '\n'
                                    f"OVC = {gsfit_total_ovc_current:.2e} A")
-            for name in rogovski_coils_dict.keys():
+            for name in rogowski_coils_dict.keys():
                 # if name == "INIVC000": continue  # Skip the INIVC000 coil
-                # if GAS is in the name, skip it
                 if "GAS" in name: continue
-                r = rogovski_coils_dict[name]["r"]
-                z = rogovski_coils_dict[name]["z"]
+                r = rogowski_coils_dict[name]["r"]
+                z = rogowski_coils_dict[name]["z"]
                 r_centroid = np.sum(r) / len(r)
                 z_centroid = np.sum(z) / len(z)
                 ax_top_right.plot(r, z,
@@ -644,7 +655,7 @@ def plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict):
             table_data1.append(["RTGS [A]"] + list(rtgsfit_vessel_currents))
             table_data1.append(["GSFIT [A]"] + list(gsfit_vessel_currents))
             table_data2 = []
-            table_data2.append(["Rog I [A]"] + rogovski_names_table)
+            table_data2.append(["Rog I [A]"] + rogowski_names_table)
             table_data2.append(["Meas RT"] + list(rtgsfit_rog_meas))
             table_data2.append(["Meas GS"] + list(gsfit_rog_meas))
             table_data2.append(["RTGSFIT"] + list(rtgsfit_rog_pred))
@@ -698,6 +709,6 @@ if __name__ == "__main__":
                                 allow_pickle=True).item()
 
     # Call the contour plotting function
-    # plot_flux_loop_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
-    # plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
+    plot_flux_loop_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
+    plot_b_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
     plot_j_at_sensors(rtgsfit_output_dict, gsfit_output_dict)
