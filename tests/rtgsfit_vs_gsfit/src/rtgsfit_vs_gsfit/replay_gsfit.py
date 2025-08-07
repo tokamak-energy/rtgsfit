@@ -30,6 +30,8 @@ def replay_gsfit():
     gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["method"] = "user_defined"
     gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["user_defined"] = [cnst.TIME]
     gsfit_controller.settings["GSFIT_code_settings.json"]["database_writer"]["method"] = "tokamak_energy_mdsplus"
+    gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_r"] = cnst.N_R
+    gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_z"] = cnst.N_Z
     elmag_run_name = gsfit_controller.settings["GSFIT_code_settings.json"]["database_reader"]["st40_mdsplus"]["workflow"]["elmag"]["run_name"]
     ivc_n_dof = gsfit_controller.settings["passive_dof_regularisation.json"]["IVC"]["n_dof"]
 

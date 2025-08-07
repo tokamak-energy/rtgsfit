@@ -41,3 +41,7 @@ RHO_BOUNDARY0 = 0.2
 
 # Replay RTGSFIT parameters
 N_ITERS = 10
+
+# Grid parameters
+N_R = 87
+N_Z = 93

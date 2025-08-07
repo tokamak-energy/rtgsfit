@@ -57,6 +57,9 @@ def initialise_rtgsfit_node():
     # fmt: on
     gsfit_controller.results["PRESHOT"]["COIL_MATRIX"] = coil_matrix
 
+    gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_r"] = cnst.N_R
+    gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_z"] = cnst.N_Z
+
     # Run
     gsfit_controller.run()
 
