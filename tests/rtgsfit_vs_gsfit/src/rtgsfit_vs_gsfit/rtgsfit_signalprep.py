@@ -104,6 +104,33 @@ def prep_coil_curr(time: float) -> np.ndarray:
 
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("RTGSFIT", cnst.PULSE_NUM_WRITE)
+        coil_matrix = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:COIL_MATRIX").data()
+
+    sensor_names = ["BVL", "BVUB", "BVUT", "DIV", "MCVC", "PSH", "ROG.MCWIRE.I", "SOL"]
+
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("ST40", cnst.PULSE_NUM)
+        sensor_currents = np.zeros(len(sensor_names), dtype=np.float64)
+        for i, sensor_name in enumerate(sensor_names):
+            if "ROG" in sensor_name:
+                sensor_current_time = mag.get(sensor_name)
+                sensor_enable = np.ones(len(sensor_current_time), dtype=np.float64)
+            else:
+                sensor_current_time = conn.get(f"\\PSU::TOP.{sensor_name}:I").data()
+                sensor_enable = conn.get(f"\\PSU::TOP.{sensor_name}:ENABLE").data() 
+            sensor_currents[i] = np.interp(time, TIME_EXPERIMENTAL, sensor_current_time * sensor_enable)
+
+    coil_curr = sensor_currents @ coil_matrix.T
+
+    return coil_curr
+
+def prep_coil_curr_psu2coil(time: float) -> np.ndarray:
+    """
+    Prepare the coil currents for RTGSFIT.
+    """
+
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("RTGSFIT", cnst.PULSE_NUM_WRITE)
         coil_names = conn.get(f"\\RTGSFIT::TOP.{cnst.RUN_NAME}.PRESHOT:COIL_NAMES").data()
 
     coil_names = convert_coil_list_format(coil_names)
