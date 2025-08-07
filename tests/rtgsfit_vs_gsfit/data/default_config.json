@@ -1,0 +1,27 @@
+{
+  "mu_0": 1.25663706127e-06,
+  "time": 0.03,
+  "settings_path": "st40_setup_for_rtgsfit",
+
+  "pulse_num": 13343,
+  "pulse_num_write": 520013343,
+  "run_name": "R_V_G",
+  "run_description": "Using a single degree of freedom for p_prime and ff_prime.",
+
+  "repo_path": "",
+  "data_dir": "",
+  "plots_dir": "",
+  "rtgsfit_path": "",
+  "rtgsfit_src_path": "",
+
+  "psu2coil_run_name": "RUN05",
+
+  "r_axis0": 0.5,
+  "z_axis0": 0.0,
+  "rho_boundary0": 0.2,
+
+  "n_iters": 10,
+
+  "n_r": 87,
+  "n_z": 93
+}
