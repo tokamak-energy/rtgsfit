@@ -50,3 +50,15 @@ uv pip install "numpy<2"
 
 - **`pyproject.toml`**  
   Contains project metadata including Python package dependencies.
+
+## Tests
+
+To run the tests use 
+```
+pytest -n auto tests
+```
+to automaitcally detect available CPU cores or
+```
+pytest -n 4 tests
+``` 
+to use e.g. 4 cores.
