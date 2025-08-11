@@ -17,17 +17,17 @@ def load_config():
     with open(config_path, 'r') as f:
         cfg = json.load(f)
 
-    cfg['REPO_PATH'] = repo_path
-    cfg['DATA_DIR'] = os.path.join(repo_path, 'data')
-    cfg['PLOTS_DIR'] = os.path.join(repo_path, 'plots')
+    cfg['repo_path'] = repo_path
+    cfg['data_dir'] = os.path.join(repo_path, 'data')
+    cfg['plots_dir'] = os.path.join(repo_path, 'plots')
 
     rtgsfit_path = os.path.dirname(os.path.dirname(repo_path))
-    cfg['RTGSFIT_PATH'] = rtgsfit_path
-    cfg['RTGSFIT_SRC_PATH'] = os.path.join(rtgsfit_path, 'src')
+    cfg['rtgsfit_path'] = rtgsfit_path
+    cfg['rtgsfit_src_path'] = os.path.join(rtgsfit_path, 'src')
 
-    if cfg['PULSE_NUM'] > 13000:
-        cfg['PSU2COIL_RUN_NAME'] = "RUN05"
+    if cfg['pulse_num'] > 13000:
+        cfg['psu2coil_run_name'] = "run05"
     else:
-        cfg['PSU2COIL_RUN_NAME'] = "RUN01"
+        cfg['psu2coil_run_name'] = "run01"
 
     return cfg
