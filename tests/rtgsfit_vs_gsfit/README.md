@@ -25,22 +25,22 @@ uv pip install "numpy<2"
   Contains the core Python modules:
 
   - `config_loader.py`  
-    Defines `load_config()`, which loads `default_config.json` from the `data/` directory and returns a configuration dictionary (`cfg`) with details such as pulse number, run name, resolution, etc.
+    Defines `load_and_prepare_config()`, which loads `default_config.json` from the `data/` directory and returns a configuration dictionary (`cfg`) with details such as pulse number, run name, resolution, etc.
+
+  - `prep_meas_coil_curr.py`  
+    Contains `prep_meas()` and `prep_coil_curr()` which read measurement data from MAG and PSU2COIL on MDS+ to supply inputs for `replay_rtgsfit()`.
 
   - `replay_gsfit.py`  
     Defines `replay_gsfit()`, which sets up and runs GSFIT for the specified pulse and time in `cfg`, then saves the results to MDS+.
 
   - `replay_rtgsfit.py`  
-    Defines `replay_rtgsfit()`, which runs RTGSFIT over multiple iterations. It requires the RTGSFIT code to be pre-compiled. This module uses `prep_meas` and `prep_coil_curr` from `rtgsfit_signalprep.py` to prepare input arrays, then outputs results as `.npy` files in the `data/` directory.
+    Defines `replay_rtgsfit()`, which runs RTGSFIT over multiple iterations. It requires the RTGSFIT code to be pre-compiled. This module uses `prep_meas` and `prep_coil_curr` from `prep_meas_coil_curr.py` to prepare input arrays, then outputs results as `.npy` files in the `data/` directory.
 
   - `rtgsfit_compile_setup.py`  
     Provides functions to interface with MDS+ and compile RTGSFIT:  
-    - `rtgsfit_mds_nodegen()` creates a node on MDS+.  
-    - `initialise_rtgsfit_node()` populates the node with necessary data.  
+    - `rtgsfit_mds_nodeclear()` delete existing MDS+ node for RTGSFIT. 
+    - `initialise_rtgsfit_node()` generates and populates the MDS+ node with the required data. 
     - `compile_rtgsfit()` compiles the RTGSFIT code using the `Makefile`.
-
-  - `rtgsfit_signalprep.py`  
-    Contains `prep_meas()` and `prep_coil_curr()` which read measurement data from MAG and PSU2COIL on MDS+ to supply inputs for `replay_rtgsfit()`.
 
 - **`src/rtgsfit_vs_gsfit/plot/`**  
   Contains modules for plotting data produced by `replay_gsfit` and `replay_rtgsfit`.
