@@ -1,17 +1,29 @@
 import os
 import json
 
-def load_config():
+def load_and_prepare_config():
     """
-    Load configuration from a JSON file to create a dictionary.
+    Load the base configuration from a JSON file and augment it with derived values.
 
-    The dictionary contains information that will be used to set and and run RTGSFIT and GSFIT.
+    This function reads the default configuration from the `data/default_config.json` file
+    in the repository, then computes and adds additional path-related and runtime fields
+    based on the repository location and configuration values.
 
-    The JSON file is expected to be in the data directory of the repository.
+    The resulting configuration dictionary includes:
+      - Original values from the JSON file.
+      - Paths to key directories and source code.
+      - Automatically selected run names based on `pulse_num`.
+      - Flags for RTGSFIT and GSFIT runtime state.
+
+    Returns
+    -------
+    dict
+        A configuration dictionary containing both loaded and computed values.
     """
 
     this_file_path = os.path.abspath(__file__)
     repo_path = os.path.dirname(os.path.dirname(os.path.dirname(this_file_path)))
+    rtgsfit_path = os.path.dirname(os.path.dirname(repo_path))
 
     config_path = os.path.join(repo_path, 'data', 'default_config.json')
     with open(config_path, 'r') as f:
@@ -20,8 +32,6 @@ def load_config():
     cfg['repo_path'] = repo_path
     cfg['data_dir'] = os.path.join(repo_path, 'data')
     cfg['plots_dir'] = os.path.join(repo_path, 'plots')
-
-    rtgsfit_path = os.path.dirname(os.path.dirname(repo_path))
     cfg['rtgsfit_path'] = rtgsfit_path
     cfg['rtgsfit_src_path'] = os.path.join(rtgsfit_path, 'src')
 
@@ -29,5 +39,10 @@ def load_config():
         cfg['psu2coil_run_name'] = "run05"
     else:
         cfg['psu2coil_run_name'] = "run01"
+
+    cfg["gsfit_replayed"] = False
+    cfg["rtgsfit_node_initialised"] = False
+    cfg["rtgsfit_compiled"] = False
+    cfg["rtgsfit_replayed"] = False
 
     return cfg

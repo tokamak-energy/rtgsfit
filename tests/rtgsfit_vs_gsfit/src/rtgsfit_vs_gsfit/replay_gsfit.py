@@ -36,9 +36,11 @@ def replay_gsfit(cfg: dict):
     print("Time slice:", gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["user_defined"])
     gsfit_controller.run()
 
+    cfg["gsfit_replayed"] = True
+
 if __name__ == "__main__":
 
     from rtgsfit_vs_gsfit import config_loader
 
-    cfg = config_loader.load_config()
+    cfg = config_loader.load_and_prepare_config()
     replay_gsfit(cfg)
