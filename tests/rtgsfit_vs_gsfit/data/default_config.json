@@ -4,7 +4,7 @@
   "settings_path": "st40_setup_for_rtgsfit",
 
   "pulse_num": 13343,
-  "pulse_num_write": 520013343,
+  "pulse_num_write": 52013343,
   "run_name": "R_V_G",
   "run_description": "Using a single degree of freedom for p_prime and ff_prime.",
 
