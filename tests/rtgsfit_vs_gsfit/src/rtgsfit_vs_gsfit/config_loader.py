@@ -1,7 +1,7 @@
 import os
 import json
 
-def load_and_prepare_config():
+def load_and_prepare_config() -> dict:
     """
     Load the base configuration from a JSON file and augment it with derived values.
 
