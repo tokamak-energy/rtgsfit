@@ -94,6 +94,39 @@ def initialise_rtgsfit_node(cfg: dict):
     gsfit_controller.run()
     cfg["rtgsfit_node_initialised"] = True
 
+    # Create IVC dictionary and save it, need to save this to MDS+ instead
+    ivc_dict = {}
+    passives = gsfit_controller.passives
+    ivc_dict["r"] = passives.get_array1(["IVC", "geometry", "r"])
+    ivc_dict["z"] = passives.get_array1(["IVC", "geometry", "z"])
+    ivc_dict["dr"] = passives.get_array1(["IVC", "geometry", "d_r"])
+    ivc_dict["dz"] = passives.get_array1(["IVC", "geometry", "d_z"])
+    n_eigs = gsfit_controller.settings["passive_dof_regularisation.json"]["IVC"]["n_dof"]
+    n_segs = len(passives.get_array1(["IVC", "dof", f"eig_01", "current_distribution"]))
+    ivc_dict["current_distributions"] = np.zeros((n_eigs, n_segs))
+    for eig_num in range(n_eigs):
+        ivc_dict["current_distributions"][eig_num, :] = \
+            passives.get_array1(["IVC", "dof", f"eig_{eig_num + 1:02d}", "current_distribution"])
+    np.save(cfg["ivc_dict_path"], ivc_dict, allow_pickle=True)
+
+    # Create coef_names list and save it
+    passives = gsfit_controller.passives
+    coef_names = ["pls0", "pls1", "pls2"]
+    passive_names = passives.keys()
+    for passive_name in passive_names:
+        dof_names = passives.keys([passive_name, "dof"])
+        for dof_name in dof_names:
+            if dof_name == "constant_current_density":
+                coef_names.append(passive_name)
+            elif dof_name.startswith("eig_"):
+                coef_names.append(dof_name)
+            else:
+                raise ValueError(f"Unknown DoF name: {dof_name}")
+    # Save coef_names to a file
+    with open(cfg["coef_names_path"], "w") as f:
+        f.writelines(name + "\n" for name in coef_names)
+
+
 def compile_rtgsfit(cfg: dict):
     """
     Clean and then compile RTGSFIT.
