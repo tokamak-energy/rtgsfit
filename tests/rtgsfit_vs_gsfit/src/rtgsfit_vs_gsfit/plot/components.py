@@ -13,7 +13,9 @@ import numpy as np
 def psi_contours(iteration: int,
                  ax: plt.Axes,
                  cfg: dict,
-                 levels: int = 30):
+                 levels: int = 30,
+                 plot_rtgsfit = True,
+                 plot_gsfit = True):
     """
     Draw the ψ [Wb] contours on the given axis.
     """
@@ -31,16 +33,17 @@ def psi_contours(iteration: int,
         conn.openTree("GSFIT", cfg["pulse_num_write"])
         psi_gsfit = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.TWO_D:PSI").data()[0, :, :]
 
-    ax.contour(r_vec, z_vec, psi_rtgsfit,
-               levels=levels,
-               colors="tab:blue")
-    ax.contour(r_vec, z_vec, psi_gsfit,
-               levels=levels,
-               colors="tab:orange")
+    if plot_rtgsfit:
+        ax.contour(r_vec, z_vec, psi_rtgsfit,
+                   levels=levels,
+                   colors="tab:blue")
+    if plot_gsfit:
+        ax.contour(r_vec, z_vec, psi_gsfit,
+                levels=levels,
+                colors="tab:orange")
     ax.set_aspect('equal')
     ax.set_xlabel("R [m]")
-    ax.set_ylabel("Z [m]")
-    ax.set_title("ψ [Wb]")
+    ax.set_ylabel("z [m]")
 
 def limiter_scatter(ax: plt.Axes,
                     cfg: dict):
@@ -195,3 +198,52 @@ def bp_probe_line(iteration: int,
     ax.set_ylabel("Bp Probe Value [T]")
     ax.tick_params(axis='x', rotation=90)
     ax.legend()
+
+def ivc_j_rtgsfit(iteration, ax: plt.Axes, cfg: dict):
+
+    from rtgsfit_vs_gsfit import rtgsfit_pred_meas
+
+    ivc_dict = np.load(cfg["ivc_dict_path"], allow_pickle=True).item()
+    areas = ivc_dict["dr"] * ivc_dict["dz"]
+
+    with open(cfg["coef_names_path"], "r") as f:
+        coef_names = [line.strip() for line in f]
+    ivc_indices = [i for i, name in enumerate(coef_names) if name.startswith("eig_")]
+
+    rtgsfit_output_dict =np.load(cfg["rtgsfit_output_dict_path"],
+                                 allow_pickle=True).item()
+    coef = rtgsfit_output_dict["coef"][iteration, :]
+    coef_ivc = coef[ivc_indices]
+
+    eigenvector_currents = ivc_dict["current_distributions"] * coef_ivc[:, np.newaxis]
+    total_j = np.sum(eigenvector_currents, axis=0) / areas
+
+    if cfg["j_vrange"] is None:
+        cfg["j_vrange"] = [total_j.min(), total_j.max()]
+    else:
+        cfg["j_vrange"][0] = min(cfg["j_vrange"][0], total_j.min())
+        cfg["j_vrange"][1] = max(cfg["j_vrange"][1], total_j.max())
+
+    # Plot vessel currents as filled polygons
+    for idx in range(len(ivc_dict["r"])):
+        # if iteration == 0: continue
+        r = ivc_dict["r"][idx]
+        z = ivc_dict["z"][idx]
+        dr = ivc_dict["dr"][idx]
+        dz = ivc_dict["dz"][idx]
+        current = total_j[idx]
+        filament_r = [r - 0.5 * dr, r + 0.5 * dr, r + 0.5 * dr, r - 0.5 * dr]
+        filament_z = [z - 0.5 * dz, z - 0.5 * dz, z + 0.5 * dz, z + 0.5 * dz]
+        color = plt.cm.viridis((current - cfg["j_vrange"][0]) /
+                               (cfg["j_vrange"][1] - cfg["j_vrange"][0]))
+        ax.fill(filament_r, filament_z, color=color, edgecolor='none', linewidth=0.5)
+    sm = plt.cm.ScalarMappable(
+        cmap=plt.cm.viridis,
+        norm=plt.Normalize(vmin=total_j.min(), vmax=total_j.max())
+    )
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax)
+    cbar.set_label('Vessel Current Density (A/m²)')
+    cbar.ax.tick_params(labelsize=8)
+    cbar.formatter.set_powerlimits((0, 0))
+    cbar.update_ticks()
