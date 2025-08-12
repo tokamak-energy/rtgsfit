@@ -42,8 +42,19 @@ uv pip install "numpy<2"
     - `initialise_rtgsfit_node()` generates and populates the MDS+ node with the required data. 
     - `compile_rtgsfit()` compiles the RTGSFIT code using the `Makefile`.
 
+  - `rtgsfit_pred_meas.py`  
+    Contains `calc_pred_meas()`, which uses the `flux_norm`, `coef`, and `coil_curr` arrays, along with the appropriate Green's matrices, to determine the best-fit measurement values.
+
+
 - **`src/rtgsfit_vs_gsfit/plot/`**  
-  Contains modules for plotting data produced by `replay_gsfit` and `replay_rtgsfit`.
+  Contains modules for plotting data produced by `replay_gsfit` and `replay_rtgsfit`:  
+  - `components.py`  
+    Provides reusable subplot helper functions that take an `ax` argument and draw individual plot elements such as contours or annotations.
+  - `examples.py`  
+    Contains full example plotting routines that assemble the subplot components into complete figures.
+  - `tables.py`
+    Creates `.csv` tables of data with the intention of viewing them using "Excel Viewer" an extention for VSCode.
+
 
 - **`tests/test_rtgsfit_vs_gsfit.py`**  
   Implements `test_rtgsfit_vs_gsfit(pulse, time)`, which initializes, compiles, and runs both RTGSFIT and GSFIT for various pulse numbers and time snapshots. The tests compare results to ensure agreement and are designed for parallel execution across multiple CPUs.
