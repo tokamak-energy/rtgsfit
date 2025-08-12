@@ -29,18 +29,33 @@ def psi_contours(iteration: int,
     rtgsfit_output_dict =np.load(cfg["rtgsfit_output_dict_path"],
                                  allow_pickle=True).item()
     psi_rtgsfit = rtgsfit_output_dict["flux_total"][iteration].reshape(n_z, n_r)
+    rtgsfit_lcfs_n = rtgsfit_output_dict["lcfs_n"][iteration, 0]
+    rtgsfit_lcfs_r = rtgsfit_output_dict["lcfs_r"][iteration, :rtgsfit_lcfs_n]
+    rtgsfit_lcfs_z = rtgsfit_output_dict["lcfs_z"][iteration, :rtgsfit_lcfs_n]
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cfg["pulse_num_write"])
         psi_gsfit = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.TWO_D:PSI").data()[0, :, :]
+        gsfit_lcfs_n = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.P_BOUNDARY:NBND").data()[0]
+        gsfit_lcfs_r = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.P_BOUNDARY:RBND").data()[0, :gsfit_lcfs_n]
+        gsfit_lcfs_z = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.P_BOUNDARY:ZBND").data()[0, :gsfit_lcfs_n]
 
+    dot_size = 5
     if plot_rtgsfit:
         ax.contour(r_vec, z_vec, psi_rtgsfit,
                    levels=levels,
                    colors="tab:blue")
+        ax.scatter(rtgsfit_lcfs_r, rtgsfit_lcfs_z,
+                   label='RTGSFIT LCFS',
+                   color='tab:blue',
+                   s=dot_size)
     if plot_gsfit:
         ax.contour(r_vec, z_vec, psi_gsfit,
                 levels=levels,
                 colors="tab:orange")
+        ax.scatter(gsfit_lcfs_r, gsfit_lcfs_z,
+                   label='GSFIT LCFS',
+                   color='tab:orange',
+                   s=dot_size)
     ax.set_aspect('equal')
     ax.set_xlabel("R [m]")
     ax.set_ylabel("z [m]")
