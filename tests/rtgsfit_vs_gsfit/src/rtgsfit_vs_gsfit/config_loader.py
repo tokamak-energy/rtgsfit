@@ -38,6 +38,10 @@ def load_and_prepare_config() -> dict:
     cfg["rtgsfit_output_dict_path"] = \
         os.path.join(cfg["data_dir"],
                      f'rtgsfit_output_dict_{cfg["pulse_num"]}_{cfg["run_name"]}.npy')
+    cfg["ivc_dict_path"] = os.path.join(cfg["data_dir"],
+                                        f'ivc_dict_{cfg["pulse_num"]}_{cfg["run_name"]}.npy')
+    cfg["coef_names_path"] = os.path.join(cfg["data_dir"],
+                                          f'coef_names_{cfg["pulse_num"]}_{cfg["run_name"]}.txt')
 
     if cfg['pulse_num'] > 13000:
         cfg['psu2coil_run_name'] = "run05"
@@ -48,5 +52,7 @@ def load_and_prepare_config() -> dict:
     cfg["rtgsfit_node_initialised"] = False
     cfg["rtgsfit_compiled"] = False
     cfg["rtgsfit_replayed"] = False
+
+    cfg["j_vrange"] = None
 
     return cfg
