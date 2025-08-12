@@ -62,6 +62,36 @@ def psi_fluxloop_bp(cfg: dict,
         plt.close("all")
         end_time = time.time()
 
+def psi_ivc_passives(cfg: dict, iterations=None):
+    """
+    Create a 1×2 subplot layout visualizing poloidal flux (ψ) contours
+    with the IVC and passive plates shaded according to segment current density.
+
+    Layout:
+      • Left: RTGSFIT results
+      • Right: GSFIT results
+    """
+
+    from rtgsfit_vs_gsfit.plot.components import ivc_j_rtgsfit, psi_contours
+
+    this_plot_dir = os.path.join(cfg["plots_this_run_dir"], "psi_ivc_passives")
+    os.makedirs(this_plot_dir, exist_ok=True)
+
+    iteration = iterations[1]
+
+    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+
+    psi_contours(iteration, ax[0], cfg, plot_rtgsfit=True, plot_gsfit=False)
+    psi_contours(iteration, ax[1], cfg, plot_rtgsfit=False, plot_gsfit=True)
+    ivc_j_rtgsfit(iteration, ax[0], cfg)
+
+    filename = f"psi_ivc_passives_{cfg['pulse_num']}_{cfg['run_name']}_{iteration:02d}.png"
+    fig.savefig(os.path.join(this_plot_dir, filename),
+                bbox_inches='tight',
+                dpi=300)
+    plt.close("all")
+    end_time = time.time()
+
 if __name__ == "__main__":
 
     from rtgsfit_vs_gsfit import config_loader, rtgsfit_compile_setup
@@ -69,8 +99,12 @@ if __name__ == "__main__":
     cfg = config_loader.load_and_prepare_config()
 
     iterations = [0, 1, 8]
+    # start_time = time.time()
+    # psi_fluxloop_bp(cfg, iterations=iterations)
+    # end_time = time.time()
+    # print(f"psi_fluxloop_bp took {end_time - start_time:.2e} seconds")
     start_time = time.time()
-    psi_fluxloop_bp(cfg, iterations=iterations)
+    psi_ivc_passives(cfg, iterations=iterations)
     end_time = time.time()
-    print(f"psi_fluxloop_bp took {end_time - start_time:.2e} seconds")
+    print(f"psi_ivc_passives took {end_time - start_time:.2e} seconds")
 
