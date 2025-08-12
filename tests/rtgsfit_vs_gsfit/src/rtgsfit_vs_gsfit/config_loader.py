@@ -32,8 +32,12 @@ def load_and_prepare_config() -> dict:
     cfg['repo_path'] = repo_path
     cfg['data_dir'] = os.path.join(repo_path, 'data')
     cfg['plots_dir'] = os.path.join(repo_path, 'plots')
+    cfg["plots_this_run_dir"] = os.path.join(cfg["plots_dir"], f'{cfg["pulse_num"]}_{cfg["run_name"]}')
     cfg['rtgsfit_path'] = rtgsfit_path
     cfg['rtgsfit_src_path'] = os.path.join(rtgsfit_path, 'src')
+    cfg["rtgsfit_output_dict_path"] = \
+        os.path.join(cfg["data_dir"],
+                     f'rtgsfit_output_dict_{cfg["pulse_num"]}_{cfg["run_name"]}.npy')
 
     if cfg['pulse_num'] > 13000:
         cfg['psu2coil_run_name'] = "run05"
