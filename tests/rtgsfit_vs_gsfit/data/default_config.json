@@ -10,9 +10,6 @@
   "run_name": "R_V_G",
   "run_description": "Using a single degree of freedom for p_prime and ff_prime.",
 
-  "use_psu2coil": true,
-  "psu2coil_run_name": "RUN05",
-
   "r_axis0": 0.5,
   "z_axis0": 0.0,
   "rho_boundary0": 0.2,
@@ -21,6 +18,9 @@
 
   "n_r": 87,
   "n_z": 93,
+
+  "use_psu2coil": true,
+  "psu2coil_run_name": "RUN05",
 
   "coil_signals": [
     "I_BVL_PSU",
