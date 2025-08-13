@@ -42,6 +42,8 @@ def load_and_prepare_config() -> dict:
                                         f'ivc_dict_{cfg["pulse_num"]}_{cfg["run_name"]}.npy')
     cfg["coef_names_path"] = os.path.join(cfg["data_dir"],
                                           f'coef_names_{cfg["pulse_num"]}_{cfg["run_name"]}.txt')
+    cfg["meas_names_path"] = os.path.join(cfg["data_dir"],
+                                          f'meas_names_{cfg["pulse_num"]}_{cfg["run_name"]}.txt')
 
     if cfg['pulse_num'] > 13000:
         cfg['psu2coil_run_name'] = "run05"
