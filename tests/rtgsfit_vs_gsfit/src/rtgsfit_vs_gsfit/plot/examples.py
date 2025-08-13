@@ -94,6 +94,15 @@ def psi_ivc_passives(cfg: dict, iterations=None):
         ivc_j_gsfit(iteration, ax[1], cfg)
         passive_j_gsfit(iteration, ax[1], cfg)
 
+        ax[0].set_title(ax[0].get_title(), fontsize=10)
+        ax[1].set_title(ax[1].get_title(), fontsize=10)
+
+        fig.suptitle(f"{cfg['pulse_num']},  {cfg['run_name']}" "\n"
+                     f"Time = {cfg['time']:.1e} s" "\n"
+                     f"Iteration {iteration:02d}",
+                     x=0.53,
+                     y=1.1)
+
         filename = f"psi_ivc_passives_{cfg['pulse_num']}_{cfg['run_name']}_{iteration:02d}.png"
         fig.savefig(os.path.join(this_plot_dir, filename),
                     bbox_inches='tight',
@@ -108,7 +117,6 @@ if __name__ == "__main__":
     cfg = config_loader.load_and_prepare_config()
 
     iterations = [0, 1, 8]
-    iterations = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     # start_time = time.time()
     # psi_fluxloop_bp(cfg, iterations=iterations)
     # end_time = time.time()
