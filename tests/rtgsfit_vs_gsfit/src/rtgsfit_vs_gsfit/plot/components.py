@@ -214,7 +214,42 @@ def bp_probe_line(iteration: int,
     ax.tick_params(axis='x', rotation=90)
     ax.legend()
 
+def ivc_j_filled_polygon(ivc_j, ivc_dict: dict, ax: plt.Axes, cfg: dict):
+    """
+    Plot filled polygons representing the current density in the IVC.
+    """
+    if cfg["j_vrange"] is None:
+        cfg["j_vrange"] = [ivc_j.min(), ivc_j.max()]
+    else:
+        cfg["j_vrange"][0] = min(cfg["j_vrange"][0], ivc_j.min())
+        cfg["j_vrange"][1] = max(cfg["j_vrange"][1], ivc_j.max())
+
+    for idx in range(len(ivc_dict["r"])):
+        # if iteration == 0: continue
+        r = ivc_dict["r"][idx]
+        z = ivc_dict["z"][idx]
+        dr = ivc_dict["dr"][idx]
+        dz = ivc_dict["dz"][idx]
+        filament_r = [r - 0.5 * dr, r + 0.5 * dr, r + 0.5 * dr, r - 0.5 * dr]
+        filament_z = [z - 0.5 * dz, z - 0.5 * dz, z + 0.5 * dz, z + 0.5 * dz]
+        color = plt.cm.viridis((ivc_j[idx] - cfg["j_vrange"][0]) /
+                               (cfg["j_vrange"][1] - cfg["j_vrange"][0]))
+        ax.fill(filament_r, filament_z, color=color, edgecolor='none', linewidth=0.5)
+    sm = plt.cm.ScalarMappable(
+        cmap=plt.cm.viridis,
+        norm=plt.Normalize(vmin=cfg["j_vrange"][0], vmax=cfg["j_vrange"][1])
+    )
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax)
+    cbar.set_label('Current Density (A/m²)')
+    cbar.ax.tick_params(labelsize=8)
+    cbar.formatter.set_powerlimits((0, 0))
+    cbar.update_ticks()
+
 def ivc_j_rtgsfit(iteration, ax: plt.Axes, cfg: dict):
+    """
+    Plot the IVC current density from RTGSFIT.
+    """
 
     from rtgsfit_vs_gsfit import rtgsfit_pred_meas
 
@@ -233,32 +268,139 @@ def ivc_j_rtgsfit(iteration, ax: plt.Axes, cfg: dict):
     eigenvector_currents = ivc_dict["current_distributions"] * coef_ivc[:, np.newaxis]
     total_j = np.sum(eigenvector_currents, axis=0) / areas
 
-    if cfg["j_vrange"] is None:
-        cfg["j_vrange"] = [total_j.min(), total_j.max()]
-    else:
-        cfg["j_vrange"][0] = min(cfg["j_vrange"][0], total_j.min())
-        cfg["j_vrange"][1] = max(cfg["j_vrange"][1], total_j.max())
+    ivc_j_filled_polygon(total_j, ivc_dict, ax, cfg)
 
-    # Plot vessel currents as filled polygons
-    for idx in range(len(ivc_dict["r"])):
-        # if iteration == 0: continue
-        r = ivc_dict["r"][idx]
-        z = ivc_dict["z"][idx]
-        dr = ivc_dict["dr"][idx]
-        dz = ivc_dict["dz"][idx]
-        current = total_j[idx]
-        filament_r = [r - 0.5 * dr, r + 0.5 * dr, r + 0.5 * dr, r - 0.5 * dr]
-        filament_z = [z - 0.5 * dz, z - 0.5 * dz, z + 0.5 * dz, z + 0.5 * dz]
-        color = plt.cm.viridis((current - cfg["j_vrange"][0]) /
+    ax.set_title("RTGSFIT \n"
+                 f"IVC Current = {np.sum(total_j * areas):.2e} A" "\n"
+                 f"|IVC Current| = {np.sum(np.abs(total_j) * areas):.2e} A")
+
+def ivc_j_gsfit(iteration, ax: plt.Axes, cfg: dict):
+    """
+    Plot the IVC current density from GSFIT.
+    """
+
+    ivc_dict = np.load(cfg["ivc_dict_path"], allow_pickle=True).item()
+    areas = ivc_dict["dr"] * ivc_dict["dz"]
+    n_eigs = ivc_dict["current_distributions"].shape[0]
+
+    eigenvalues = np.zeros(n_eigs)
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("GSFIT", cfg["pulse_num_write"])
+        for eig_num in range(1, n_eigs + 1):
+            eigenvalues[eig_num - 1] = \
+                conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.PASSIVES.IVC.DOF:EIG_{eig_num:02d}")
+    
+    eigenvector_currents = ivc_dict["current_distributions"] * eigenvalues[:, np.newaxis]
+    total_j = np.sum(eigenvector_currents, axis=0) / areas
+
+    ivc_j_filled_polygon(total_j, ivc_dict, ax, cfg)
+
+    ax.set_title("GSFIT \n"
+                 f"IVC Current = {np.sum(total_j * areas):.2e} A" "\n"
+                 f"|IVC Current| = {np.sum(np.abs(total_j) * areas):.2e} A")
+    
+def get_passive_support_ring_dict(cfg) -> dict:
+    """
+    Get the passive support ring geometry and area information.
+    """
+
+    from shapely.geometry import Polygon
+
+    passive_support_ring_names = ["DIVPSRB", "DIVPSRT", "HFSPSRB", "HFSPSRT"]
+    passive_support_ring_dict = {}
+    for name in passive_support_ring_names:
+        passive_support_ring_dict[name] = {}
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("MAG", cfg["pulse_num"])
+        for name in passive_support_ring_names:
+            passive_support_ring_dict[name]["r_path"] = \
+                conn.get(f"\\MAG::TOP.BEST.ROG.{name}.R_PATH").data()[:4]
+            passive_support_ring_dict[name]["z_path"] = \
+                conn.get(f"\\MAG::TOP.BEST.ROG.{name}.Z_PATH").data()[:4]
+            polygon = []
+            for r, z in zip(passive_support_ring_dict[name]["r_path"],
+                            passive_support_ring_dict[name]["z_path"]):
+                polygon.append((r, z))
+            passive_support_ring_dict[name]["area"] = Polygon(polygon).area
+
+    return passive_support_ring_dict
+
+def passive_j_filled_polygon(psr_dict: dict,
+                             ax: plt.Axes,
+                             cfg: dict):
+    """
+    Plot the passive support ring current density.
+    Using an input passive support ring dictionary.
+    """
+    max_j = -np.inf
+    min_j = np.inf
+    for name in psr_dict.keys():
+        min_j = min(min_j, psr_dict[name]["pred_j"])
+        max_j = max(max_j, psr_dict[name]["pred_j"])
+
+    if cfg["j_vrange"] is None:
+        cfg["j_vrange"] = [min_j, max_j]
+    else:
+        cfg["j_vrange"][0] = min(cfg["j_vrange"][0], min_j)
+        cfg["j_vrange"][1] = max(cfg["j_vrange"][1], max_j)
+
+    title = ax.get_title()
+    for name in psr_dict.keys():
+        color = plt.cm.viridis((psr_dict[name]["pred_j"] - cfg["j_vrange"][0]) /
                                (cfg["j_vrange"][1] - cfg["j_vrange"][0]))
-        ax.fill(filament_r, filament_z, color=color, edgecolor='none', linewidth=0.5)
-    sm = plt.cm.ScalarMappable(
-        cmap=plt.cm.viridis,
-        norm=plt.Normalize(vmin=total_j.min(), vmax=total_j.max())
-    )
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax)
-    cbar.set_label('Vessel Current Density (A/m²)')
-    cbar.ax.tick_params(labelsize=8)
-    cbar.formatter.set_powerlimits((0, 0))
-    cbar.update_ticks()
+        ax.fill(psr_dict[name]["r_path"], psr_dict[name]["z_path"],
+                color=color, edgecolor='none', linewidth=0.5)
+        title += "\n" f"{name} current = " \
+                 f"{psr_dict[name]['current']:.2e} A"
+    title += "\n"
+    ax.set_title(title)
+
+def passive_j_rtgsfit(iteration: int, ax: plt.Axes, cfg: dict):
+    """
+    Plot the passive support ring current density from RTGSFIT.
+    """
+
+    from rtgsfit_vs_gsfit import rtgsfit_pred_meas
+
+    passive_support_ring_dict = get_passive_support_ring_dict(cfg)
+
+    rtgsfit_output_dict = np.load(cfg["rtgsfit_output_dict_path"],
+                                  allow_pickle=True).item()
+    flux_norm = rtgsfit_output_dict["flux_norm"][iteration, :]
+    coef = rtgsfit_output_dict["coef"][iteration, :]
+    coil_curr = rtgsfit_output_dict["coil_curr"][iteration, :]
+    pred_meas_rtgsfit = rtgsfit_pred_meas.calc_pred_meas(cfg, flux_norm, coef, coil_curr)
+
+    with open(cfg["meas_names_path"], "r") as f:
+        meas_names = [line.strip() for line in f]
+
+    for psr_name in passive_support_ring_dict.keys():
+        for i, meas_name in enumerate(meas_names):
+            if meas_name == psr_name:
+                passive_support_ring_dict[psr_name]["pred_j"] = \
+                    pred_meas_rtgsfit[i] / passive_support_ring_dict[psr_name]["area"]
+                passive_support_ring_dict[psr_name]["current"] = \
+                    pred_meas_rtgsfit[i]
+
+    passive_j_filled_polygon(passive_support_ring_dict, ax, cfg)
+
+def passive_j_gsfit(iteration: int, ax: plt.Axes, cfg: dict):
+    """
+    Plot the passive support ring current density from GSFIT.
+    """
+
+    passive_support_ring_dict = get_passive_support_ring_dict(cfg)
+
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("GSFIT", cfg["pulse_num_write"])
+        rog_names = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.CONSTRAINTS.ROG:NAME").data()
+        pred_currents = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.CONSTRAINTS.ROG:CVALUE").data()[0]
+
+    for psr_name in passive_support_ring_dict.keys():
+        for i, rog_name in enumerate(rog_names):
+            if psr_name in rog_name:
+                passive_support_ring_dict[psr_name]["current"] = pred_currents[i]
+                passive_support_ring_dict[psr_name]["pred_j"] = \
+                    pred_currents[i] / passive_support_ring_dict[psr_name]["area"]
+
+    passive_j_filled_polygon(passive_support_ring_dict, ax, cfg)
