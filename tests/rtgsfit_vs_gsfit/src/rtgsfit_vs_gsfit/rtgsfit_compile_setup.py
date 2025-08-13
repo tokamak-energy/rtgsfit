@@ -126,6 +126,43 @@ def initialise_rtgsfit_node(cfg: dict):
     with open(cfg["coef_names_path"], "w") as f:
         f.writelines(name + "\n" for name in coef_names)
 
+    # create meas_names list and save it
+    meas_names = []
+    flux_loops = gsfit_controller.flux_loops
+    bp_probes = gsfit_controller.bp_probes
+    rogowski_coils = gsfit_controller.rogowski_coils
+    # Get the "included" sensors
+    flux_loops_to_include = flux_loops.get_vec_bool(["*", "fit_settings", "include"])
+    bp_probes_to_include = bp_probes.get_vec_bool(["*", "fit_settings", "include"])
+    rogowski_coils_to_include = rogowski_coils.get_vec_bool(["*", "fit_settings", "include"])
+    meas_names = []
+    for i_flux_loop, floop_name in enumerate(flux_loops.keys()):
+        if flux_loops_to_include[i_flux_loop]:
+            meas_names.append(floop_name)
+    for i_bp_probe, bp_name in enumerate(bp_probes.keys()):
+        if bp_probes_to_include[i_bp_probe]:
+            meas_names.append(bp_name)
+    rogowski_coils_names_rtgsfit_order = [
+        "INIVC000",
+        "BVLT",
+        "BVLB",
+        "GASBFLT",
+        "GASBFLB",
+        "HFSPSRT",
+        "HFSPSRB",
+        "DIVPSRT",
+        "DIVPSRB",
+    ]
+    for rog_name in rogowski_coils_names_rtgsfit_order:
+        meas_names.append(rog_name)
+    for passive_name in passive_names:
+        passive_regularisation_local = passives.get_array2([passive_name, "regularisations"])
+        [n_reg_local, _] = passive_regularisation_local.shape
+        for i_reg in range(n_reg_local):
+            meas_names.append(f"{passive_name}_reg_{i_reg}")
+    # save meas_names to file
+    with open(cfg["meas_names_path"], "w") as f:
+        f.writelines(name + "\n" for name in meas_names)
 
 def compile_rtgsfit(cfg: dict):
     """
