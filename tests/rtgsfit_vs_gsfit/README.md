@@ -52,9 +52,13 @@ uv pip install "numpy<2"
     Provides reusable subplot helper functions that take an `ax` argument and draw individual plot elements such as contours or annotations.
   - `examples.py`  
     Contains full example plotting routines that assemble the subplot components into complete figures.
-  - `tables.py`
-    Creates `.csv` tables of data with the intention of viewing them using "Excel Viewer" an extention for VSCode.
 
+- **`src/rtgsfit_vs_gsfit/table/`**
+  Contains modules for producing formatted csv tables of the data produced by `replay_gsfit` and `replay_rtgsfit`:
+  - `dataframes.py`
+    Makes Pandas Dataframe objects of the data.
+  - `save_to_csv.py`
+    Combines Pandas Dataframes together into a CSV and formats them to make them more readable.
 
 - **`tests/test_rtgsfit_vs_gsfit.py`**  
   Implements `test_rtgsfit_vs_gsfit(pulse, time)`, which initializes, compiles, and runs both RTGSFIT and GSFIT for various pulse numbers and time snapshots. The tests compare results to ensure agreement and are designed for parallel execution across multiple CPUs.
