@@ -1,5 +1,5 @@
 """
-Creates `.csv` tables of data with the intention of viewing them using "Excel Viewer" an extention for VSCode.
+Combines Pandas Dataframes together into a CSV and formats them to make them more readable.
 """
 
 import os
