@@ -44,6 +44,8 @@ def load_and_prepare_config() -> dict:
                                           f'coef_names_{cfg["pulse_num"]}_{cfg["run_name"]}.txt')
     cfg["meas_names_path"] = os.path.join(cfg["data_dir"],
                                           f'meas_names_{cfg["pulse_num"]}_{cfg["run_name"]}.txt')
+    cfg["gsfit_pf_coils_path"] = os.path.join(cfg["data_dir"],
+                                              f'gsfit_pf_coil_currents_{cfg["pulse_num"]}_{cfg["run_name"]}.json')
 
     if cfg['pulse_num'] > 13000:
         cfg['psu2coil_run_name'] = "run05"
