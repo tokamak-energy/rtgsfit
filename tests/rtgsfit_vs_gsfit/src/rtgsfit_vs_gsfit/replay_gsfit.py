@@ -3,6 +3,9 @@ This module contains the function to run GSFIT and save the results to MDS+.
 """
 
 from gsfit import Gsfit
+import json
+import mdsthin
+import numpy as np
 
 def replay_gsfit(cfg: dict):
     """
@@ -37,6 +40,19 @@ def replay_gsfit(cfg: dict):
     gsfit_controller.run()
 
     cfg["gsfit_replayed"] = True
+
+    coils = gsfit_controller.coils
+    coils_dict = {}
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("ELMAG", cfg["pulse_num"])
+        coil_names = conn.get("\\ELMAG::TOP.BEST.COILS:COIL_NAMES")
+    for name in coil_names:
+        coil_curr_experimental = coils.get_array1(["pf", name, "i", "measured_experimental"])
+        coil_time_experimental = coils.get_array1(["pf", name, "i", "time_experimental"])
+        coil_curr_interp = np.interp(cfg["time"], coil_time_experimental, coil_curr_experimental)
+        coils_dict[name] = coil_curr_interp
+    with open(cfg["gsfit_pf_coils_path"], "w") as f:
+        json.dump(coils_dict, f, indent=4, sort_keys=False)
 
 if __name__ == "__main__":
 
