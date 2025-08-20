@@ -128,6 +128,7 @@ def eigenvector_distributions(ivc_dict: dict):
         ivc_j = ivc_dict["current_distributions"][i_eig, :]
         fig, ax = plt.subplots()
         ivc_j_filled_polygon(ivc_j, ivc_dict, ax, cfg)
+        ax.set_title(f"Eigenvector {i_eig + 1:02d}")
         filename = f"eigenvector_distribution_{cfg['pulse_num']}_{cfg['run_name']}_{i_eig+1:02d}.png"
         fig.savefig(os.path.join(this_plot_dir, filename),
                     bbox_inches='tight',
