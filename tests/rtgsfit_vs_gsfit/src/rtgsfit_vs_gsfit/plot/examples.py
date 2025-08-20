@@ -110,6 +110,31 @@ def psi_ivc_passives(cfg: dict, iterations=None):
         plt.close("all")
         end_time = time.time()
 
+def eigenvector_distributions(ivc_dict: dict):
+    """
+    Create a separate filled polygon plot for each eigenvector
+    distribution.
+    """
+    from rtgsfit_vs_gsfit.plot.components import ivc_j_filled_polygon
+
+    ivc_dict = np.load(cfg["ivc_dict_path"], allow_pickle=True).item()
+    areas = ivc_dict["dr"] * ivc_dict["dz"]
+    n_eigs = ivc_dict["current_distributions"].shape[0]
+
+    this_plot_dir = os.path.join(cfg["plots_this_run_dir"], "eigenvector_distributions")
+    os.makedirs(this_plot_dir, exist_ok=True)
+
+    for i_eig in range(n_eigs):
+        ivc_j = ivc_dict["current_distributions"][i_eig, :]
+        fig, ax = plt.subplots()
+        ivc_j_filled_polygon(ivc_j, ivc_dict, ax, cfg)
+        filename = f"eigenvector_distribution_{cfg['pulse_num']}_{cfg['run_name']}_{i_eig+1:02d}.png"
+        fig.savefig(os.path.join(this_plot_dir, filename),
+                    bbox_inches='tight',
+                    dpi=300)
+        fig.clf()
+
+
 if __name__ == "__main__":
 
     from rtgsfit_vs_gsfit import config_loader, rtgsfit_compile_setup
@@ -121,8 +146,11 @@ if __name__ == "__main__":
     # psi_fluxloop_bp(cfg, iterations=iterations)
     # end_time = time.time()
     # print(f"psi_fluxloop_bp took {end_time - start_time:.2e} seconds")
+    # start_time = time.time()
+    # psi_ivc_passives(cfg, iterations=iterations)
+    # end_time = time.time()
     start_time = time.time()
-    psi_ivc_passives(cfg, iterations=iterations)
+    eigenvector_distributions(cfg)
     end_time = time.time()
-    print(f"psi_ivc_passives took {end_time - start_time:.2e} seconds")
+    print(f"eigenvector_distributions took {end_time - start_time:.2e} seconds")
 

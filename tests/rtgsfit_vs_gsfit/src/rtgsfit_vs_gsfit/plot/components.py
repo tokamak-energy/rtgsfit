@@ -214,7 +214,7 @@ def bp_probe_line(iteration: int,
     ax.tick_params(axis='x', rotation=90)
     ax.legend()
 
-def ivc_j_filled_polygon(ivc_j, ivc_dict: dict, ax: plt.Axes, cfg: dict):
+def ivc_j_filled_polygon(ivc_j: np.ndarray, ivc_dict: dict, ax: plt.Axes, cfg: dict):
     """
     Plot filled polygons representing the current density in the IVC.
     """
@@ -239,6 +239,7 @@ def ivc_j_filled_polygon(ivc_j, ivc_dict: dict, ax: plt.Axes, cfg: dict):
         cmap=plt.cm.viridis,
         norm=plt.Normalize(vmin=cfg["j_vrange"][0], vmax=cfg["j_vrange"][1])
     )
+    ax.set_aspect("equal")
     sm.set_array([])
     cbar = plt.colorbar(sm, ax=ax)
     cbar.set_label('Current Density (A/m²)')
