@@ -405,3 +405,49 @@ def passive_j_gsfit(iteration: int, ax: plt.Axes, cfg: dict):
                     pred_currents[i] / passive_support_ring_dict[psr_name]["area"]
 
     passive_j_filled_polygon(passive_support_ring_dict, ax, cfg)
+
+def ovc_area(cfg: dict) -> np.ndarray:
+    """
+    Get the area of the OVC filaments.
+    RTGSFIT and GSFIT assume a uniform current in the OVC, 
+    so we only need the area to determine the total current.
+    """
+
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("ELMAG", cfg["pulse_num"])
+        vessel_d_r = conn.get(f"\\ELMAG::TOP.BEST.VESSEL:DR").data()
+        vessel_d_z = conn.get(f"\\ELMAG::TOP.BEST.VESSEL:DZ").data()
+        fils2passive = conn.get(f"\\ELMAG::TOP.BEST.VESSEL:FILS2PASSIVE").data()
+        passive_names = conn.get(f"\\ELMAG::TOP.BEST.VESSEL:PASSIVE_NAME").data()
+        for i_passive, passive_name in enumerate(passive_names):
+            if passive_name == "OVC":
+                indices = fils2passive[:, i_passive].astype(int) == True
+                d_r = vessel_d_r[indices]
+                d_z = vessel_d_z[indices]
+                areas = d_r * d_z
+
+    return np.sum(areas)
+
+def ovc_current_rtgsfit(iteration: int, cfg: dict) -> float:
+    """
+    Get the Total OVC current from RTGSFIT.
+    """
+    rtgsfit_output_dict = np.load(cfg["rtgsfit_output_dict_path"],
+                                  allow_pickle=True).item()
+    coef = rtgsfit_output_dict["coef"][iteration, :]
+    with open(cfg["coef_names_path"], "r") as f:
+        coef_names = [line.strip() for line in f]
+
+    for i, name in enumerate(coef_names):
+        if name == "OVC":
+            return coef[i] * ovc_area(cfg)
+
+def ovc_current_gsfit(cfg: dict) -> float:
+    """
+    Get the Total OVC current from GSFIT.
+    """
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("GSFIT", cfg["pulse_num_write"])
+        ovc_current = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.PASSIVES.OVC.DOF:CONSTANT_J").data()[0]
+
+    return ovc_current * ovc_area(cfg)

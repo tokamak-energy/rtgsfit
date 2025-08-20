@@ -72,8 +72,8 @@ def psi_ivc_passives(cfg: dict, iterations=None):
       • Right: GSFIT results
     """
 
-    from rtgsfit_vs_gsfit.plot.components import ivc_j_gsfit, ivc_j_rtgsfit, passive_j_rtgsfit, \
-        passive_j_gsfit, psi_contours
+    from rtgsfit_vs_gsfit.plot.components import ivc_j_gsfit, ivc_j_rtgsfit, ovc_current_gsfit, \
+        ovc_current_rtgsfit, passive_j_rtgsfit, passive_j_gsfit, psi_contours
 
     this_plot_dir = os.path.join(cfg["plots_this_run_dir"], "psi_ivc_passives")
     os.makedirs(this_plot_dir, exist_ok=True)
@@ -87,11 +87,23 @@ def psi_ivc_passives(cfg: dict, iterations=None):
 
         psi_contours(iteration, ax[0], cfg, plot_rtgsfit=True, plot_gsfit=False)
         psi_contours(iteration, ax[1], cfg, plot_rtgsfit=False, plot_gsfit=True)
+
+        # RTGSFIT currents
         if iteration != 0:
             ivc_j_rtgsfit(iteration, ax[0], cfg)
+            ovc_total_current_rtgsfit = ovc_current_rtgsfit(iteration, cfg)
+            title = ax[0].get_title()
+            title += '\n' f'OVC current = {ovc_total_current_rtgsfit:.2e} A'
+            ax[0].set_title(title)
             passive_j_rtgsfit(iteration, ax[0], cfg)
+
+        # GSFIT currents
         cfg["j_vrange"] = None
         ivc_j_gsfit(iteration, ax[1], cfg)
+        ovc_total_current_gsfit = ovc_current_gsfit(cfg)
+        title = ax[1].get_title()
+        title += '\n' f'OVC current = {ovc_total_current_gsfit:.2e} A'
+        ax[1].set_title(title)
         passive_j_gsfit(iteration, ax[1], cfg)
 
         ax[0].set_title(ax[0].get_title(), fontsize=10)
@@ -147,11 +159,11 @@ if __name__ == "__main__":
     # psi_fluxloop_bp(cfg, iterations=iterations)
     # end_time = time.time()
     # print(f"psi_fluxloop_bp took {end_time - start_time:.2e} seconds")
-    # start_time = time.time()
-    # psi_ivc_passives(cfg, iterations=iterations)
-    # end_time = time.time()
     start_time = time.time()
-    eigenvector_distributions(cfg)
+    psi_ivc_passives(cfg, iterations=iterations)
     end_time = time.time()
+    # start_time = time.time()
+    # eigenvector_distributions(cfg)
+    # end_time = time.time()
     print(f"eigenvector_distributions took {end_time - start_time:.2e} seconds")
 
