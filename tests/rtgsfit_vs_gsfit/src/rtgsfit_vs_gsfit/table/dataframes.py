@@ -60,8 +60,8 @@ def rog_df(iteration: int, cfg: dict) -> pd.DataFrame:
                 conn.get("\\GSFIT::TOP." + cfg["run_name"] + ".CONSTRAINTS.ROG:NAME")
             meas_values = \
                 conn.get("\\GSFIT::TOP." + cfg["run_name"] + ".CONSTRAINTS.ROG:MVALUE")[0]
-        rog_indices = np.zeros(len(rogowski_names), dtype=int)
-        for i, rog_name in enumerate(rogowski_names):
+        rog_indices = np.zeros(len(cfg["rogowski_names"]), dtype=int)
+        for i, rog_name in enumerate(cfg["rogowski_names"]):
             for j, rog_name_gsfit in enumerate(rog_names_gsfit):
                 if rog_name in rog_name_gsfit:
                     rog_indices[i] = j
@@ -76,8 +76,8 @@ def rog_df(iteration: int, cfg: dict) -> pd.DataFrame:
         pred_meas_rtgsfit = rtgsfit_pred_meas.calc_pred_meas(cfg, flux_norm, coef, coil_curr)
         with open(cfg["meas_names_path"], "r") as f:
             meas_names = [line.strip() for line in f]
-        rog_indices = np.zeros(len(rogowski_names), dtype=int)
-        for i, rog_name in enumerate(rogowski_names):
+        rog_indices = np.zeros(len(cfg["rogowski_names"]), dtype=int)
+        for i, rog_name in enumerate(cfg["rogowski_names"]):
             for j, meas_name in enumerate(meas_names):
                 if rog_name == meas_name:
                     rog_indices[i] = j
@@ -90,15 +90,12 @@ def rog_df(iteration: int, cfg: dict) -> pd.DataFrame:
                 conn.get("\\GSFIT::TOP." + cfg["run_name"] + ".CONSTRAINTS.ROG:NAME")
             calc_values = \
                 conn.get("\\GSFIT::TOP." + cfg["run_name"] + ".CONSTRAINTS.ROG:CVALUE")[0]
-        rog_indices = np.zeros(len(rogowski_names), dtype=int)
-        for i, rog_name in enumerate(rogowski_names):
+        rog_indices = np.zeros(len(cfg["rogowski_names"]), dtype=int)
+        for i, rog_name in enumerate(cfg["rogowski_names"]):
             for j, rog_name_gsfit in enumerate(rog_names_gsfit):
                 if rog_name in rog_name_gsfit:
                     rog_indices[i] = j
         return calc_values[rog_indices]
-
-    rogowski_names = ["INIVC000", "BVLT", "BVLB", "GASBFLT", "GASBFLB",
-                      "HFSPSRT", "HFSPSRB", "DIVPSRT", "DIVPSRB"]
 
     meas_vals = rog_meas_row(cfg)
     rtgsfit_vals = rog_rtgsfit_row(iteration, cfg)
@@ -111,7 +108,7 @@ def rog_df(iteration: int, cfg: dict) -> pd.DataFrame:
                       index=["MEASURED",
                              "RTGSFIT ",
                              "GSFIT   "],
-                      columns=rogowski_names)
+                      columns=cfg["rogowski_names"])
     df.index.name = " " * len("MEASURED")
     pd.set_option("display.float_format", "{:.2e}".format)
 
