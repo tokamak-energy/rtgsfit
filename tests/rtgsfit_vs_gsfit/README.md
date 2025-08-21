@@ -60,8 +60,8 @@ uv pip install "numpy<2"
   - `save_to_csv.py`  
     Combines Pandas Dataframes together into a CSV and formats them to make them more readable.
 
-- **`tests/test_rtgsfit_vs_gsfit.py`**  
-  Implements `test_rtgsfit_vs_gsfit(pulse, time)`, which initializes, compiles, and runs both RTGSFIT and GSFIT for various pulse numbers and time snapshots. The tests compare results to ensure agreement and are designed for parallel execution across multiple CPUs.
+- **`tests/test_integration_rtgsfit_vs_gsfit.py`**  
+  Implements `test_rtgsfit_vs_gsfit(pulse, time)`, which initializes, compiles, and runs both RTGSFIT and GSFIT for various pulse numbers and time snapshots. The tests compare results to ensure agreement and are designed for parallel execution across multiple CPUs. It also runs a regression test.
 
 - **`pyproject.toml`**  
   Contains project metadata including Python package dependencies.
