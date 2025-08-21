@@ -289,7 +289,7 @@ def ivc_j_gsfit(iteration, ax: plt.Axes, cfg: dict):
         conn.openTree("GSFIT", cfg["pulse_num_write"])
         for eig_num in range(1, n_eigs + 1):
             eigenvalues[eig_num - 1] = \
-                conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.PASSIVES.IVC.DOF:EIG_{eig_num:02d}")
+                conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.PASSIVES.IVC.DOF:EIG_{eig_num:02d}")[0]
     
     eigenvector_currents = ivc_dict["current_distributions"] * eigenvalues[:, np.newaxis]
     total_j = np.sum(eigenvector_currents, axis=0) / areas
@@ -451,3 +451,48 @@ def ovc_current_gsfit(cfg: dict) -> float:
         ovc_current = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.PASSIVES.OVC.DOF:CONSTANT_J").data()[0]
 
     return ovc_current * ovc_area(cfg)
+
+def ivc_eigenvalue_bar_chart(ax: plt.Axes,
+                             iteration: int,
+                             cfg: dict):
+    """
+    Create a bar chart comparing the IVC eigenvalues from RTGSFIT and GSFIT.
+    """
+
+    import pandas as pd
+
+    def ivc_rtgsfit_row(iteration: int,
+                        cfg: dict) -> np.ndarray:
+        rtgsfit_output_dict = np.load(cfg["rtgsfit_output_dict_path"],
+                                    allow_pickle=True).item()
+        coef = rtgsfit_output_dict["coef"][iteration, :]
+        with open(cfg["coef_names_path"], "r") as f:
+            coef_names = [line.strip() for line in f]
+        ivc_indices = [i for i, name in enumerate(coef_names) if name.startswith("eig_")]
+        return coef[ivc_indices]
+    
+    def ivc_gsfit_row(cfg: dict) -> np.ndarray:
+        ivc_dict = np.load(cfg["ivc_dict_path"], allow_pickle=True).item()
+        n_eigs = ivc_dict["current_distributions"].shape[0]
+        eigenvalues = np.zeros(n_eigs)
+        with mdsthin.Connection('smaug') as conn:
+            conn.openTree("GSFIT", cfg["pulse_num_write"])
+            for eig_num in range(1, n_eigs + 1):
+                eigenvalues[eig_num - 1] = \
+                    conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.PASSIVES.IVC.DOF:EIG_{eig_num:02d}")[0]
+        return eigenvalues
+    
+    rtgsfit_vals = ivc_rtgsfit_row(iteration, cfg)
+    gsfit_vals = ivc_gsfit_row(cfg)
+
+    n_eigs = len(rtgsfit_vals)
+    cols = [f"eig_{i:02d}" for i in range(1, n_eigs + 1)]
+
+    df = pd.DataFrame([rtgsfit_vals, gsfit_vals], 
+                      index=["RTGSFIT", "GSFIT"],
+                      columns=cols).T
+        
+    df.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Eigenvalue")
+    ax.set_xlabel("Eigenvector Index")
+    ax.set_title("IVC Eigenvalues: RTGSFIT vs GSFIT")

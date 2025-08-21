@@ -147,6 +147,30 @@ def eigenvector_distributions(ivc_dict: dict):
                     dpi=300)
         fig.clf()
 
+def eigenvalue_bar_chart(cfg:dict,
+                         iterations=None):
+    
+    from rtgsfit_vs_gsfit.plot.components import ivc_eigenvalue_bar_chart
+    
+    this_plot_dir = os.path.join(cfg["plots_this_run_dir"], "eigenvalue_bar_chart")
+    os.makedirs(this_plot_dir, exist_ok=True)
+
+    if iterations is None:
+        iterations = np.arange(cfg["n_iters"], dtype=int)
+
+    for iteration in iterations:
+
+        fig, ax = plt.subplots()
+
+        ivc_eigenvalue_bar_chart(ax, iteration, cfg)
+
+        filename = f"eigenvalue_bar_chart_{cfg['pulse_num']}_{cfg['run_name']}_{iteration:02d}.png"
+        fig.savefig(os.path.join(this_plot_dir, filename),
+                    bbox_inches='tight',
+                    dpi=300)
+        plt.close("all")
+        end_time = time.time()
+    
 
 if __name__ == "__main__":
 
@@ -159,9 +183,9 @@ if __name__ == "__main__":
     # psi_fluxloop_bp(cfg, iterations=iterations)
     # end_time = time.time()
     # print(f"psi_fluxloop_bp took {end_time - start_time:.2e} seconds")
-    start_time = time.time()
-    psi_ivc_passives(cfg, iterations=iterations)
-    end_time = time.time()
+    # start_time = time.time()
+    # psi_ivc_passives(cfg, iterations=iterations)
+    # end_time = time.time()
     # start_time = time.time()
     # eigenvector_distributions(cfg)
     # end_time = time.time()
