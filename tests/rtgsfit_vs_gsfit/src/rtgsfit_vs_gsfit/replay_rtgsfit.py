@@ -168,11 +168,11 @@ if __name__ == "__main__":
 
     cfg = config_loader.load_and_prepare_config()
 
-    # rtgsfit_compile_setup.rtgsfit_mds_nodeclear(cfg)
-    # rtgsfit_compile_setup.initialise_rtgsfit_node(cfg)
-    # rtgsfit_compile_setup.compile_rtgsfit(cfg)
-    cfg["rtgsfit_node_initialised"] = True
-    cfg["rtgsfit_compiled"] = True
+    rtgsfit_compile_setup.rtgsfit_mds_nodeclear(cfg)
+    rtgsfit_compile_setup.initialise_rtgsfit_node(cfg)
+    rtgsfit_compile_setup.compile_rtgsfit(cfg)
+    # cfg["rtgsfit_node_initialised"] = True
+    # cfg["rtgsfit_compiled"] = True
 
     replay_rtgsfit(cfg)
     print("RTGSFIT replay completed successfully.")

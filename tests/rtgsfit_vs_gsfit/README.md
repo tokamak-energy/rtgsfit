@@ -55,9 +55,9 @@ uv pip install "numpy<2"
 
 - **`src/rtgsfit_vs_gsfit/table/`**
   Contains modules for producing formatted csv tables of the data produced by `replay_gsfit` and `replay_rtgsfit`:
-  - `dataframes.py`
+  - `dataframes.py`  
     Makes Pandas Dataframe objects of the data.
-  - `save_to_csv.py`
+  - `save_to_csv.py`  
     Combines Pandas Dataframes together into a CSV and formats them to make them more readable.
 
 - **`tests/test_rtgsfit_vs_gsfit.py`**  

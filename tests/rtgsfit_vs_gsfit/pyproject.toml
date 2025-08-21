@@ -16,7 +16,7 @@ dependencies = [
   "pyzmq >=25.1.0",
 
   # GSFIT stack
-  "gsfit @ git+https://github.com/tokamak-energy/gsfit.git@rtgsfit_vs_gsfit",
+  "gsfit @ git+https://github.com/tokamak-energy/gsfit.git@main",
   "f90nml ==1.4.5",
   "setuptools-git-versioning ==2.1.0",
   "toml ==0.10.2",
