@@ -352,7 +352,7 @@ def passive_j_filled_polygon(psr_dict: dict,
         ax.fill(psr_dict[name]["r_path"], psr_dict[name]["z_path"],
                 color=color, edgecolor='none', linewidth=0.5)
         title += "\n" f"{name} current = " \
-                 f"{psr_dict[name]['current']:.2e} A"
+                 f"{psr_dict[name]['current']:.2e} A, {psr_dict[name]['pred_j']:.2e} A/m²"
     title += "\n"
     ax.set_title(title)
 
