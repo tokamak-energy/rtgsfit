@@ -1,7 +1,8 @@
 import os
 import json
 
-def load_and_prepare_config() -> dict:
+def load_and_prepare_config(run_name: str = None,
+                            pulse_num: int = None) -> dict:
     """
     Load the base configuration from a JSON file and augment it with derived values.
 
@@ -28,6 +29,12 @@ def load_and_prepare_config() -> dict:
     config_path = os.path.join(repo_path, 'data', 'default_config.json')
     with open(config_path, 'r') as f:
         cfg = json.load(f)
+
+    if run_name is not None:
+        cfg['run_name'] = run_name
+    if pulse_num is not None:
+        cfg['pulse_num'] = pulse_num
+        cfg["pulse_num_write"] = 52_000_000 + pulse_num
 
     cfg['repo_path'] = repo_path
     cfg['data_dir'] = os.path.join(repo_path, 'data')
