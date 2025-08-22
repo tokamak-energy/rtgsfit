@@ -1,0 +1,57 @@
+{
+  "mu_0": 1.25663706127e-06,
+
+  "time": 0.03,
+  
+  "settings_path": "st40_setup_for_rtgsfit",
+
+  "pulse_num": 13343,
+  "pulse_num_write": 52013343,
+  "run_name": "R_V_G",
+  "run_description": "Using a single degree of freedom for p_prime and ff_prime.",
+
+  "r_axis0": 0.5,
+  "z_axis0": 0.0,
+  "rho_boundary0": 0.2,
+
+  "n_iters": 10,
+
+  "n_r": 87,
+  "n_z": 93,
+
+  "use_psu2coil": true,
+  "psu2coil_run_name": "RUN05",
+
+  "coil_signals": [
+    "I_BVL_PSU",
+    "I_BVUB_PSU",
+    "I_BVUT_PSU",
+    "I_DIV_PSU",
+    "I_MCVC_PSU",
+    "I_PSH_PSU",
+    "I_ROG_MCWIRE",
+    "I_SOL_PSU"
+  ],
+  "coil_matrix": [
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+  ],
+
+  "rogowski_names": [
+    "INIVC000",
+    "BVLT",
+    "BVLB",
+    "GASBFLT",
+    "GASBFLB",
+    "HFSPSRT",
+    "HFSPSRB",
+    "DIVPSRT",
+    "DIVPSRB"
+  ]
+}
