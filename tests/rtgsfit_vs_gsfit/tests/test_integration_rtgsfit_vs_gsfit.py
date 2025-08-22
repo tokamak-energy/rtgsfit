@@ -289,12 +289,18 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
         "rog_meas": {"rtol_meas": 5e-2, "atol_meas": 5e2, "rtol_pred": 5e-2, "atol_pred": 1e1},
         "regression": {"rtol": 1e-8, "atol": 1e-8}
     }
-    logging.info(f"Checking results...")
+    logging.info(f"Checking psi...")
     check_psi(cfg, **tolerances["psi"])
+    logging.info(f"Checking psi_meas...")
     check_psi_meas(cfg, **tolerances["psi_meas"])
+    logging.info(f"Checking bp_meas...")
     check_bp_meas(cfg, **tolerances["bp_meas"])
+    logging.info(f"Checking ivc_eigs...")
     check_ivc_eigs(cfg, **tolerances["ivc_eigs"])
+    logging.info(f"Checking ovc_current...")
     check_ovc_current(cfg, **tolerances["ovc_current"])
+    logging.info(f"Checking rog_meas...")
     check_rog_meas(cfg, **tolerances["rog_meas"])
+    logging.info(f"Checking regression...")
     check_regression(cfg, **tolerances["regression"])
     logging.info(f"Results checked successfully.")
