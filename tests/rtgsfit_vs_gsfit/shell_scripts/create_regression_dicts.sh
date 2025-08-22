@@ -1,4 +1,7 @@
 #!/bin/bash
+# This shell script creates copies of any files in the data directory of
+# the form rtgsfit_output_dict_*.npy and adds _regression to the filename.
+# I used this to create regression test data.
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
