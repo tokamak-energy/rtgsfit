@@ -72,5 +72,5 @@ To run the tests use
 ```
 pytest -n 3 tests
 ```
-to use 3 cores. We use 3 cores as this matches the number of elemtns in defined in the
+to use 3 cores. We use 3 cores as this matches the number of elements in defined in the
 `test_cases` list in `tests/test_integration_rtgsfit_vs_gsfit.py`.
