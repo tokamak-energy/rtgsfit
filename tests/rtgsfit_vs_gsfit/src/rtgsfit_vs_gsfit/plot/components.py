@@ -1,6 +1,8 @@
 """
 Provides reusable subplot helper functions that take an `ax` argument
 and draw individual plot elements such as contours or annotations.
+
+These functions are then called by the examples.py module.
 """
 
 import os
