@@ -237,7 +237,8 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
 
         for key in rtgsfit_dict.keys():
             np.testing.assert_allclose(rtgsfit_dict[key], regress_dict[key],
-                                       rtol=rtol, atol=atol)
+                                       rtol=rtol, atol=atol,
+                                       err_msg=f"Key: {key}")
 
     run_name = f"t{int(time*1e3):03d}ms"
     cfg = config_loader.load_and_prepare_config(
