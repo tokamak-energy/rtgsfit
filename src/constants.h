@@ -73,6 +73,12 @@ extern const int N_SENS_PCS;
 /* N_LIMIT : number of limit points */
 extern const int N_LIMIT;
 
+/* LIMIT_R : R values of the limit points (length N_LIMIT) */
+extern const double LIMIT_R[];
+
+/* LIMIT_Z : Z values of the limit points (length N_LIMIT) */
+extern const double LIMIT_Z[];
+
 /* N_INTRP : number of interpolation points */
 extern const int N_INTRP;
 
