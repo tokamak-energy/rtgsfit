@@ -389,9 +389,9 @@ int rtgsfit(
 
     // extract inside of LCFS
     // BUXTON: we think this might have an error??????
-    int ret = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
-    if (ret) {
-      printf("error %d\n", ret);
+    int lcfs_error = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
+    if (lcfs_error) {
+      printf("error %d\n", lcfs_error);
     }
 
     // normalise total psi
@@ -404,5 +404,5 @@ int rtgsfit(
 
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
-  return ret;
+  return lcfs_error;
 }
