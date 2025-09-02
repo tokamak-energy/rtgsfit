@@ -69,6 +69,8 @@ if __name__ == "__main__":
     data_dictionary["inv_r_mu0"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:INV_R_MU0").data()
     data_dictionary["limit_idx"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:LIMIT_IDX").data()
     data_dictionary["limit_weight"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:LIMIT_W").data()
+    data_dictionary["limit_r"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:LIMIT_R").data()
+    data_dictionary["limit_z"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:LIMIT_Z").data()
     data_dictionary["lower_band"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:LOWER_BAND").data()
     data_dictionary["mask_lim"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:MASK_LIM").data()
     data_dictionary["n_bp_probes"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_BP_PROBES").data()
