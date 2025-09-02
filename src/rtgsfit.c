@@ -228,7 +228,6 @@ int rtgsfit(
     double lcfs_flux, axis_flux, axis_r, axis_z;
     double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
     double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
-    double LIMIT_R[N_LIMIT], LIMIT_Z[N_LIMIT];
     int xpt_n = 0;
     int opt_n = 0;
     // N_MEAS includes the number of regularisations.
