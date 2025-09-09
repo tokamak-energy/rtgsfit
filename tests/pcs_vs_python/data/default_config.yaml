@@ -1,0 +1,55 @@
+# Permeability of free space
+mu_0: 1.25663706127e-06
+
+# GSFIT preshot parameter
+settings_path: st40_setup_for_rtgsfit
+
+# MDS+ parameters
+pulse_num: 13_343
+pulse_num_preshot: 99_000_230
+run_name_preshot: RUN03
+run_description_preshot: "Using a single degree of freedom for p_prime and ff_prime."
+pulse_num_replay: 52_013_343
+run_name_replay: RUN03
+run_description_replay: "Using a single degree of freedom for p_prime and ff_prime."
+
+rtgsfit_path: /home/alex.prokopyszyn/GitHub/rtgsfit
+
+# Initial condition parameters
+r_axis0: 0.5
+z_axis0: 0.0
+rho_boundary0: 0.2
+
+# Time parameters
+# Note that t_min and d_t will be exact
+# t_max will be within d_t of the specified value below
+t_min: 0.005
+t_max: 0.3
+d_t: 0.001
+
+# Grid parameters
+n_r: 33
+n_z: 65
+
+# Coil parameters
+use_psu2coil: false
+psu2coil_run_name: RUN05
+coil_signals: 
+  - I_BVL_PSU
+  - I_BVUB_PSU
+  - I_BVUT_PSU
+  - I_DIV_PSU
+  - I_MCVC_PSU
+  - I_PSH_PSU
+  - I_ROG_MCWIRE
+  - I_SOL_PSU
+coil_matrix:
+  # BVL_PSU, BVUB_PSU, BVUT_PSU, DIV_PSU, MCVC_PSU, PSH_PSU, ROG_MCWIRE, SOL_PSU
+  - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] # SOL coil
+  - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0] # MCT coil
+  - [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0] # MCB coil
+  - [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0] # DIV coil
+  - [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # BVL coil
+  - [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0] # BVUT coil
+  - [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # BVUB coil
+  - [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0] # PSH coil
