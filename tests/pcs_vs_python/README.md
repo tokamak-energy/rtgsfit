@@ -2,7 +2,7 @@
 
 `pcs_vs_python` is a sub-repository within the `tests/` directory of the `rtgsfit` project.  
 It provides tests to verify that results we get from running `rtgsfit` using python agree with the
-results we get by running throught the ST40 Plasma Control System Simulink.
+results we get by running through the ST40 Plasma Control System on Simulink.
 
 ## Installation
 
