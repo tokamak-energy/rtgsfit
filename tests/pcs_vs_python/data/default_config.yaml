@@ -7,10 +7,10 @@ settings_path: st40_setup_for_rtgsfit
 # MDS+ parameters
 pulse_num: 13_343
 pulse_num_preshot: 99_000_230
-run_name_preshot: RUN03
+run_name_preshot: TEST01
 run_description_preshot: "Using a single degree of freedom for p_prime and ff_prime."
 pulse_num_replay: 52_013_343
-run_name_replay: RUN03
+run_name_replay: TEST01
 run_description_replay: "Using a single degree of freedom for p_prime and ff_prime."
 
 rtgsfit_path: /home/alex.prokopyszyn/GitHub/rtgsfit
