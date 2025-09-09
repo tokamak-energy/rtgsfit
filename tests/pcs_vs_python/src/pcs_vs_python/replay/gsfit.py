@@ -43,7 +43,7 @@ def replay_gsfit(cfg: dict):
 
 if __name__ == "__main__":
 
-    from replay_rtgsfit_st40 import config_loader
+    from pcs_vs_python import config_loader
 
     cfg = config_loader.load_and_prepare_config()
     replay_gsfit(cfg)
