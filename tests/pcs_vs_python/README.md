@@ -14,8 +14,6 @@ uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
 uv pip install "numpy<2"
 ```
 
-Note that the same virtual environment used in `rtgsfit_vs_gsfit` should work here.
-
 ## Repository Structure
 
 - **`data/`**  
