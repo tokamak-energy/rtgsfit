@@ -30,7 +30,7 @@ def load_and_prepare_config(run_name: str = None,
     with open(config_path, 'r') as f:
         cfg = yaml.safe_load(f)
 
-    cfg["n_t"] = int((cfg["t_max"] - cfg["t_min"]) / cfg["d_t"]) + 1
+    cfg["n_t"] = int((cfg["t_max_approx"] - cfg["t_min"]) / cfg["d_t"]) + 1
     cfg["t_max"] = cfg["t_min"] + (cfg["n_t"] - 1) * cfg["d_t"]
 
     cfg['repo_path'] = repo_path

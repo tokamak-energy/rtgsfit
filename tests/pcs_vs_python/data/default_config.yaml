@@ -22,9 +22,9 @@ rho_boundary0: 0.2
 
 # Time parameters
 # Note that t_min and d_t will be exact
-# t_max will be within d_t of the specified value below
+# t_max will be within d_t of t_max_approx
 t_min: 0.005
-t_max: 0.3
+t_max_approx: 0.3
 d_t: 0.001
 
 # Grid parameters
