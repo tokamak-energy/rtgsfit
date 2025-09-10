@@ -53,3 +53,14 @@ coil_matrix:
   - [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0] # BVUT coil
   - [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # BVUB coil
   - [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0] # PSH coil
+
+rogowski_names:
+  - INIVC000
+  - BVLT
+  - BVLB
+  - GASBFLT
+  - GASBFLB
+  - HFSPSRT
+  - HFSPSRB
+  - DIVPSRT
+  - DIVPSRB
