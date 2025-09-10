@@ -6,7 +6,7 @@ import numpy as np
 from pcs_vs_python.replay.input_signals import prep_coil_curr_2d, prep_meas_pcs_2d
 import standard_utility
 
-from pcs_vs_python.replay import input_signals
+from pcs_vs_python.replay import input_signals, out_data_rtgsfit
 
 def initial_flux_norm(r_vec, z_vec, 
                       r_axis, z_axis,
@@ -45,50 +45,6 @@ def replay_rtgsfit(cfg: dict):
     Run the RTGSFIT code for a single snapshot over multiple iterations.
     """
 
-    def initialise_out_dict():
-
-        out_dict = {"GLOBAL" : {"IP": np.zeros(cfg["n_t"], dtype=np.float64),
-                                "PSI_A": np.zeros(cfg["n_t"], dtype=np.float64),
-                                "PSI_B": np.zeros(cfg["n_t"], dtype=np.float64),
-                                "CHIT": np.zeros(cfg["n_t"], dtype=np.float64)},
-                    "CONSTRAINTS" : {"COIL" : {"MVALUE" : np.zeros((cfg["n_t"], n_coil), dtype=np.float64),
-                                               "NAME" : coil_names}},
-                                     "BPPROBE" : {"CVALUE" : np.zeros((cfg["n_t"], n_bp_probes), dtype=np.float64),
-                                                  "MVALUE" : np.zeros((cfg["n_t"], n_bp_probes), dtype=np.float64)},
-                    "TWO_D" : {"PSI" : np.zeros((cfg["n_t"], n_z, n_r), dtype=np.float64),
-                               "RGRID" : r_vec,
-                               "ZGRID" : z_vec},
-                    "TIME" : time_array_replay}
-
-        return out_dict
-
-    def update_out_dict_meas_coil_curr(out_dict):
-
-        out_dict["flux_norm"][i_iter + 1, :] = flux_norm
-        out_dict["mask"][i_iter + 1, :] = mask
-        out_dict["flux_total"][i_iter + 1, :] = flux_total
-        out_dict["error"][i_iter + 1] = error[0]
-        out_dict["lcfs_r"][i_iter + 1, :] = lcfs_r
-        out_dict["lcfs_z"][i_iter + 1, :] = lcfs_z
-        out_dict["lcfs_n"][i_iter + 1] = lcfs_n[0]
-        out_dict["coef"][i_iter + 1, :] = coef
-        out_dict["flux_boundary"][i_iter + 1] = flux_boundary[0]
-        out_dict["plasma_current"][i_iter + 1] = plasma_current[0]
-
-        out_dict["TWO_D"]["PSI"][i_iter, :, :] = flux_total.reshape(cfg["n_z"], cfg["n_r"])
-        out_dict["GLOBAL"]["IP"][i_iter] = plasma_current[0]
-        out_dict["GLOBAL"]["PSI_B"][i_iter] = flux_boundary[0]
-        out_dict["GLOBAL"]["GS_ERROR"][i_iter] = result
-        out_dict["GLOBAL"]["CHIT"][i_iter] = error[0]
-        out_dict["GLOBAL"]["ELON"][i_iter] = lcfs_n[0]
-        out_dict["GLOBAL"]["R_MAG"][i_iter] = meas_pcs[0]
-        out_dict["GLOBAL"]["Z_MAG"][i_iter] = meas_pcs[1]
-        out_dict["GLOBAL"]["PSI_A"][i_iter] = meas_pcs[2]
-        out_dict["PROFILES"]["RHO"]["P_PRIME"][i_iter, :] = lcfs_r
-        out_dict["PROFILES"]["RHO"]["FF_PRIME"][i_iter, :] = lcfs_z
-
-        return out_dict
-
     # Ensure the RTGSFIT library is loaded
     # and the function signatures are set correctly
     librtgsfit_path = os.path.join(cfg["rtgsfit_path"], 'lib', 'librtgsfit.so')
@@ -116,24 +72,22 @@ def replay_rtgsfit(cfg: dict):
         n_coef = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:N_COEF").data()
         n_lcfs_max = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:N_LCFS_MAX").data()
         n_coil = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:N_COIL").data()
-        n_bp_probes = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:N_BP_PROBES").data()
         sens_names = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:SENS_NAMES").data()
-        coil_names = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:COIL_NAMES").data()
-        meas_names = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:MEAS_NAMES").data()
 
     n_r = len(r_vec)
     n_z = len(z_vec)
     n_grid = n_r * n_z
     n_meas_pcs = len(sens_names)
+
     meas_pcs_2d = input_signals.prep_meas_pcs_2d(cfg)
     coil_curr_2d = input_signals.prep_coil_curr_2d(cfg)
+
     meas_pcs = np.zeros(n_meas_pcs, dtype=np.float64)
     coil_curr = np.zeros(n_coil, dtype=np.float64)
     flux_norm = initial_flux_norm(r_vec, z_vec,
                                   cfg["r_axis0"], cfg["z_axis0"],
                                   cfg["rho_boundary0"])
     mask = np.ones(n_grid, dtype=np.int32)
-    mask = mask.flatten().astype(np.int32)
     flux_total = np.zeros(n_grid, dtype=np.float64)
     coef = np.zeros(n_coef, dtype=np.float64)
     error = np.array([0.0], dtype=np.float64)
@@ -146,16 +100,14 @@ def replay_rtgsfit(cfg: dict):
     time_array_replay = np.linspace(cfg["t_min"], cfg["t_max"], cfg["n_t"],
                                     dtype=np.float64)
 
-    output_dict = initialise_output_dict()
-    print("output_dict.keys():", output_dict.keys())
+    out = out_data_rtgsfit.OutputDataRTGSFITClass(cfg)
 
-    for i_iter, time in enumerate(time_array_replay):
+    for iteration, time in enumerate(time_array_replay):
 
-        meas_pcs = meas_pcs_2d[i_iter, :]
-        coil_curr = coil_curr_2d[i_iter, :]
-        print("i_iter:", i_iter)
-        output_dict["meas_pcs"][i_iter + 1, :] = meas_pcs
-        output_dict["coil_curr"][i_iter + 1, :] = coil_curr
+        meas_pcs = meas_pcs_2d[iteration, :]
+        coil_curr = coil_curr_2d[iteration, :]
+        out.update_mvalues(iteration, meas_pcs, coil_curr)
+        print("iteration:", iteration)
 
         # Call the rtgsfit function
         result = rtgsfit_lib.rtgsfit(
@@ -173,11 +125,12 @@ def replay_rtgsfit(cfg: dict):
             plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         )
 
-        print("Iteration:", i_iter + 1)
+        out.update_cvalues(iteration, flux_norm, mask, flux_total, error, lcfs_r, lcfs_z, lcfs_n,
+                           coef, flux_boundary, plasma_current)
+        print("Iteration:", iteration + 1)
+        print("Time (ms):", time * 1e3)
         print("Result:", result)
         print("Plasma current:", plasma_current)
-
-        output_dict = update_output_dict(output_dict)
 
     print("Writing to MDSplus")
     print("Creating script nodes")
@@ -195,7 +148,7 @@ def replay_rtgsfit(cfg: dict):
     standard_utility.write_script_data(
         script_name="RTGSFIT",
         pulseNo_write=cfg["pulse_num_replay"],
-        data_to_write=output_dict,
+        data_to_write=out.data_dict,
         pulseNo_cal=None,
         run_name=cfg["run_name_replay"],
         run_description=cfg["run_description_replay"],
