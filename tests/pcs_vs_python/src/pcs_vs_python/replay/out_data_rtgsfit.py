@@ -95,11 +95,13 @@ class OutputDataRTGSFITClass:
         self.data_dict["PASSIVES"] = {}
         self.data_dict["PASSIVES"]["OVC"] = {}
         self.data_dict["PASSIVES"]["OVC"]["DOF"] = {}
-        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"] = np.zeros(n_t, dtype=np.float64)
+        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"] = {}
+        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"]["CVALUE"] = np.zeros(n_t, dtype=np.float64)
         self.data_dict["PASSIVES"]["IVC"] = {}
         self.data_dict["PASSIVES"]["IVC"]["DOF"] = {}
         for i in range(len(self.ivc_indices)):
-            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"] = np.zeros(n_t, dtype=np.float64)
+            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"] = {}
+            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"]["CVALUE"] = np.zeros(n_t, dtype=np.float64)
         self.data_dict["PROFILES"] = {}
         self.data_dict["PROFILES"]["SOURCE_FUN"] = {}
         self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"] = {}
@@ -187,8 +189,8 @@ class OutputDataRTGSFITClass:
         self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["CVALUE"][iteration] = pred_meas[self.rog_coil_indices]
 
         for i, ivc_idx in enumerate(self.ivc_indices):
-            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"][iteration] = coef[ivc_idx]
-        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"][iteration] = coef[self.ovc_index]
+            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"]["CVALUE"][iteration] = coef[ivc_idx]
+        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"]["CVALUE"][iteration] = coef[self.ovc_index]
 
         pls0_idx = np.where(self.coef_names == "pls0")[0][0]
         self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["P_PRIME_DOF"][iteration] = coef[pls0_idx]
