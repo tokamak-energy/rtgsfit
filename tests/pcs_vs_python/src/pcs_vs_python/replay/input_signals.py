@@ -49,16 +49,14 @@ def prep_meas_pcs_2d(cfg: dict) -> np.ndarray:
         conn.openTree("RTGSFIT", cfg["pulse_num_preshot"])
         sens_names = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:SENS_NAMES").data()
 
-    time_array_replay = np.linspace(cfg["t_min"], cfg["t_max"], cfg["n_t"])
-
     mag = st40_database.GetData(cfg["pulse_num"], "MAG#BEST")
     time_array_mag = mag.get("TIME")
 
     sens_names_mag = [convert_sens_name_to_mag(sens_name) for sens_name in sens_names]
-    meas_pcs_2d = np.zeros((cfg["n_t"], len(sens_names)), dtype=np.float64)
+    meas_pcs_2d = np.zeros((len(cfg["time"]), len(sens_names)), dtype=np.float64)
     for i, sens_name_mag in enumerate(sens_names_mag):
         meas_mag = mag.get(sens_name_mag)
-        meas_pcs_2d[:, i] = np.interp(time_array_replay, time_array_mag, meas_mag)
+        meas_pcs_2d[:, i] = np.interp(cfg["time"], time_array_mag, meas_mag)
 
     return meas_pcs_2d
 
@@ -74,22 +72,20 @@ def prep_coil_curr_2d(cfg: dict) -> np.ndarray:
         coil_matrix = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:COIL_MATRIX").data()
         coil_signals = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:COIL_SIGNALS").data()
 
-    time_array_replay = np.linspace(cfg["t_min"], cfg["t_max"], cfg["n_t"])
-
     mag = st40_database.GetData(cfg["pulse_num"], "MAG#BEST")
     time_array_mag = mag.get("TIME")
 
-    coil_curr_2d = np.zeros((cfg["n_t"], len(coil_names)), dtype=np.float64)
+    coil_curr_2d = np.zeros((len(cfg["time"]), len(coil_names)), dtype=np.float64)
 
     if cfg["use_psu2coil"]:
         coil_names_psu2coil = [convert_coil_name_to_psu2coil(coil_name) for coil_name in coil_names]
         psu2coil = st40_database.GetData(cfg["pulse_num"], f'PSU2COIL#{cfg["psu2coil_run_name"]}')
         for i, coil_name_psu2coil in enumerate(coil_names_psu2coil):
             coil_curr_psu2coil = psu2coil.get(coil_name_psu2coil)
-            coil_curr_2d[:, i] = np.interp(time_array_replay, time_array_mag, coil_curr_psu2coil)
+            coil_curr_2d[:, i] = np.interp(cfg["time"], time_array_mag, coil_curr_psu2coil)
     else:
         # Use coil_matrix to compute coil currents from the PSU signals
-        psu_currents = np.zeros((cfg["n_t"], len(coil_signals)), dtype=np.float64)
+        psu_currents = np.zeros((len(cfg["time"]), len(coil_signals)), dtype=np.float64)
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("ST40", cfg["pulse_num"])
             for i, coil_signal in enumerate(coil_signals):
@@ -99,7 +95,7 @@ def prep_coil_curr_2d(cfg: dict) -> np.ndarray:
                 else:
                     # One of the signals is a Rogowski coil which we read from MAG instead of PSU
                     psu_current = mag.get(coil_signal_psu)
-                psu_currents[:, i] = np.interp(time_array_replay, time_array_mag, psu_current)
+                psu_currents[:, i] = np.interp(cfg["time"], time_array_mag, psu_current)
             coil_curr_2d = psu_currents @ coil_matrix.T
 
     return coil_curr_2d

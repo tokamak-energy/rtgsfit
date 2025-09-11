@@ -97,17 +97,21 @@ def replay_rtgsfit(cfg: dict):
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
 
-    time_array_replay = np.linspace(cfg["t_min"], cfg["t_max"], cfg["n_t"],
-                                    dtype=np.float64)
-
     out = out_data_rtgsfit.OutputDataRTGSFITClass(cfg)
+    meas_pcs = meas_pcs_2d[0, :]
+    coil_curr = coil_curr_2d[0, :]
+    out.update_mvalues(0, meas_pcs, coil_curr)
+    out.update_cvalues(0, flux_norm, mask, flux_total, error, lcfs_r, lcfs_z, lcfs_n,
+                       coef, flux_boundary, plasma_current)
 
-    for iteration, time in enumerate(time_array_replay):
+    for iteration, time in enumerate(cfg["time"]):
+
+        if iteration == 0:
+            continue  # Already done iteration 0 above
 
         meas_pcs = meas_pcs_2d[iteration, :]
         coil_curr = coil_curr_2d[iteration, :]
         out.update_mvalues(iteration, meas_pcs, coil_curr)
-        print("iteration:", iteration)
 
         # Call the rtgsfit function
         result = rtgsfit_lib.rtgsfit(
@@ -127,7 +131,7 @@ def replay_rtgsfit(cfg: dict):
 
         out.update_cvalues(iteration, flux_norm, mask, flux_total, error, lcfs_r, lcfs_z, lcfs_n,
                            coef, flux_boundary, plasma_current)
-        print("Iteration:", iteration + 1)
+        print("Iteration:", iteration)
         print("Time (ms):", time * 1e3)
         print("Result:", result)
         print("Plasma current:", plasma_current)

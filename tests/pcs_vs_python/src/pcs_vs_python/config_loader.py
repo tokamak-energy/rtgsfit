@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import yaml
 
 def load_and_prepare_config(run_name: str = None,
@@ -30,12 +31,19 @@ def load_and_prepare_config(run_name: str = None,
     with open(config_path, 'r') as f:
         cfg = yaml.safe_load(f)
 
+    # n_t is the number of "true" time steps.
+    # However, time has an extra entry at the start so
+    # we can still see the initial conditions.
     cfg["n_t"] = int((cfg["t_max_approx"] - cfg["t_min"]) / cfg["d_t"]) + 1
     cfg["t_max"] = cfg["t_min"] + (cfg["n_t"] - 1) * cfg["d_t"]
+    cfg["time"] = np.zeros(cfg["n_t"] + 1, dtype=np.float64)
+    cfg["time"][1:] = np.linspace(cfg["t_min"], cfg["t_max"], cfg["n_t"], dtype=np.float64)
+    cfg["time"][0] = cfg["t_min"] - 1e-8
 
     cfg['repo_path'] = repo_path
     cfg['rtgsfit_src_path'] = os.path.join(cfg['rtgsfit_path'], 'src')
     cfg["plot_dir"] = os.path.join(repo_path, 'plots')
+    cfg["plot_dir_this_run"] = os.path.join(cfg["plot_dir"], f'{cfg["pulse_num"]}_{cfg["run_name_replay"]}')
 
     return cfg
 

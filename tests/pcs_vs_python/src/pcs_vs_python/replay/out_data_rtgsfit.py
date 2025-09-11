@@ -68,55 +68,55 @@ class OutputDataRTGSFITClass:
 
         self.data_dict = {}
         self.data_dict["GLOBAL"] = {}
-        self.data_dict["GLOBAL"]["IP"] = np.zeros(n_t, dtype=np.float64)
-        self.data_dict["GLOBAL"]["PSI_A"] = np.zeros(n_t, dtype=np.float64)
-        self.data_dict["GLOBAL"]["PSI_B"] = np.zeros(n_t, dtype=np.float64)
-        self.data_dict["GLOBAL"]["CHIT"] = np.zeros(n_t, dtype=np.float64)
-        self.data_dict["GLOBAL"]["DELTA_Z"] = np.zeros(n_t, dtype=np.float64)
+        self.data_dict["GLOBAL"]["IP"] = np.zeros(n_t+1, dtype=np.float64)
+        self.data_dict["GLOBAL"]["PSI_A"] = np.zeros(n_t+1, dtype=np.float64)
+        self.data_dict["GLOBAL"]["PSI_B"] = np.zeros(n_t+1, dtype=np.float64)
+        self.data_dict["GLOBAL"]["CHIT"] = np.zeros(n_t+1, dtype=np.float64)
+        self.data_dict["GLOBAL"]["DELTA_Z"] = np.zeros(n_t+1, dtype=np.float64)
         self.data_dict["CONSTRAINTS"] = {}
         self.data_dict["CONSTRAINTS"]["COIL"] = {}
-        self.data_dict["CONSTRAINTS"]["COIL"]["MVALUE"] = np.zeros((n_t, n_coil), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["COIL"]["MVALUE"] = np.zeros((n_t+1, n_coil), dtype=np.float64)
         self.data_dict["CONSTRAINTS"]["COIL"]["NAME"] = coil_names
         self.data_dict["CONSTRAINTS"]["FLOOP"] = {}
-        self.data_dict["CONSTRAINTS"]["FLOOP"]["CVALUE"] = np.zeros((n_t, n_f_loops), dtype=np.float64)
-        self.data_dict["CONSTRAINTS"]["FLOOP"]["MVALUE"] = np.zeros((n_t, n_f_loops), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["FLOOP"]["CVALUE"] = np.zeros((n_t+1, n_f_loops), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["FLOOP"]["MVALUE"] = np.zeros((n_t+1, n_f_loops), dtype=np.float64)
         self.data_dict["CONSTRAINTS"]["FLOOP"]["NAME"] = meas_names[self.flux_loop_indices]
         self.data_dict["CONSTRAINTS"]["FLOOP"]["WEIGHT"] = self.weight[self.flux_loop_indices]
         self.data_dict["CONSTRAINTS"]["BPPROBE"] = {}
-        self.data_dict["CONSTRAINTS"]["BPPROBE"]["CVALUE"] = np.zeros((n_t, n_bp_probes), dtype=np.float64)
-        self.data_dict["CONSTRAINTS"]["BPPROBE"]["MVALUE"] = np.zeros((n_t, n_bp_probes), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["BPPROBE"]["CVALUE"] = np.zeros((n_t+1, n_bp_probes), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["BPPROBE"]["MVALUE"] = np.zeros((n_t+1, n_bp_probes), dtype=np.float64)
         self.data_dict["CONSTRAINTS"]["BPPROBE"]["NAME"] = meas_names[self.bp_probe_indices]
         self.data_dict["CONSTRAINTS"]["BPPROBE"]["WEIGHT"] = self.weight[self.bp_probe_indices]
         self.data_dict["CONSTRAINTS"]["ROGOWSKI"] = {}
-        self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["CVALUE"] = np.zeros((n_t, n_rog_coils), dtype=np.float64)
-        self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["MVALUE"] = np.zeros((n_t, n_rog_coils), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["CVALUE"] = np.zeros((n_t+1, n_rog_coils), dtype=np.float64)
+        self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["MVALUE"] = np.zeros((n_t+1, n_rog_coils), dtype=np.float64)
         self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["NAME"] = meas_names[self.rog_coil_indices]
         self.data_dict["CONSTRAINTS"]["ROGOWSKI"]["WEIGHT"] = self.weight[self.rog_coil_indices]
         self.data_dict["PASSIVES"] = {}
         self.data_dict["PASSIVES"]["OVC"] = {}
         self.data_dict["PASSIVES"]["OVC"]["DOF"] = {}
         self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"] = {}
-        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"]["CVALUE"] = np.zeros(n_t, dtype=np.float64)
+        self.data_dict["PASSIVES"]["OVC"]["DOF"]["CONSTANT_J"]["CVALUE"] = np.zeros(n_t+1, dtype=np.float64)
         self.data_dict["PASSIVES"]["IVC"] = {}
         self.data_dict["PASSIVES"]["IVC"]["DOF"] = {}
         for i in range(len(self.ivc_indices)):
             self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"] = {}
-            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"]["CVALUE"] = np.zeros(n_t, dtype=np.float64)
+            self.data_dict["PASSIVES"]["IVC"]["DOF"][f"EIG_{i:02d}"]["CVALUE"] = np.zeros(n_t+1, dtype=np.float64)
         self.data_dict["PROFILES"] = {}
         self.data_dict["PROFILES"]["SOURCE_FUN"] = {}
         self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"] = {}
-        self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["P_PRIME_DOF"] = np.zeros(n_t, dtype=np.float64)
-        self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["FF_PRIM_DOF"] = np.zeros(n_t, dtype=np.float64)
+        self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["P_PRIME_DOF"] = np.zeros(n_t+1, dtype=np.float64)
+        self.data_dict["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["FF_PRIM_DOF"] = np.zeros(n_t+1, dtype=np.float64)
         self.data_dict["P_BOUNDARY"] = {}
-        self.data_dict["P_BOUNDARY"]["NBND"] = np.zeros(n_t, dtype=np.int32)
-        self.data_dict["P_BOUNDARY"]["RBND"] = np.zeros((n_t, n_lcfs_max), dtype=np.float64)
-        self.data_dict["P_BOUNDARY"]["ZBND"] = np.zeros((n_t, n_lcfs_max), dtype=np.float64)
+        self.data_dict["P_BOUNDARY"]["NBND"] = np.zeros(n_t+1, dtype=np.int32)
+        self.data_dict["P_BOUNDARY"]["RBND"] = np.zeros((n_t+1, n_lcfs_max), dtype=np.float64)
+        self.data_dict["P_BOUNDARY"]["ZBND"] = np.zeros((n_t+1, n_lcfs_max), dtype=np.float64)
         self.data_dict["TWO_D"] = {}
-        self.data_dict["TWO_D"]["PSI"] = np.zeros((n_t, self.n_z, self.n_r), dtype=np.float64)
-        self.data_dict["TWO_D"]["MASK"] = np.zeros((n_t, self.n_z, self.n_r), dtype=np.int32)
+        self.data_dict["TWO_D"]["PSI"] = np.zeros((n_t+1, self.n_z, self.n_r), dtype=np.float64)
+        self.data_dict["TWO_D"]["MASK"] = np.zeros((n_t+1, self.n_z, self.n_r), dtype=np.int32)
         self.data_dict["TWO_D"]["RGRID"] = r_vec
         self.data_dict["TWO_D"]["ZGRID"] = self.z_vec
-        self.data_dict["TIME"] = np.linspace(cfg["t_min"], cfg["t_max"], n_t, dtype=np.float64)
+        self.data_dict["TIME"] = cfg["time"]
 
     def update_mvalues(self,
                        iteration : int,
