@@ -207,7 +207,7 @@ int rtgsfit(
         double* flux_norm, // input/output
         int* mask, // input/output
         double* flux_total, // output
-        double* error, // output
+        double* chi_sq_err, // output
         double* lcfs_r, // output
         double* lcfs_z, // output
         int* lcfs_n, // output
@@ -313,12 +313,12 @@ int rtgsfit(
     cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig,
             N_MEAS, coef, 1, 0.0, meas_model, 1);
 
-    // find error between meas and model
-    *error = 0.0;
+    // find chi squared error between meas and model
+    *chi_sq_err = 0.0;
     for (i_meas=0; i_meas<N_MEAS; i_meas++)
     {
-        *error = *error + (meas_no_coil[i_meas] -  meas_model[i_meas]) \
-                * (meas_no_coil[i_meas] -  meas_model[i_meas]);
+        *chi_sq_err = *chi_sq_err + (meas_no_coil[i_meas] -  meas_model[i_meas]) \
+                    * (meas_no_coil[i_meas] -  meas_model[i_meas]);
     }
 
     // convert current to RHS of eq
@@ -391,7 +391,7 @@ int rtgsfit(
     // BUXTON: we think this might have an error??????
     int lcfs_error = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
     if (lcfs_error) {
-      printf("error %d\n", lcfs_error);
+      printf("lcfs_error %d\n", lcfs_error);
     }
 
     // normalise total psi
