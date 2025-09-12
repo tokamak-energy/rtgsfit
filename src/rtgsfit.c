@@ -124,8 +124,6 @@ double find_flux_on_limiter(double* flux_total)
  * @param xpt_n Number of x-points.
  * @param axis_r R coordinate of the axis.
  * @param axis_z Z coordinate of the axis.
- * @param LIMIT_R Array of limiter R coordinates.
- * @param LIMIT_Z Array of limiter Z coordinates.
  * @return The computed flux value on the limiter after x-point-filtering.
  */
 double find_flux_on_limiter_xfiltered(double flux_total[],
@@ -133,9 +131,7 @@ double find_flux_on_limiter_xfiltered(double flux_total[],
                                       double xpt_z[],
                                       int xpt_n,
                                       double axis_r,
-                                      double axis_z,
-                                      double LIMIT_R[],
-                                      double LIMIT_Z[])
+                                      double axis_z)
 {
 
     int i_limit, i_intrp, idx, skip;
@@ -232,12 +228,12 @@ int rtgsfit(
     double lcfs_flux, axis_flux, axis_r, axis_z;
     double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
     double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
-    double LIMIT_R[N_LIMIT], LIMIT_Z[N_LIMIT];
     int xpt_n = 0;
     int opt_n = 0;
-    // note: N_MEAS is actually the number of constraints, i.e. including regularisations
-    // number of sensors with correction, i.e. meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
+    // N_MEAS includes the number of regularisations.
     int n_meas_w_correction = N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS;
+    // The meas array doesn't need the regularisations as we use meas_no_coil
+    // when the LAPACKE_dgelss function is called.
     double meas[n_meas_w_correction];
 
     // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
@@ -247,11 +243,7 @@ int rtgsfit(
     // will this be done during compilation?
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
 
-    // subtract PF (vessel) contributions from measurements
-    // PROKOPYSZYN: Why is "vessel" in brackets in the above comment?
-    // PROKOPYSZYN: I think this is a mistake, it should be "PF coil" instead of "PF (vessel)".
-    // PROKOPYSZYN: The rm_coil_from_meas only removes the PF coil contributions from the measurements.
-    // PROKOPYSZYN: The passive vessel contributions are not removed
+    // subtract PF contributions from measurements
     // Note that this also sets the regularisation elements of meas_no_coil to zero.
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
@@ -378,18 +370,7 @@ int rtgsfit(
     axis_r = opt_r[i_opt];
     axis_z = opt_z[i_opt];
 
-    // Calulcate LIMIT_R and LIMIT_Z
-    // Alex P: We need to precompute these values and store them in the constants.c file.
-    for (int i_limit = 0; i_limit < N_LIMIT; i_limit++) {
-        LIMIT_R[i_limit] = 0.0;
-        LIMIT_Z[i_limit] = 0.0;
-        for (int i_intrp = 0; i_intrp < N_INTRP; i_intrp++) {
-            int idx = i_limit * N_INTRP + i_intrp;
-            LIMIT_R[i_limit] += LIMIT_WEIGHT[idx] * R_GRID[LIMIT_IDX[idx]];
-            LIMIT_Z[i_limit] += LIMIT_WEIGHT[idx] * Z_GRID[LIMIT_IDX[idx]];
-        }
-    }
-    lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, axis_r, axis_z, LIMIT_R, LIMIT_Z);
+    lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, axis_r, axis_z);
 
     // select xpt
     if (xpt_n > 0)
@@ -408,15 +389,20 @@ int rtgsfit(
 
     // extract inside of LCFS
     // BUXTON: we think this might have an error??????
-    int ret = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
-    if (ret) {
-      printf("error %d\n", ret);
+    int lcfs_error = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
+    if (lcfs_error) {
+      printf("error %d\n", lcfs_error);
     }
 
     // normalise total psi
     normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
 
+    // store axis_r, axis_z and axis_flux in the meas_pcs array
+    // meas_pcs[0] = axis_r;
+    // meas_pcs[1] = axis_z;
+    // meas_pcs[2] = axis_flux;
+
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
-  return info;
+  return lcfs_error;
 }

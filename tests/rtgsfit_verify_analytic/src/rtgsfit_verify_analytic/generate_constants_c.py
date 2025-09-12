@@ -302,6 +302,8 @@ def generate_data_dictionary():
     data_dictionary["inv_r_mu0"] = inv_r_mu0
     data_dictionary["limit_idx"] = limit_idx
     data_dictionary["limit_weight"] = limit_weight
+    data_dictionary["limit_r"] = r_lim
+    data_dictionary["limit_z"] = z_lim
     data_dictionary["lower_band"] = lower_band
     # convert mask lim from bool to int
     data_dictionary["mask_lim"] = mask_lim.astype(int)
