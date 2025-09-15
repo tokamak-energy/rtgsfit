@@ -2,7 +2,7 @@
 Real-Time equilibrium reconstruction code
 
 ## Compilation
-A .mat datafile will be required with the same variable names of that of the 
+<!-- A .mat datafile will be required with the same variable names of that of the 
 global constants specified in constants.h. This should 
 contain all matrices in row major order, with indexing also in row major order 
 and starting from 0.  The conda environment is only required for running the 
@@ -15,12 +15,16 @@ cd src
 make DATAFILE=<PATH/TO/DATAFILE.mat>
 cd ../tests
 make
+``` -->
+```
+cd src/
+make clean
+make SHOT=99000230 RUN_NAME=RUN02
 ```
 
 
 
-
-## Program Structure
+<!-- ## Program Structure
 * shared libraries
 * dependancy graph
 
@@ -32,11 +36,10 @@ math.h
 float.h
 stdio.h
 time.h
-string.h
+string.h -->
 
 ## Formatting convention
 * Allman bracket style
-* 
 
 ## Naming convention
 * Global constants are fully capitilised with underscores e.g. R_GRID
@@ -113,7 +116,7 @@ R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
 * vessel filaments
 
 
-# To compile
+<!-- # To compile
 (Peter's notes)
 ```bash
 git checkout replay_rtgsfit
@@ -134,14 +137,14 @@ cd ../tests/
 make -f makefile_test PCS_PATH=/home/peter.buxton/0_Version_Controlled/pcs
 ```
 
-./replay_rtgsfit 12050 0.01 0.002 0.2
+./replay_rtgsfit 12050 0.01 0.002 0.2 -->
 
 
 # Important
 "const_to_file.py" is what adds the constants into the c
 
 
-
+<!-- 
 make DATAFILE=/home/peter.buxton/0_Version_Controlled/rtgsfit/data/12001000_RUN04_for_c.mat
 
 
@@ -163,4 +166,4 @@ bt
 
 # Instructions for aleksei
 
-source /opt/intel/oneapi/setvars.sh
+source /opt/intel/oneapi/setvars.sh -->
