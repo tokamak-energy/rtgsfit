@@ -16,7 +16,15 @@ make DATAFILE=<PATH/TO/DATAFILE.mat>
 cd ../tests
 make
 ``` -->
+First install MDS+ with
+```bash
+uv venv --python 3.13
+source .venv/bin/activate
+uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
+uv pip install "numpy<2"
 ```
+then install compile the code with
+```bash
 cd src/
 make clean
 make SHOT=99000230 RUN_NAME=RUN02
