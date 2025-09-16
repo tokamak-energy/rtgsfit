@@ -14,7 +14,8 @@ import numpy as np
 
 class Psi:
     def __init__(self,
-                 cfg: dict):
+                 cfg: dict,
+                 plasma_boundary: bool = True):
         self.cfg = cfg
 
         with mdsthin.Connection('smaug') as conn:
@@ -22,9 +23,11 @@ class Psi:
             self.psi_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.TWO_D:PSI").data()
             self.r_vec = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.TWO_D:RGRID").data()
             self.z_vec = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.TWO_D:ZGRID").data()
-            self.rbnd_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.P_BOUNDARY:RBND").data()
-            self.zbnd_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.P_BOUNDARY:ZBND").data()
-            self.nbnd_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.P_BOUNDARY:NBND").data()
+            self.plasma_boundary = plasma_boundary
+            if plasma_boundary:
+                self.rbnd_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.P_BOUNDARY:RBND").data()
+                self.zbnd_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.P_BOUNDARY:ZBND").data()
+                self.nbnd_py = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name_replay']}.P_BOUNDARY:NBND").data()
 
         self.dot_size = 5
 
@@ -43,11 +46,13 @@ class Psi:
                        self.psi_py[iteration, :, :],
                        levels=levels,
                        colors="tab:blue")
-            ax.scatter(self.rbnd_py[iteration, :self.nbnd_py[iteration]],
-                       self.zbnd_py[iteration, :self.nbnd_py[iteration]],
-                       label='RTGSFIT LCFS',
-                       color='tab:blue',
-                       s=self.dot_size)
+            print("Max RTGSFIT ψ:", np.max(self.psi_py[iteration, :, :]))
+            if self.plasma_boundary:
+                ax.scatter(self.rbnd_py[iteration, :self.nbnd_py[iteration]],
+                           self.zbnd_py[iteration, :self.nbnd_py[iteration]],
+                           label='RTGSFIT LCFS',
+                           color='tab:blue',
+                           s=self.dot_size)
         ax.set_aspect('equal')
         ax.set_xlabel("R [m]")
         ax.set_ylabel("z [m]")

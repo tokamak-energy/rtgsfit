@@ -7,6 +7,7 @@ import os
 import time
 
 import matplotlib.pyplot as plt
+import mdsthin
 import numpy as np
 
 def psi_fluxloop_bp(cfg: dict,
@@ -64,13 +65,57 @@ def psi_fluxloop_bp(cfg: dict,
                     dpi=300)
         plt.close("all")
 
+def just_psi(cfg: dict,
+             iterations = None):
+    """
+    Create a single plot showing ψ [Wb] contours.
+
+    Layout:
+      • Single axis:
+          Contour plot of poloidal flux ψ [Wb] from both GSFIT and RTGSFIT,
+          including limiter points and annotated positions of flux loops and Bp probes.
+    """
+
+    from pcs_vs_python.plot.components import Psi
+
+    this_plot_dir = os.path.join(cfg["plot_dir_this_run"], "just_psi")
+    os.makedirs(this_plot_dir, exist_ok=True)
+
+    # iterations  = [0, 1, 2, 10, 100, 200]
+    iterations = np.arange(0, 68000, 1000)
+
+    psi_class = Psi(cfg, plasma_boundary=False)
+
+    for iteration in iterations:
+
+        fig, ax = plt.subplots()
+
+        psi_class.contour(iteration, ax)
+
+        fig.suptitle(f"{cfg['pulse_num']},  run_name_replay: {cfg['run_name_replay']}" "\n"
+                     f"Iteration {iteration:02d}")
+
+        filename = f"just_psi_{cfg['pulse_num']}_{cfg['run_name_replay']}_{iteration:02d}.png"
+        fig.savefig(os.path.join(this_plot_dir, filename),
+                    bbox_inches='tight',
+                    dpi=300)
+        plt.close("all")
+
 if __name__ == "__main__":
 
     from pcs_vs_python import config_loader
 
-    cfg = config_loader.load_and_prepare_config()
+    # start_time = time.time()
+    # cfg = config_loader.load_and_prepare_config()
+    # psi_fluxloop_bp(cfg)
+    # end_time = time.time()
+    # print(f"Plotting completed in {end_time - start_time:.2e} seconds.")
 
     start_time = time.time()
-    psi_fluxloop_bp(cfg)
+    cfg = config_loader.load_and_prepare_config()
+    cfg["pulse_num_replay"] = 30_013_343
+    cfg["run_name_replay"] = "RUN01"
+    cfg["plot_dir_this_run"] = os.path.join(cfg["plot_dir"], f'{cfg["pulse_num"]}_{cfg["run_name_replay"]}')
+    just_psi(cfg)
     end_time = time.time()
     print(f"Plotting completed in {end_time - start_time:.2e} seconds.")
