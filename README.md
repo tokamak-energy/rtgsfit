@@ -23,7 +23,7 @@ source .venv/bin/activate
 uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
 uv pip install "numpy<2"
 ```
-then install compile the code with
+then compile the code with
 ```bash
 cd src/
 make clean
