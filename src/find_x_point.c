@@ -6,7 +6,7 @@
 #include "constants.h"
 #include "gradient.h"
 
-#define NP 4
+#define NP 6
 #define N_R_MIN_1 (N_R - 1)
 #define N_R_PLS_1 (N_R + 1)
 #define N_Z_MIN_1 (N_Z - 1)
