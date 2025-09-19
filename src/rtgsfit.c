@@ -1,13 +1,14 @@
 #include "constants.h"
-#include <math.h>
-#include <cblas.h>
 #include "gradient.h"
 #include "rtgsfit.h"
-#include <lapacke.h>
 #include "poisson_solver.h"
 #include "find_x_point.h"
 #include <stdio.h>
 #include <float.h>
+#include <math.h>
+#include <lapacke.h>
+#include <cblas.h>
+#include <stdint.h>
 #include <string.h>
 
 
@@ -177,16 +178,15 @@ void normalise_flux(
         double* flux_total,
         double flux_lcfs,
         double flux_axis,
-        int* mask,
+        int32_t* mask,
         double* flux_norm
         )
 {
     double inv_flux_diff;
-    int i_grid;
     inv_flux_diff = 1.0/(flux_lcfs - flux_axis);
 
     // psi norm has to be of total flux, as boundary is defined in terms of total flux !
-    for (i_grid=0; i_grid<N_GRID; i_grid++)
+    for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
     {
         if (mask[i_grid] && MASK_LIM[i_grid])
         {
@@ -201,7 +201,7 @@ void normalise_flux(
 
 
 
-int rtgsfit(
+void rtgsfit(
         double* meas_pcs, // input
         double* coil_curr, // input
         double* flux_norm, // input/output
@@ -213,12 +213,13 @@ int rtgsfit(
         int* lcfs_n, // output
         double* coef, // output
         double* flux_boundary, // output
-        double* plasma_current // output
+        double* plasma_current, // output
+        int32_t *lcfs_err_code // output
         )
 {
     double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
     double g_pls_grid[N_PLS*N_GRID];
-    int info, i_grid, i_opt, i_xpt, i_meas;
+    int info, i_opt, i_xpt, i_meas;
     int rank;
     double rcond = -1.0;
     double xpt_flux_max;
@@ -259,10 +260,10 @@ int rtgsfit(
             g_coef_meas_w, N_MEAS);
 
     // form meas vectors from measurements
-    for (i_meas=0; i_meas<N_MEAS; i_meas++)
+    for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
     {
         meas_no_coil[i_meas] *= WEIGHT[i_meas];
-    }
+    } 
 
     // copy measurment to coef due to overwritting in LAPACKE_dgelss
     memcpy(meas_no_coil_cp, meas_no_coil, sizeof(double)*N_MEAS);
@@ -301,7 +302,7 @@ int rtgsfit(
     // `source` is the current density in each grid cell;
     // plasma_current = sum(source) * d_area
     double source_sum = 0.0;
-    for (i_grid = 0; i_grid < N_GRID; i_grid++) {
+    for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++) {
         source_sum += source[i_grid];
     }
     *plasma_current = source_sum * DR * DZ;
@@ -315,14 +316,14 @@ int rtgsfit(
 
     // find chi squared error between meas and model
     *chi_sq_err = 0.0;
-    for (i_meas=0; i_meas<N_MEAS; i_meas++)
+    for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
     {
         *chi_sq_err = *chi_sq_err + (meas_no_coil[i_meas] -  meas_model[i_meas]) \
                     * (meas_no_coil[i_meas] -  meas_model[i_meas]);
     }
 
     // convert current to RHS of eq
-    for (i_grid=0; i_grid<N_GRID; i_grid++)
+    for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
     {
         source[i_grid] *= -R_MU0_DZ2[i_grid];  // BUXTON: R_MU0_DZ2=mu0 * R * d_area
     }
@@ -343,7 +344,7 @@ int rtgsfit(
                 N_VESS, &coef[N_PLS], 1, 0.0, flux_vessel, 1);
 
         // calculate total flux = coil + plasma + vessel
-        for (i_grid=0; i_grid<N_GRID; i_grid++)
+        for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
         {
             flux_total[i_grid] +=  flux_pls[i_grid] + flux_vessel[i_grid];
             // BUXTON: do I need to add delta_z*d(psi)/d(psi_n)
@@ -351,7 +352,7 @@ int rtgsfit(
     }
     else
     {
-        for (i_grid=0; i_grid<N_GRID; i_grid++)
+        for (int32_t i_grid=0; i_grid < N_GRID; i_grid++)
         {
             flux_total[i_grid] +=  flux_pls[i_grid];
         }
@@ -389,10 +390,7 @@ int rtgsfit(
 
     // extract inside of LCFS
     // BUXTON: we think this might have an error??????
-    int lcfs_error = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
-    if (lcfs_error) {
-      printf("lcfs_error %d\n", lcfs_error);
-    }
+    *lcfs_err_code = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
 
     // normalise total psi
     normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
@@ -404,5 +402,4 @@ int rtgsfit(
 
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
-  return lcfs_error;
 }
