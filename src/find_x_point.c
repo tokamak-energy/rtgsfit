@@ -50,7 +50,7 @@ void find_zero_on_edge(
       cross_row[*count] = rowNum[ii] + diff_row * off;
       (*count)++;
     }
-    if (count > 3) printf("Help me Alex\n");
+    if (*count > 3) printf("Help me Alex\n");
   }
 }
 
