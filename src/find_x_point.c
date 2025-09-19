@@ -6,7 +6,7 @@
 #include "constants.h"
 #include "gradient.h"
 
-#define NP 6
+#define NP 4
 #define N_R_MIN_1 (N_R - 1)
 #define N_R_PLS_1 (N_R + 1)
 #define N_Z_MIN_1 (N_Z - 1)
@@ -50,6 +50,7 @@ void find_zero_on_edge(
       cross_row[*count] = rowNum[ii] + diff_row * off;
       (*count)++;
     }
+    if (count > 3) printf("Help me Alex\n");
   }
 }
 
@@ -78,21 +79,6 @@ void n_comb(
     idx_b[1] = 2;
     idx_a[2] = 0;
     idx_b[2] = 2;
-    break;
-  case 4:
-    *n_comb = 6;
-    idx_a[0] = 0;
-    idx_b[0] = 1;
-    idx_a[1] = 1;
-    idx_b[1] = 2;
-    idx_a[2] = 2;
-    idx_b[2] = 3;
-    idx_a[3] = 0;
-    idx_b[3] = 2;
-    idx_a[4] = 0;
-    idx_b[4] = 3;
-    idx_a[5] = 1;
-    idx_b[5] = 3;
     break;
   }
 }
