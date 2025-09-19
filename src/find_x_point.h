@@ -1,28 +1,30 @@
 #ifndef FIND_X_POINT_H_
 #define FIND_X_POINT_H_
 
-double lin_intrp(double* psi, int idx, double dist_to_null_r,
+#include <stdint.h>
+
+double lin_intrp(double* psi, int32_t idx, double dist_to_null_r,
         double dist_to_null_z, double abs_dist_null_r, double abs_dist_null_z);
 
-double lin_intrp_2(double* psi, int idx, double frac_dist_null_r,
+double lin_intrp_2(double* psi, int32_t idx, double frac_dist_null_r,
         double frac_dist_null_z);
 
 void find_null_in_gradient(double *psi,
-        double *opt_r, double *opt_z, double *opt_psi, int *i_opt,
-        double *xpt_r, double *xpt_z, double *xpt_psi, int *i_xpt);
+        double *opt_r, double *opt_z, double *opt_psi, int32_t *i_opt,
+        double *xpt_r, double *xpt_z, double *xpt_psi, int32_t *i_xpt);
 
 
 void find_lcfs_rz(double *psi, double psi_lcfs,
-        double *r_lcfs, double *z_lcfs, int *n_lcfs);
+        double *r_lcfs, double *z_lcfs, int32_t *n_lcfs);
 
 
 int inside_lcfs(double r_opt, double z_opt, double *r_lcfs, 
-        double *z_lcfs, int n_lcfs, int *mask);
+        double *z_lcfs, int32_t n_lcfs, int32_t *mask);
 
 
 void find_null_in_gradient_march(double* flux, double* opt_r, double* opt_z,
-        double* opt_flux, int* opt_n, double* xpt_r, double* xpt_z,
-        double* xpt_flux, int* xpt_n);
+        double* opt_flux, int32_t* opt_n, double* xpt_r, double* xpt_z,
+        double* xpt_flux, int32_t* xpt_n);
 
 #endif
 
