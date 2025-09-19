@@ -42,7 +42,8 @@ if __name__ == "__main__":
         ctypes.POINTER(ctypes.c_int),     # lcfs_n
         ctypes.POINTER(ctypes.c_double),  # coef
         ctypes.POINTER(ctypes.c_double),  # flux_boundary
-        ctypes.POINTER(ctypes.c_double)   # plasma_current
+        ctypes.POINTER(ctypes.c_double),   # plasma_current
+        ctypes.POINTER(ctypes.c_int32)   # lcfs_err_code
     ]
     # Define the return type for the rtgsfit function
     rtgsfit_lib.rtgsfit.restype = ctypes.c_int
@@ -92,6 +93,7 @@ if __name__ == "__main__":
     lcfs_n = np.array([0], dtype=np.int32)
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
+    lcfs_err_code = np.array([0], dtype=np.int32)
 
     output_dict = {"meas" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
                    "coil_curr" : np.zeros((cnst.N_ITERS + 1, n_coil), dtype=np.float64),
@@ -141,7 +143,8 @@ if __name__ == "__main__":
             lcfs_n.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
             coef.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_boundary.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+            plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
         )
 
         print("Iteration:", i_iter + 1)
