@@ -22,7 +22,7 @@ def initial_flux_norm(r_vec, z_vec):
     
     return flux_norm.flatten()
 
-if __name__ == "__main__":
+def replay_rtgsfit():
 
     librtgsfit_path = os.path.join(cnst.RTGSFIT_PATH, 'lib', 'librtgsfit.so')
     constants_c_path = os.path.join(cnst.REPO_PATH, 'data', 'constants.c')
