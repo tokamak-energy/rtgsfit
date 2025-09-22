@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import shutil
 
-from rtgsfit_verify_analytic import cnst
+from rtgsfit_verify_analytic import cnst, replay_rtgsfit
 
 @pytest.fixture(scope="session")
 def run_pipeline():
@@ -30,10 +30,7 @@ def run_pipeline():
         shell=True
     )
 
-    subprocess.run(
-        ["python", "-m", "rtgsfit_verify_analytic.replay_rtgsfit"],
-        check=True
-    )
+    replay_rtgsfit.replay_rtgsfit()
 
 @pytest.fixture(scope="session")
 def output_dict(run_pipeline):
