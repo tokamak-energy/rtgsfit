@@ -8,7 +8,7 @@ It provides automated tests to verify that results from `rtgsfit` are consistent
 ```bash
 uv venv --python 3.13
 source .venv/bin/activate
-uv pip install -e .
+uv pip install --reinstall -e .
 uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
 uv pip install "numpy<2"
 ```
