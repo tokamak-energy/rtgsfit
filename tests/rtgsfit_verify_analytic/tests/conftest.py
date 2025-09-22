@@ -24,7 +24,7 @@ def run_pipeline():
     shutil.copy(constants_c, rtgsfit_src / "constants.c")
 
     subprocess.run(
-        "make SHOT=0 RUN_NAME=no_mds",
+        "make SHOT=0 RUN_NAME=no_mds DEBUG=1",
         cwd=rtgsfit_src,
         check=True,
         shell=True
