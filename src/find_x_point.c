@@ -113,19 +113,6 @@ void find_xpoint_cross(
   }
 }
 
-/*    double matrix_inv[] = { b_diff_row / det, -b_diff_col / det, */
-/*                          -a_diff_row / det, a_diff_col / det };*/
-/*   */
-/*    double b_vec[] = {a_start_col - b_start_col, a_row_start - b_row_start};*/
-/*    double matrix = {a_diff_col, b_diff_col, a_diff_row, b_diff_row};*/
-/*    double matrix[] = {a_diff_row, 0.0, -1.0, 0.0,*/
-/*                 0.0, b_diff_row, -1.0, 0.0,*/
-/*                 a_diff_col, 0.0, 0.0, -1.0,*/
-/*                 0.0, b_diff_col, 0.0, -1.0};*/
-/*                 */
-/*    double vector[] = {*/
-/*                 */
-
 void find_null_in_gradient_march(
     double* flux,
     double* opt_r,
