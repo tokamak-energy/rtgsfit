@@ -131,7 +131,7 @@ if __name__ == "__main__":
         coil_curr = np.zeros(n_coil, dtype=np.float64)
 
         # Call the rtgsfit function
-        result = rtgsfit_lib.rtgsfit(
+        rtgsfit_lib.rtgsfit(
             meas.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             coil_curr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_norm.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -148,7 +148,6 @@ if __name__ == "__main__":
         )
 
         print("Iteration:", i_iter + 1)
-        print("Result:", result)
 
         output_dict["meas"][i_iter + 1, :] = meas
         output_dict["coil_curr"][i_iter + 1, :] = coil_curr
