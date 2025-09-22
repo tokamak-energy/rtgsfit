@@ -127,7 +127,7 @@ def replay_rtgsfit(cfg: dict):
         coil_curr_copy = coil_curr.copy()
 
         # Call the rtgsfit function
-        result = rtgsfit_lib.rtgsfit(
+        rtgsfit_lib.rtgsfit(
             meas_pcs_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             coil_curr_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_norm.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -143,7 +143,6 @@ def replay_rtgsfit(cfg: dict):
         )
 
         print("Iteration:", i_iter + 1)
-        print("Result:", result)
 
         output_dict["meas_pcs"][i_iter + 1, :] = meas_pcs
         output_dict["coil_curr"][i_iter + 1, :] = coil_curr
