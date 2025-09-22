@@ -95,6 +95,7 @@ def replay_rtgsfit(cfg: dict):
     lcfs_n = np.array([0], dtype=np.int32)
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
+    lcfs_err_code = np.array([0], dtype=np.int32)
 
     output_dict = {"meas_pcs" : np.zeros((cfg["n_iters"] + 1, n_meas_pcs), dtype=np.float64),
                    "coil_curr" : np.zeros((cfg["n_iters"] + 1, n_coil), dtype=np.float64),
@@ -107,7 +108,8 @@ def replay_rtgsfit(cfg: dict):
                    "lcfs_n" : np.zeros((cfg["n_iters"] + 1, 1), dtype=np.int32),
                    "coef" : np.zeros((cfg["n_iters"] + 1, n_coef), dtype=np.float64),
                    "flux_boundary" : np.zeros((cfg["n_iters"] + 1, 1), dtype=np.float64),
-                   "plasma_current" : np.zeros((cfg["n_iters"] + 1, 1), dtype=np.float64)}
+                   "plasma_current" : np.zeros((cfg["n_iters"] + 1, 1), dtype=np.float64),
+                   "lcfs_err_code" : np.zeros((cfg["n_iters"] + 1, 1), dtype=np.int32)}
     output_dict["meas_pcs"][0, :] = meas_pcs
     output_dict["coil_curr"][0, :] = coil_curr
     output_dict["flux_norm"][0, :] = flux_norm
@@ -120,6 +122,7 @@ def replay_rtgsfit(cfg: dict):
     output_dict["coef"][0, :] = coef
     output_dict["flux_boundary"][0, :] = flux_boundary
     output_dict["plasma_current"][0, :] = plasma_current
+    output_dict["lcfs_err_code"][0, :] = lcfs_err_code
 
     for i_iter in range(cfg["n_iters"]):
 
@@ -139,7 +142,8 @@ def replay_rtgsfit(cfg: dict):
             lcfs_n.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
             coef.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_boundary.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+            plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
         )
 
         print("Iteration:", i_iter + 1)
@@ -156,6 +160,7 @@ def replay_rtgsfit(cfg: dict):
         output_dict["coef"][i_iter + 1, :] = coef
         output_dict["flux_boundary"][i_iter + 1, :] = flux_boundary
         output_dict["plasma_current"][i_iter + 1, :] = plasma_current
+        output_dict["lcfs_err_code"][i_iter + 1, :] = lcfs_err_code
 
     # Save output_dict to a file
     np.save(cfg["rtgsfit_output_dict_path"], output_dict, allow_pickle=True)
