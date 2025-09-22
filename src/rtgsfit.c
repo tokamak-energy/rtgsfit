@@ -362,14 +362,19 @@ void rtgsfit(
     // lcfs_flux = find_flux_on_limiter(flux_total); // Using find_flux_on_limiter_xfiltered instead.
 
     // find x point & opt
-    find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n,
-            xpt_r, xpt_z, xpt_flux, &xpt_n);
+    // find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n,
+    //         xpt_r, xpt_z, xpt_flux, &xpt_n);
 
-    // select opt
-    i_opt = max_idx(opt_n, opt_flux);
-    axis_flux = opt_flux[i_opt];
-    axis_r = opt_r[i_opt];
-    axis_z = opt_z[i_opt];
+    // // select opt
+    // i_opt = max_idx(opt_n, opt_flux);
+    // axis_flux = opt_flux[i_opt];
+    // axis_r = opt_r[i_opt];
+    // axis_z = opt_z[i_opt];
+    // axis_flux is max flux on grid
+    i_opt = max_idx(N_GRID, flux_total);
+    axis_flux = flux_total[i_opt];
+    axis_r = R_GRID[i_opt];
+    axis_z = Z_GRID[i_opt];
 
     lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, axis_r, axis_z);
 
