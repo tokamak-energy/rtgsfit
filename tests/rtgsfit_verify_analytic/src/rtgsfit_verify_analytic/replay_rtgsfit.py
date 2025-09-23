@@ -97,7 +97,7 @@ if __name__ == "__main__":
     plasma_current = np.array([0.0], dtype=np.float64)
     lcfs_err_code = np.array([0], dtype=np.int32)
     lapack_dgelss_info = np.array([0], dtype=np.int64)
-    meas_model = np.array(n_meas, dtype=np.float64)
+    meas_model = np.zeros(n_meas, dtype=np.float64)
 
     output_dict = {"meas" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
                    "coil_curr" : np.zeros((cnst.N_ITERS + 1, n_coil), dtype=np.float64),
