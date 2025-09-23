@@ -73,6 +73,8 @@ def replay_rtgsfit(cfg: dict):
         n_lcfs_max = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:N_LCFS_MAX").data()
         n_coil = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:N_COIL").data()
         sens_names = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:SENS_NAMES").data()
+        flux_norm = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:INITIAL_COND:FLUX_NORM").data()
+        mask = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name_preshot"]}.PRESHOT:INITIAL_COND:MASK").data()
 
     n_r = len(r_vec)
     n_z = len(z_vec)
@@ -84,10 +86,10 @@ def replay_rtgsfit(cfg: dict):
 
     meas_pcs = np.zeros(n_meas_pcs, dtype=np.float64)
     coil_curr = np.zeros(n_coil, dtype=np.float64)
-    flux_norm = initial_flux_norm(r_vec, z_vec,
-                                  cfg["r_axis0"], cfg["z_axis0"],
-                                  cfg["rho_boundary0"])
-    mask = np.ones(n_grid, dtype=np.int32)
+    # flux_norm = initial_flux_norm(r_vec, z_vec,
+    #                               cfg["r_axis0"], cfg["z_axis0"],
+    #                               cfg["rho_boundary0"])
+    # mask = np.ones(n_grid, dtype=np.int32)
     flux_total = np.zeros(n_grid, dtype=np.float64)
     coef = np.zeros(n_coef, dtype=np.float64)
     error = np.array([0.0], dtype=np.float64)
