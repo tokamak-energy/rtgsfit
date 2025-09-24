@@ -387,7 +387,7 @@ def const_to_file(const_dict,
     with open(file_write, 'w') as file:
         file.write(new_c_code)
 
-if __name__ == "__main__":
+def generate_constants_c():
     data_dictionary = generate_data_dictionary()
     constant_h_path = os.path.join(cnst.RTGSFIT_PATH, 'src', 'constants.h')
     const_to_file(data_dictionary, file_read=constant_h_path)

@@ -3,10 +3,18 @@ rtgsfit_verify_analytic sets up and runs analytic verification tests for RTGSFIT
 
 ## Installation
 
-```
+```bash
 uv venv --python 3.13
 source .venv/bin/activate
 uv pip install -e .
+```
+
+## Testing
+
+Run tests with
+
+```python
+pytest -s tests
 ```
 
 ## Running Modules

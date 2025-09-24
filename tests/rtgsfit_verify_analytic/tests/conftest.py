@@ -4,18 +4,15 @@ from pathlib import Path
 import pytest
 import shutil
 
-from rtgsfit_verify_analytic import cnst
+from rtgsfit_verify_analytic import cnst, generate_constants_c, replay_rtgsfit
 
 @pytest.fixture(scope="session")
 def run_pipeline():
     """
     Run the full RTGSFIT pipeline once per test session.
     """
-    
-    subprocess.run(
-        ["python", "-m", "rtgsfit_verify_analytic.generate_constants_c"],
-        check=True
-    )
+
+    generate_constants_c.generate_constants_c()
 
     rtgsfit_src = Path(cnst.RTGSFIT_PATH) / "src"
     subprocess.run(["make", "clean"], cwd=rtgsfit_src, check=True)
@@ -24,16 +21,14 @@ def run_pipeline():
     shutil.copy(constants_c, rtgsfit_src / "constants.c")
 
     subprocess.run(
-        "make SHOT=0 RUN_NAME=no_mds",
+        "make SHOT=0 RUN_NAME=no_mds DEBUG=1",
         cwd=rtgsfit_src,
         check=True,
         shell=True
     )
 
-    subprocess.run(
-        ["python", "-m", "rtgsfit_verify_analytic.replay_rtgsfit"],
-        check=True
-    )
+    replay_rtgsfit.replay_rtgsfit()
+    
 
 @pytest.fixture(scope="session")
 def output_dict(run_pipeline):
