@@ -232,18 +232,18 @@ void rtgsfit(
     int xpt_n = 0;
     int opt_n = 0;
     // N_MEAS includes the number of regularisations.
-    // n_meas_w_correction is the number of measurements after the regularisations have been removed.
-    int n_meas_w_correction = N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS;
+    // n_meas_no_reg is the number of measurements after the regularisations have been removed.
+    int n_meas_no_reg = N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS;
     // The meas array doesn't need the regularisations as we use meas_no_coil
     // when the LAPACKE_dgelss function is called.
-    double meas[n_meas_w_correction];
+    double meas[n_meas_no_reg];
 
     // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
     // meas contains the post-processed measurements, but doesn't include the regularisation elements.
     // The regularisation elements are included in meas_no_coil.
     // meas_pcs contains the raw measurements from the PCS that need to be post-processed
     // using the SENSOR_REPLACEMENT_MATRIX.
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas_w_correction, N_SENS_PCS, 1.0,
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas_no_reg, N_SENS_PCS, 1.0,
             SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
 
     // will this be done during compilation?
