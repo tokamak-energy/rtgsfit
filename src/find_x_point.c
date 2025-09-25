@@ -82,26 +82,37 @@ void n_comb(
     break;
   case 1:
     *n_comb = 1;
-    idx_a[0] = 0; idx_b[0] = 0;
+    idx_a[0] = 0;
+    idx_b[0] = 0;
     break;
   case 2:
     *n_comb = 1;
-    idx_a[0] = 0; idx_b[0] = 1;
+    idx_a[0] = 0;
+    idx_b[0] = 1;
     break;
   case 3:
     *n_comb = 3;
-    idx_a[0] = 0; idx_b[0] = 1;
-    idx_a[1] = 0; idx_b[1] = 2;
-    idx_a[2] = 1; idx_b[2] = 2;
+    idx_a[0] = 0;
+    idx_b[0] = 1;
+    idx_a[1] = 0;
+    idx_b[1] = 2;
+    idx_a[2] = 1;
+    idx_b[2] = 2;
     break;
   case 4:
     *n_comb = 6;
-    idx_a[0] = 0; idx_b[0] = 1;
-    idx_a[1] = 0; idx_b[1] = 2;
-    idx_a[2] = 0; idx_b[2] = 3;
-    idx_a[3] = 1; idx_b[3] = 2;
-    idx_a[4] = 1; idx_b[4] = 3;
-    idx_a[5] = 2; idx_b[5] = 3;
+    idx_a[0] = 0;
+    idx_b[0] = 1;
+    idx_a[1] = 0;
+    idx_b[1] = 2;
+    idx_a[2] = 0;
+    idx_b[2] = 3;
+    idx_a[3] = 1;
+    idx_b[3] = 2;
+    idx_a[4] = 1;
+    idx_b[4] = 3;
+    idx_a[5] = 2;
+    idx_b[5] = 3;
     break;
   default:
     *n_comb = 0;
