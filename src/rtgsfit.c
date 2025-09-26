@@ -10,10 +10,13 @@
 #include <cblas.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
+
+#define N_MEAS_W_CORRECTION N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS
 
 
-int max_idx(
-        int n_arr,
+int32_t max_idx(
+        int32_t n_arr,
         double* arr
         )
 {
@@ -213,24 +216,22 @@ void rtgsfit(
         double* plasma_current, // output
         int32_t *lcfs_err_code, // output
         int64_t *lapack_dgelss_info, // output
-        double meas_model[N_MEAS] // output
+        double *meas_model, // output
+        int32_t n_meas_model // input
         )
 {
-    double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
-    double g_pls_grid[N_PLS*N_GRID];
-    int xpt_n = 0;
-    int opt_n = 0;
+    assert(n_meas_model == N_MEAS);
     // N_MEAS includes the number of regularisations.
-    int n_meas_w_correction = N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS;
     // The meas array doesn't need the regularisations as we use meas_no_coil
     // when the LAPACKE_dgelss function is called.
-    double meas[n_meas_w_correction];
+    double meas[N_MEAS_W_CORRECTION];
 
     // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas_w_correction, N_SENS_PCS, 1.0,
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS_W_CORRECTION, N_SENS_PCS, 1.0,
             SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
 
     // will this be done during compilation?
+    double g_coef_meas_w[N_COEF * N_MEAS];
     memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
 
     // subtract PF contributions from measurements
@@ -241,6 +242,7 @@ void rtgsfit(
     // make basis
     // This makes the transpose of the T_{yg} matrix in eqn. (61) of the Moret et al. (2015)
     // LIUQE paper, without the Delta_R * Delta_Z factor.
+    double g_pls_grid[N_PLS * N_GRID];
     make_basis(flux_norm, mask, g_pls_grid);
 
     // make meas-pls matrix
@@ -256,9 +258,10 @@ void rtgsfit(
     }
 
     double meas_no_coil_cp[N_MEAS];
+    double g_coef_meas_w_orig[N_COEF * N_MEAS];
     // copy measurment to coef due to overwritting in LAPACKE_dgelss
-    memcpy(meas_no_coil_cp, meas_no_coil, sizeof(double)*N_MEAS);
-    memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double)*N_COEF*N_MEAS);
+    memcpy(meas_no_coil_cp, meas_no_coil, sizeof(double) * N_MEAS);
+    memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double) * N_COEF * N_MEAS);
 
     // fit coeff or use dgelsd or  dgels or gelsy
     // BUXTON: g_coef_meas_w = "constraint_weights * fitting_matrix"
@@ -306,10 +309,10 @@ void rtgsfit(
     // modelled measurements
     // BUXTON: measurements
     // BUXTON: "meas_model = g_coef_meas_w_orig * coef"
-    //double meas_model[N_MEAS];    
+    // double meas_model_arr[N_MEAS];
     cblas_dgemv(CblasRowMajor, CblasTrans, N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig,
             N_MEAS, coef, 1, 0.0, meas_model, 1);
-
+    
     // find chi squared error between meas and model
     *chi_sq_err = 0.0;
     for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
@@ -367,6 +370,9 @@ void rtgsfit(
     double opt_r[N_XPT_MAX];
     double opt_z[N_XPT_MAX];
     double opt_flux[N_XPT_MAX];
+
+    int32_t xpt_n = 0;
+    int32_t opt_n = 0;
     find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n,
             xpt_r, xpt_z, xpt_flux, &xpt_n);
 
