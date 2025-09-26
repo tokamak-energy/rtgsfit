@@ -12,8 +12,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define N_MEAS_W_CORRECTION N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS
-
+#define N_MEAS_NO_REG N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS
 
 int32_t max_idx(
         int32_t n_arr,
@@ -222,20 +221,27 @@ void rtgsfit(
 {
     assert(n_meas_model == N_MEAS);
     // N_MEAS includes the number of regularisations.
+    // n_meas_no_reg is the number of measurements after the regularisations have been removed.
     // The meas array doesn't need the regularisations as we use meas_no_coil
     // when the LAPACKE_dgelss function is called.
-    double meas[N_MEAS_W_CORRECTION];
-
     // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS_W_CORRECTION, N_SENS_PCS, 1.0,
+    // meas contains the post-processed measurements, but doesn't include the regularisation elements.
+    // The regularisation elements are included in meas_no_coil.
+    // meas_pcs contains the raw measurements from the PCS that need to be post-processed
+    // using the SENSOR_REPLACEMENT_MATRIX.
+    double meas[N_MEAS_NO_REG];
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS_NO_REG, N_SENS_PCS, 1.0,
             SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
 
     // will this be done during compilation?
     double g_coef_meas_w[N_COEF * N_MEAS];
-    memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
+    memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double) * N_MEAS * N_COEF);
 
     // subtract PF contributions from measurements
     // Note that this also sets the regularisation elements of meas_no_coil to zero.
+    // meas_no_coil is the post-processed measurments with the PF coil contributions removed
+    // and includes the regularisation elements, which can be thought of as fake Rogowski coil
+    // measurements.
     double meas_no_coil[N_MEAS];
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 

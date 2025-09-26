@@ -8,7 +8,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define NP 4
+#define N_PATCH_CORNERS  4 // number of corners in a cell (rectangle)
+#define N_PATCH_PAIRS    6 // maximum number of unique unordered connections between up to 4 edge crossings
 #define N_R_MIN_1 (N_R - 1)
 #define N_R_PLS_1 (N_R + 1)
 #define N_Z_MIN_1 (N_Z - 1)
@@ -24,19 +25,25 @@
 #define ERR_VERT_BDRY 0b010000
 #define ERR_MASK_INDEX 0b100000
 
+/// Find crossings along the edges of a patch.
+/// 
+/// Evaluates the array `grad_patch` on each edge of the patch and determines where it
+/// changes sign (i.e., crosses zero). The function records:
+///   - the total number of crossings (0–4),
+///   - the coordinates of each crossing.
 void find_zero_on_edge(
     double* grad_patch,
     double* cross_row,
     double* cross_col,
     int32_t* count) {
-  const int32_t rowNum[NP] = {0, 0, 1, 1};
-  const int32_t colNum[NP] = {0, 1, 0, 1};
-  const int32_t nn_c[NP] = {1, 1, 0, 0};
-  const int32_t nn_r[NP] = {0, 1, 0, 1};
-  const int32_t nn_ind[NP] = {1, 3, 0, 2};
+  const int32_t rowNum[N_PATCH_CORNERS] = {0, 0, 1, 1};
+  const int32_t colNum[N_PATCH_CORNERS] = {0, 1, 0, 1};
+  const int32_t nn_c[N_PATCH_CORNERS] = {1, 1, 0, 0}; // next node column
+  const int32_t nn_r[N_PATCH_CORNERS] = {0, 1, 0, 1}; // next node row
+  const int32_t nn_ind[N_PATCH_CORNERS] = {1, 3, 0, 2}; // next node index
 
   *count = 0;
-  for (int ii = 0; ii < NP; ii++) {
+  for (int ii = 0; ii < N_PATCH_CORNERS; ii++) {
     if (fabs(grad_patch[ii]) < THRESH) {
       cross_col[*count] = colNum[ii];
       cross_row[*count] = rowNum[ii];
@@ -51,9 +58,17 @@ void find_zero_on_edge(
       (*count)++;
     }
   }
-  if (*count > 3) {printf("Alex, please, help me. I need your fix!\n");}
 }
 
+/// Generate all unique unordered index pairs between edge crossings in a patch.
+///
+/// unordered pairs of crossing indices. The results represent the line segments
+/// that could connect crossing points of a gradient function across patch edges.
+/// 
+/// @param[in]  n_count  Number of edge crossings in the patch (0–4).
+/// @param[out] n_comb   Number of unique unordered pairs generated.
+/// @param[out] idx_a    Array of first indices of each pair (size up to N_PATCH_PAIRS).
+/// @param[out] idx_b    Array of second indices of each pair (size up to N_PATCH_PAIRS).
 void n_comb(
     int32_t n_count,
     int32_t *n_comb,
@@ -61,6 +76,10 @@ void n_comb(
     int32_t *idx_b) {
 
   switch (n_count){
+  case 0:
+    *n_comb = 0;
+    printf("Error in n_comb: this function should not be called when n_count=0.\n");
+    break;
   case 1:
     *n_comb = 1;
     idx_a[0] = 0;
@@ -75,10 +94,29 @@ void n_comb(
     *n_comb = 3;
     idx_a[0] = 0;
     idx_b[0] = 1;
-    idx_a[1] = 1;
+    idx_a[1] = 0;
+    idx_b[1] = 2;
+    idx_a[2] = 1;
+    idx_b[2] = 2;
+    break;
+  case 4:
+    *n_comb = 6;
+    idx_a[0] = 0;
+    idx_b[0] = 1;
+    idx_a[1] = 0;
     idx_b[1] = 2;
     idx_a[2] = 0;
-    idx_b[2] = 2;
+    idx_b[2] = 3;
+    idx_a[3] = 1;
+    idx_b[3] = 2;
+    idx_a[4] = 1;
+    idx_b[4] = 3;
+    idx_a[5] = 2;
+    idx_b[5] = 3;
+    break;
+  default:
+    *n_comb = 0;
+    printf("Error in n_comb: unexpected n_count=%d. This should not be possible.\n", n_count);
     break;
   }
 }
@@ -113,19 +151,6 @@ void find_xpoint_cross(
   }
 }
 
-/*    double matrix_inv[] = { b_diff_row / det, -b_diff_col / det, */
-/*                          -a_diff_row / det, a_diff_col / det };*/
-/*   */
-/*    double b_vec[] = {a_start_col - b_start_col, a_row_start - b_row_start};*/
-/*    double matrix = {a_diff_col, b_diff_col, a_diff_row, b_diff_row};*/
-/*    double matrix[] = {a_diff_row, 0.0, -1.0, 0.0,*/
-/*                 0.0, b_diff_row, -1.0, 0.0,*/
-/*                 a_diff_col, 0.0, 0.0, -1.0,*/
-/*                 0.0, b_diff_col, 0.0, -1.0};*/
-/*                 */
-/*    double vector[] = {*/
-/*                 */
-
 void find_null_in_gradient_march(
     double* flux,
     double* opt_r,
@@ -157,12 +182,12 @@ void find_null_in_gradient_march(
   gradient_r(grad_z, hess_rz);
   for (int32_t i_row = 0; i_row < N_Z_MIN_1; i_row++) {
     for (int32_t i_col = 0; i_col < N_R_MIN_1; i_col++)  {
-      double gr_patch[NP];
-      double gz_patch[NP];
-      double grs_row[NP];
-      double gzs_row[NP];
-      double grs_col[NP];
-      double gzs_col[NP];
+      double gr_patch[N_PATCH_CORNERS];
+      double gz_patch[N_PATCH_CORNERS];
+      double grs_row[N_PATCH_CORNERS];
+      double gzs_row[N_PATCH_CORNERS];
+      double grs_col[N_PATCH_CORNERS];
+      double gzs_col[N_PATCH_CORNERS];
       int32_t idx = i_row * N_R + i_col;
       gr_patch[0] = grad_r[idx];
       gr_patch[1] = grad_r[idx + 1];
@@ -179,10 +204,10 @@ void find_null_in_gradient_march(
       find_zero_on_edge(gz_patch, gzs_row, gzs_col, &count_z);
 
       if ((count_r > 0) && (count_z > 0)) {
-        int32_t idx_r_start[NP];
-        int32_t idx_r_end[NP];
-        int32_t idx_z_start[NP];
-        int32_t idx_z_end[NP];
+        int32_t idx_r_start[N_PATCH_PAIRS];
+        int32_t idx_r_end[N_PATCH_PAIRS];
+        int32_t idx_z_start[N_PATCH_PAIRS];
+        int32_t idx_z_end[N_PATCH_PAIRS];
         int32_t n_comb_r;
         int32_t n_comb_z;
         n_comb(count_r, &n_comb_r, idx_r_start, idx_r_end);
@@ -296,73 +321,6 @@ double lin_intrp(
   }
   return flux_at_null;
 }
-
-
-void find_null_in_gradient(
-    double *flux,
-    double *opt_r,
-    double *opt_z,
-    double *opt_flux,
-    int32_t *opt_n,
-    double *xpt_r,
-    double *xpt_z,
-    double *xpt_flux,
-    int32_t *xpt_n) {
-  double grad_z[N_GRID];
-  double grad_r[N_GRID];
-  double hess_zz[N_GRID];
-  double hess_rr[N_GRID];
-  double hess_rz[N_GRID];
-
-  *opt_n = 0;
-  *xpt_n = 0;
-  // find hessian & gradients
-  gradient_z(flux, grad_z);
-  gradient_r(flux, grad_r);
-  hessian_zz(flux, hess_zz);
-  hessian_rr(flux, hess_rr);
-  gradient_r(grad_z, hess_rz);
-
-  for (int i_row = 1; i_row < (N_Z_MIN_1); i_row++) {
-    for (int i_col = 1; i_col < (N_R_MIN_1); i_col++) {
-      int32_t idx = i_row * N_R + i_col;
-      double hess_det = hess_zz[idx] * hess_rr[idx] - hess_rz[idx] * hess_rz[idx];
-      double dist_to_null_r = (grad_z[idx] * hess_rz[idx] - hess_zz[idx] * grad_r[idx]) / \
-        hess_det;
-      double dist_to_null_z = (grad_r[idx] * hess_rz[idx] - hess_rr[idx] * grad_z[idx]) / \
-        hess_det;
-
-      double abs_dist_null_r = fabs(dist_to_null_r);
-      double abs_dist_null_z = fabs(dist_to_null_z);
-
-      if (abs_dist_null_r < 0.5 * DR && abs_dist_null_z < 0.5 * DZ && MASK_LIM[idx]) {
-        double hess_rr_at_null = lin_intrp(hess_rr, idx, dist_to_null_r,
-        dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
-        double hess_zz_at_null = lin_intrp(hess_zz, idx, dist_to_null_r,
-        dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
-        double hess_rz_at_null = lin_intrp(hess_rz, idx, dist_to_null_r,
-        dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
-        double hess_det_at_null = hess_rr_at_null * hess_zz_at_null - \
-          hess_rz_at_null * hess_rz_at_null;
-
-        if (hess_det_at_null > 0.0 && hess_rr_at_null < 0.0) {
-          opt_r[*opt_n] = R_VEC[i_col] + dist_to_null_r;
-          opt_z[*opt_n] = Z_VEC[i_row] + dist_to_null_z;
-          opt_flux[*opt_n] = lin_intrp(flux, idx, dist_to_null_r,
-          dist_to_null_z,  abs_dist_null_r, abs_dist_null_z);
-          (*opt_n)++;
-        } else if (hess_det_at_null < 0.0) {
-          xpt_r[*xpt_n] = R_VEC[i_col] + dist_to_null_r;
-          xpt_z[*xpt_n] = Z_VEC[i_row] + dist_to_null_z;
-          xpt_flux[*xpt_n] = lin_intrp(flux, idx, dist_to_null_r,
-          dist_to_null_z, abs_dist_null_r, abs_dist_null_z);
-          (*xpt_n)++;
-        }
-      }
-    }
-  }
-}
-
 
 void find_lcfs_rz(
     double *flux,
