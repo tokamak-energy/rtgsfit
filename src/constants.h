@@ -13,10 +13,19 @@ extern const int N_GRID;
 /* N_MEAS : number of measurements */
 extern const int N_MEAS;
 
+/* N_FLUX_LOOPS : number of flux loop measurements */
+extern const int N_FLUX_LOOPS;
+
+/* N_BP_PROBES : number of bp-probe measurements */
+extern const int N_BP_PROBES;
+
+/* N_ROGOWSKI_COILS : number of Rogowski coil measurements */
+extern const int N_ROGOWSKI_COILS;
+
 /* N_COIL : number of PF coils */
 extern const int N_COIL;
 
-/* N_BOUND : number of boundary points */
+/* N_LTRB : number of boundary points */
 extern const int N_LTRB;
 
 /* N_LCFS_MAX : max storage allocated for find LCFS coordinates */ 
@@ -55,8 +64,20 @@ extern const double Z_VEC[];
 /* WEIGHTS: weight values (length N_MEAS) */
 extern const double WEIGHT[];
 
+/* SENSOR_REPLACEMENT_MATRIX : Replace "bad" sensors with "good" sensors */
+extern const double SENSOR_REPLACEMENT_MATRIX[];
+
+/* N_SENS_PCS : number of sensors read from PCS (i.e. the "good" sensors) */ 
+extern const int N_SENS_PCS;
+
 /* N_LIMIT : number of limit points */
 extern const int N_LIMIT;
+
+/* LIMIT_R : R values of the limit points (length N_LIMIT) */
+extern const double LIMIT_R[];
+
+/* LIMIT_Z : Z values of the limit points (length N_LIMIT) */
+extern const double LIMIT_Z[];
 
 /* N_INTRP : number of interpolation points */
 extern const int N_INTRP;
@@ -79,19 +100,24 @@ extern const double Z_GRID[];
 /* INV_R_MU0 : 1/(mu0 * R_GRID) */
 extern const double INV_R_MU0[];
 
-/* INV_R_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
+/* INV_R_LTRB_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
 extern const double INV_R_LTRB_MU0[];
 
-/* R_MU0_DZ2 : mu0 * R_GRID * D_ROW * D_ROW */
+/* R_MU0_DZ2 : 2pi * mu0 * R_GRID * D_ROW * D_ROW */
 extern const double R_MU0_DZ2[];
 
-/* G_WEIGHT_MEAS_GRID : greens matrix (N_MEAS, N_GRID) */
+/* G_GRID_MEAS_WEIGHT : greens matrix (N_GRID, N_MEAS)
+   This is effectively the M_{fy}, B_{my} terms in eqn (61) of the 
+   Moret et al. (2015) LIUQE paper  transposed */
 extern const double G_GRID_MEAS_WEIGHT[];
 
-/* G_WEIGHT_MEAS_GRID : greens matrix (N_MEAS, N_COEF) */
+/* G_COEF_MEAS_WEIGHT : greens matrix (N_MEAS, N_COEF) (but stored in column-major format)
+   This is effectively the matrix in eqn (61) of the Moret et al. (2015) LIUQE paper */
 extern const double G_COEF_MEAS_WEIGHT[];
 
-/* G_BOUND : greens matrix (N_BOUND, N_BOUND) */
+/* G_LTRB : greens matrix (N_LTRB, N_LTRB)
+   This is effectively the M(r, z, r' z') function in the second line of eqn (51) of
+   the Moret et al. (2015) LIUQE paper. */
 extern const double G_LTRB[];
 
 /* G_MEAS_COIL : greens matrix (N_MEAS, N_COIL) */
@@ -100,6 +126,7 @@ extern const double G_MEAS_COIL[];
 /* G_GRID_COIL : greens matrix (N_GRID, N_COIL) */
 extern const double G_GRID_COIL[];
 
+/* G_GRID_VESSEL : Greens matrix between grid and vessel degrees of freedom (N_GRID, N_VESS) */
 extern const double G_GRID_VESSEL[];
 
 /* LOWER_BAND : lower triangular matrix (N_GRID, N_COL) CHECK!*/

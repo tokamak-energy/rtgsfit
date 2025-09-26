@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools==80.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rtgsfit_vs_gsfit"
+version = "2025.0.0"
+dependencies = [
+  "numpy==1.26.4",
+  "matplotlib==3.10.6",
+  "scipy>=1.16.2",
+  "ipython>=8.20.0",
+  "jupyter-client>=8.6.0",
+  "psutil>=5.9.0",
+  "pytest>=8.4.2",
+  "pytest-xdist==3.8.0",
+  "pyzmq>=25.1.0",
+
+  # GSFIT stack
+  "gsfit @ git+https://github.com/tokamak-energy/gsfit.git@main",
+  "f90nml==1.4.5",
+  "setuptools-git-versioning==2.1.0",
+  "toml==0.10.2",
+
+  # ST40 Database stack
+  "st40-database==0.0.62+git.c8a2a4cb",
+  "dash>=3.2.0",
+  "flask>=3.1.2",
+  "flexcache==0.3",
+  "flexparser==0.4",
+  "mdsthin==1.5.1",
+  "mysql-connector-python==9.4.0",
+  "narwhals==2.5.0",
+  "natsort==8.4.0",
+  "pandas>=2.3.2",
+  "pint==0.25",
+  "pint-xarray==0.6.0",
+  "plotly>=6.3.0",
+  "requests>=2.32.5",
+  "shapely==2.1.1",
+  "xarray>=2025.9.0",
+
+  # standard-utility and tooling
+  "standard-utility==0.3.126+git.23024a67",
+  "coverage==7.10.6",
+  "filelock==3.19.1",
+  "mypy==1.18.1",
+  "mypy-extensions==1.1.0",
+  "pathspec==0.12.1",
+  "pytest-cov==7.0.0",
+  "pytest-mypy==1.0.1"
+]
+requires-python = ">=3.9"
+
+authors = [
+  { name = "Alex Prokopyszyn", email = "alex.prokopyszyn@tokamakenergy.com" }
+]
+maintainers = [
+  { name = "Alex Prokopyszyn", email = "alex.prokopyszyn@tokamakenergy.com" }
+]
+
+description = "This repository sets up and runs both GSFIT and RTGSFIT. It uses MDSPlus data only available on Tokamak Energy's network."
+readme = "README.md"
+license = { text = "GNU GENERAL PUBLIC LICENSE" }
+keywords = ["Grad", "Shafranov"]
+classifiers = [
+  "Programming Language :: Python :: 3"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

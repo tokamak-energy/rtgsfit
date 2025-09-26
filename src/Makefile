@@ -1,16 +1,22 @@
 # Check if FILENAME is defined as a command line argument
-ifndef DATAFILE
-    ifneq ($(MAKECMDGOALS),clean)
-    $(error DATAFILE is not defined. Please provide a value using 'make DATAFILE=<your_file_name>')
-    endif
+ifndef SHOT
+	ifndef RUN_NAME
+		ifneq ($(MAKECMDGOALS),clean)
+		$(error SHOT and RUN_NAME are not defined. Please provide values using 'make SHOT=<integer> RUN_NAME=<string>')
+		endif
+	endif
 endif
 
 CC = gcc
-DEBUG = 1
+ifndef DEBUG
+	DEBUG = 0
+endif
+# print the value of DEBUG
+$(info DEBUG is set to $(DEBUG))
 
 ifeq ($(DEBUG), 1)
-	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread
-	LDFLAGS = -pg -shared
+	CFLAGS = -fPIC -Wall -Warray-bounds -pg -std=gnu11 -Ofast -pthread -g3 -O0 -DDEBUG
+	LDFLAGS = -pg -shared -g3
 else
 	CFLAGS = -fPIC -Wall -Warray-bounds -std=gnu11 -march=native -Ofast -funroll-loops -frename-registers -flto
 	LDFLAGS = -shared -Wl,-Ofast -pthread
@@ -37,16 +43,16 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
+	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas -llapacke
 
 $(OBJS): %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
 
 rtgsfit.o: rtgsfit.c
-	$(CC) $(CFLAGS) -o $@  -c $< -I/usr/include/lapacke
+	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< -I/usr/include/lapacke
 
 constants.c: constants.h
-	python ../utility/const_to_file.py $(DATAFILE)
+	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
 
 clean:
 	rm -f $(SHARED) $(OBJS)  constants.c *.pyc

@@ -62,3 +62,6 @@ tests/c_*.py
 
 # Binary data files
 *.nc
+
+# Virtual environment
+venv_rtgsfit/
