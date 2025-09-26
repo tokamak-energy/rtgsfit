@@ -10,10 +10,12 @@
 #include <cblas.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
+#define N_MEAS_NO_REG N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS
 
-int max_idx(
-        int n_arr,
+int32_t max_idx(
+        int32_t n_arr,
         double* arr
         )
 {
@@ -135,21 +137,20 @@ double find_flux_on_limiter_xfiltered(double flux_total[],
                                       double axis_z)
 {
 
-    int i_limit, i_intrp, idx, skip;
-    double flux_limit_max, flux_limit;
-    double dot_product;
+    int skip;
+    double flux_limit_max;
 
     flux_limit_max = -DBL_MAX;
 
-    for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
+    for (int32_t i_limit = 0; i_limit < N_LIMIT; i_limit++)
     {
 
         // If dot product of (R_LIM[i_limit] - xpt_r, Z_LIM[i_limit] - xpt_z) and 
         // (axis_r - xpt_r, axis_z - xpt_z) is negative for any xpt, skip this limit point
-        skip=0;
-        for (int i_xpt = 0; i_xpt < xpt_n; i_xpt++)
+        skip = 0;
+        for (int32_t i_xpt = 0; i_xpt < xpt_n; i_xpt++)
         {
-            dot_product = (LIMIT_R[i_limit] - xpt_r[i_xpt]) * (axis_r - xpt_r[i_xpt]) +
+            double dot_product = (LIMIT_R[i_limit] - xpt_r[i_xpt]) * (axis_r - xpt_r[i_xpt]) +
                           (LIMIT_Z[i_limit] - xpt_z[i_xpt]) * (axis_z - xpt_z[i_xpt]);
             if (dot_product < 0.0)
             {
@@ -160,10 +161,10 @@ double find_flux_on_limiter_xfiltered(double flux_total[],
 
         if (skip) continue;
 
-        flux_limit = 0.0;
-        for (i_intrp = 0; i_intrp < N_INTRP; i_intrp++)
+        double flux_limit = 0.0;
+        for (int32_t i_intrp = 0; i_intrp < N_INTRP; i_intrp++)
         {
-            idx = i_limit*N_INTRP + i_intrp;
+            int32_t idx = i_limit * N_INTRP + i_intrp;
             flux_limit += LIMIT_WEIGHT[idx] * flux_total[LIMIT_IDX[idx]];
         }
         if (flux_limit > flux_limit_max)
@@ -199,66 +200,55 @@ void normalise_flux(
     }
 }
 
-
-
 void rtgsfit(
         double* meas_pcs, // input
         double* coil_curr, // input
         double* flux_norm, // input/output
-        int* mask, // input/output
+        int32_t* mask, // input/output
         double* flux_total, // output
         double* chi_sq_err, // output
         double* lcfs_r, // output
         double* lcfs_z, // output
-        int* lcfs_n, // output
+        int32_t* lcfs_n, // output
         double* coef, // output
         double* flux_boundary, // output
         double* plasma_current, // output
-        int32_t *lcfs_err_code // output
+        int32_t *lcfs_err_code, // output
+        int64_t *lapack_dgelss_info, // output
+        double *meas_model, // output
+        int32_t n_meas_model // input
         )
 {
-    double g_coef_meas_w[N_COEF*N_MEAS], g_coef_meas_w_orig[N_COEF*N_MEAS];
-    double g_pls_grid[N_PLS*N_GRID];
-    int info, i_opt, i_xpt, i_meas;
-    int rank;
-    double rcond = -1.0;
-    double xpt_flux_max;
-    double single_vals[N_COEF], meas_no_coil_cp[N_MEAS];
-    double source[N_GRID], meas_no_coil[N_MEAS], meas_model[N_MEAS];
-    double flux_pls[N_GRID], flux_vessel[N_GRID];
-    double lcfs_flux, axis_flux, axis_r, axis_z;
-    double xpt_r[N_XPT_MAX], xpt_z[N_XPT_MAX], xpt_flux[N_XPT_MAX];
-    double opt_r[N_XPT_MAX], opt_z[N_XPT_MAX], opt_flux[N_XPT_MAX];
-    int xpt_n = 0;
-    int opt_n = 0;
+    assert(n_meas_model == N_MEAS);
     // N_MEAS includes the number of regularisations.
     // n_meas_no_reg is the number of measurements after the regularisations have been removed.
-    int n_meas_no_reg = N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS;
     // The meas array doesn't need the regularisations as we use meas_no_coil
     // when the LAPACKE_dgelss function is called.
-    double meas[n_meas_no_reg];
-
     // meas = SENSOR_REPLACEMENT_MATRIX * meas_pcs
     // meas contains the post-processed measurements, but doesn't include the regularisation elements.
     // The regularisation elements are included in meas_no_coil.
     // meas_pcs contains the raw measurements from the PCS that need to be post-processed
     // using the SENSOR_REPLACEMENT_MATRIX.
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_meas_no_reg, N_SENS_PCS, 1.0,
+    double meas[N_MEAS_NO_REG];
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS_NO_REG, N_SENS_PCS, 1.0,
             SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
 
     // will this be done during compilation?
-    memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double)*N_MEAS*N_COEF);
+    double g_coef_meas_w[N_COEF * N_MEAS];
+    memcpy(g_coef_meas_w, G_COEF_MEAS_WEIGHT, sizeof(double) * N_MEAS * N_COEF);
 
     // subtract PF contributions from measurements
     // Note that this also sets the regularisation elements of meas_no_coil to zero.
     // meas_no_coil is the post-processed measurments with the PF coil contributions removed
     // and includes the regularisation elements, which can be thought of as fake Rogowski coil
-    // measurements. 
+    // measurements.
+    double meas_no_coil[N_MEAS];
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
 
     // make basis
     // This makes the transpose of the T_{yg} matrix in eqn. (61) of the Moret et al. (2015)
     // LIUQE paper, without the Delta_R * Delta_Z factor.
+    double g_pls_grid[N_PLS * N_GRID];
     make_basis(flux_norm, mask, g_pls_grid);
 
     // make meas-pls matrix
@@ -271,11 +261,13 @@ void rtgsfit(
     for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
     {
         meas_no_coil[i_meas] *= WEIGHT[i_meas];
-    } 
+    }
 
+    double meas_no_coil_cp[N_MEAS];
+    double g_coef_meas_w_orig[N_COEF * N_MEAS];
     // copy measurment to coef due to overwritting in LAPACKE_dgelss
-    memcpy(meas_no_coil_cp, meas_no_coil, sizeof(double)*N_MEAS);
-    memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double)*N_COEF*N_MEAS);
+    memcpy(meas_no_coil_cp, meas_no_coil, sizeof(double) * N_MEAS);
+    memcpy(g_coef_meas_w_orig, g_coef_meas_w, sizeof(double) * N_COEF * N_MEAS);
 
     // fit coeff or use dgelsd or  dgels or gelsy
     // BUXTON: g_coef_meas_w = "constraint_weights * fitting_matrix"
@@ -283,7 +275,10 @@ void rtgsfit(
     // BUXTON: GSFit.rs uses "dgelss" = same!!
     // "single_vals" = singular values, not used
     // "rcond" = -1 == machine precision
-    info = LAPACKE_dgelss(
+    int rank;
+    double rcond = -1.0;
+    double single_vals[N_COEF];
+    *lapack_dgelss_info = (int64_t)LAPACKE_dgelss(
       LAPACK_COL_MAJOR,
       N_MEAS,
       N_COEF,
@@ -304,6 +299,7 @@ void rtgsfit(
     // BUXTON: matrix-vector multiplication; result stored in "source"
     // BUXTON: "source = g_pls_grid * coef"
     // BUXTON: source = plasma current on (R, Z) grid
+    double source[N_GRID];
     cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid,
             N_GRID, coef, 1, 0.0, source, 1);
 
@@ -319,9 +315,10 @@ void rtgsfit(
     // modelled measurements
     // BUXTON: measurements
     // BUXTON: "meas_model = g_coef_meas_w_orig * coef"
-    cblas_dgemv(CblasRowMajor, CblasTrans,  N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig,
+    // double meas_model_arr[N_MEAS];
+    cblas_dgemv(CblasRowMajor, CblasTrans, N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig,
             N_MEAS, coef, 1, 0.0, meas_model, 1);
-
+    
     // find chi squared error between meas and model
     *chi_sq_err = 0.0;
     for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
@@ -338,6 +335,7 @@ void rtgsfit(
 
     //  poisson solver -> psi_plasma
     // BUXTON: calculate psi_plasma
+    double flux_pls[N_GRID];
     poisson_solver(source, flux_pls);
 
     // calculate coil psi on grid
@@ -348,6 +346,8 @@ void rtgsfit(
     // calculate vessel flux on grid
     if (N_VESS > 0)
     {
+
+        double flux_vessel[N_GRID];
         cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_VESS, 1.0, G_GRID_VESSEL,
                 N_VESS, &coef[N_PLS], 1, 0.0, flux_vessel, 1);
 
@@ -370,22 +370,31 @@ void rtgsfit(
     // lcfs_flux = find_flux_on_limiter(flux_total); // Using find_flux_on_limiter_xfiltered instead.
 
     // find x point & opt
+    double xpt_r[N_XPT_MAX];
+    double xpt_z[N_XPT_MAX];
+    double xpt_flux[N_XPT_MAX];
+    double opt_r[N_XPT_MAX];
+    double opt_z[N_XPT_MAX];
+    double opt_flux[N_XPT_MAX];
+
+    int32_t xpt_n = 0;
+    int32_t opt_n = 0;
     find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n,
             xpt_r, xpt_z, xpt_flux, &xpt_n);
 
     // select opt
-    i_opt = max_idx(opt_n, opt_flux);
-    axis_flux = opt_flux[i_opt];
-    axis_r = opt_r[i_opt];
-    axis_z = opt_z[i_opt];
+    int32_t i_opt = max_idx(opt_n, opt_flux);
+    double axis_flux = opt_flux[i_opt];
+    double axis_r = opt_r[i_opt];
+    double axis_z = opt_z[i_opt];
 
-    lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, axis_r, axis_z);
+    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, axis_r, axis_z);
 
     // select xpt
     if (xpt_n > 0)
     {
-        i_xpt = max_idx(xpt_n, xpt_flux);
-        xpt_flux_max = xpt_flux[i_xpt];
+        int32_t i_xpt = max_idx(xpt_n, xpt_flux);
+        double xpt_flux_max = xpt_flux[i_xpt];
         xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*axis_flux;
         if (xpt_flux_max > lcfs_flux)
         {

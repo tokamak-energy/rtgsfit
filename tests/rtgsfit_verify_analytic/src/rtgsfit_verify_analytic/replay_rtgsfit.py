@@ -43,7 +43,9 @@ def replay_rtgsfit():
         ctypes.POINTER(ctypes.c_double),  # coef
         ctypes.POINTER(ctypes.c_double),  # flux_boundary
         ctypes.POINTER(ctypes.c_double),   # plasma_current
-        ctypes.POINTER(ctypes.c_int32)   # lcfs_err_code
+        ctypes.POINTER(ctypes.c_int32),   # lcfs_err_code
+        ctypes.POINTER(ctypes.c_int64),  # lapack dgelss info
+        ctypes.POINTER(ctypes.c_double)   # measured inputs
     ]
     # Define the return type for the rtgsfit function
     rtgsfit_lib.rtgsfit.restype = ctypes.c_int
@@ -94,6 +96,8 @@ def replay_rtgsfit():
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
     lcfs_err_code = np.array([0], dtype=np.int32)
+    lapack_dgelss_info = np.array([0], dtype=np.int64)
+    meas_model = np.zeros(n_meas, dtype=np.float64)
 
     output_dict = {"meas" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
                    "coil_curr" : np.zeros((cnst.N_ITERS + 1, n_coil), dtype=np.float64),
@@ -144,7 +148,9 @@ def replay_rtgsfit():
             coef.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_boundary.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+            lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+            lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         )
 
         print("Iteration:", i_iter + 1)
