@@ -275,7 +275,7 @@ void rtgsfit(
     // BUXTON: GSFit.rs uses "dgelss" = same!!
     // "single_vals" = singular values, not used
     // "rcond" = -1 == machine precision
-    int rank;
+    lapack_int rank;
     double rcond = -1.0;
     double single_vals[N_COEF];
     *lapack_dgelss_info = (int64_t)LAPACKE_dgelss(
