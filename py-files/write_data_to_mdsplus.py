@@ -45,7 +45,7 @@ results = NestedDict()
 
 ## Store results
 results["TWO_D"]["PSI"] = psi
-#results["TWO_D"]["MASK"] = mask
+results["TWO_D"]["MASK"] = mask
 results["TWO_D"]["RGRID"] = r
 results["TWO_D"]["ZGRID"] = z
 results["TIME"] = time

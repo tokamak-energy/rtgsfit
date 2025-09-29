@@ -45,7 +45,8 @@ def replay_rtgsfit():
         ctypes.POINTER(ctypes.c_double),   # plasma_current
         ctypes.POINTER(ctypes.c_int32),   # lcfs_err_code
         ctypes.POINTER(ctypes.c_int64),  # lapack dgelss info
-        ctypes.POINTER(ctypes.c_double)   # measured inputs
+        ctypes.POINTER(ctypes.c_double),   # meas_model
+        ctypes.c_int32   # number of elements of the array of measured inputs
     ]
     # Define the return type for the rtgsfit function
     rtgsfit_lib.rtgsfit.restype = ctypes.c_int
@@ -150,7 +151,8 @@ def replay_rtgsfit():
             plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+            meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            ctypes.c_int32(len(meas_model))
         )
 
         print("Iteration:", i_iter + 1)
