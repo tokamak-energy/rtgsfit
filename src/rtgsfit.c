@@ -215,11 +215,9 @@ void rtgsfit(
         double* plasma_current, // output
         int32_t *lcfs_err_code, // output
         int64_t *lapack_dgelss_info, // output
-        double *meas_model, // output
-        int32_t n_meas_model // input
+        double *meas_model // output
         )
 {
-    assert(n_meas_model == N_MEAS);
     // N_MEAS includes the number of regularisations.
     // n_meas_no_reg is the number of measurements after the regularisations have been removed.
     // The meas array doesn't need the regularisations as we use meas_no_coil
