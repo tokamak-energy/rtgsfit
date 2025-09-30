@@ -417,7 +417,6 @@ int inside_lcfs(
   double r_end = DBL_MAX;
   double r_tmp[N_R_TIMES_2];
   double z_tmp[N_Z_TIMES_2];
-  int32_t n_mid_plane_bdry = 0;
 
   memset(mask, 0, N_GRID * sizeof(int));
 
@@ -427,6 +426,7 @@ int inside_lcfs(
   // Add r points to `r_tmp` which are at the same z as the o-point
   // Note: there should be at least the LFS and HFS points. If not, then there is an error
   // But there may be more points (around the solenoid)
+  int32_t n_mid_plane_bdry = 0;
   for (int32_t i_lcfs = 0; i_lcfs < lcfs_n; i_lcfs++) {
     if (fabs(lcfs_z[i_lcfs] - z_nearest) < THRESH) {
       r_tmp[n_mid_plane_bdry] = lcfs_r[i_lcfs];
