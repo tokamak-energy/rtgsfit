@@ -7,7 +7,7 @@
 
   "pulse_num": 13343,
   "pulse_num_write": 52013343,
-  "run_name": "R_V_G",
+  "run_name": "t030ms",
   "run_description": "Using a single degree of freedom for p_prime and ff_prime.",
 
   "r_axis0": 0.5,

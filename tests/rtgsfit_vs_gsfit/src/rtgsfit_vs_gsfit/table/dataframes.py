@@ -152,6 +152,33 @@ def pf_coil_gsfit_df(cfg: dict) -> pd.DataFrame:
 
     return df
 
+def plasma_current_df(iteration: int, cfg: dict) -> pd.DataFrame:
+    """
+    Create a DataFrame for the plasma current from RTGSFIT and GSFIT.
+    Just one row with two columns. Literally just the plasma current.
+    so just a 1x2 dataframe.
+    """
+
+    def plasma_current_rtgsfit(iteration: int, cfg: dict) -> np.ndarray:
+        rtgsfit_output_dict = np.load(cfg["rtgsfit_output_dict_path"],
+                                    allow_pickle=True).item()
+        return rtgsfit_output_dict["plasma_current"][iteration, 0]
+    
+    def plasma_current_gsfit(cfg: dict) -> np.ndarray:
+        with mdsthin.Connection('smaug') as conn:
+            conn.openTree("GSFIT", cfg["pulse_num_write"])
+            plasma_current = conn.get(f"\\GSFIT::TOP.{cfg['run_name']}.GLOBAL:IP")[0]
+        return plasma_current
+
+    rtgsfit_val = plasma_current_rtgsfit(iteration, cfg)
+    gsfit_val = plasma_current_gsfit(cfg)
+
+    df = pd.DataFrame([[rtgsfit_val, gsfit_val]],
+                    columns=["RTGSFIT", "GSFIT"])
+    pd.set_option("display.float_format", "{:.2e}".format)
+
+    return df
+
 if __name__ == "__main__":
 
     import time

@@ -12,7 +12,7 @@ def save_dfs_to_csv(iterations: np.ndarray, cfg: dict) -> None:
     Save DataFrames to a CSV with titles between them and spaces.
     """
     from rtgsfit_vs_gsfit.table.dataframes import ivc_df, pf_coil_gsfit_df, \
-        pf_coil_rtgsfit_df, rog_df
+        pf_coil_rtgsfit_df, plasma_current_df, rog_df
 
     this_plot_dir = os.path.join(cfg["plots_this_run_dir"], "dataframes")
     os.makedirs(this_plot_dir, exist_ok=True)
@@ -46,6 +46,11 @@ def save_dfs_to_csv(iterations: np.ndarray, cfg: dict) -> None:
             f.write("\n")
             f.write(f"GSFIT PF Coil Currents [A]:\n")
             pf_coil_gsfit_df.to_csv(f, index=False, float_format="%8.1e")
+            f.write("\n")
+            f.write(f"Plasma Current [A]:\n")
+            df_plasma_current = plasma_current_df(iteration, cfg)
+            df_plasma_current.columns = [f"{col:>8}" for col in df_plasma_current.columns]
+            df_plasma_current.to_csv(f, index=False, float_format="%8.1e")
 
 if __name__ == "__main__":
 
