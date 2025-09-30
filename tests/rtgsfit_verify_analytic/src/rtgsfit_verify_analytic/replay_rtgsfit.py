@@ -31,22 +31,22 @@ def replay_rtgsfit():
 
     # Define the argument types for the rtgsfit function
     rtgsfit_lib.rtgsfit.argtypes = [
-        ctypes.POINTER(ctypes.c_double),  # meas
-        ctypes.POINTER(ctypes.c_double),  # coil_curr
-        ctypes.POINTER(ctypes.c_double),  # flux_norm
-        ctypes.POINTER(ctypes.c_int),     # mask
-        ctypes.POINTER(ctypes.c_double),  # flux_total
-        ctypes.POINTER(ctypes.c_double),  # error
-        ctypes.POINTER(ctypes.c_double),  # lcfs_r
-        ctypes.POINTER(ctypes.c_double),  # lcfs_z
-        ctypes.POINTER(ctypes.c_int),     # lcfs_n
-        ctypes.POINTER(ctypes.c_double),  # coef
-        ctypes.POINTER(ctypes.c_double),  # flux_boundary
-        ctypes.POINTER(ctypes.c_double),   # plasma_current
-        ctypes.POINTER(ctypes.c_int32),   # lcfs_err_code
-        ctypes.POINTER(ctypes.c_int64),  # lapack dgelss info
-        ctypes.POINTER(ctypes.c_double),   # meas_model
-        ctypes.c_int32   # number of elements of the array of measured inputs
+        ctypes.POINTER(ctypes.c_double), # meas
+        ctypes.POINTER(ctypes.c_double), # coil_curr
+        ctypes.POINTER(ctypes.c_double), # flux_norm
+        ctypes.POINTER(ctypes.c_int), # mask
+        ctypes.POINTER(ctypes.c_double), # flux_total
+        ctypes.POINTER(ctypes.c_double), # error
+        ctypes.POINTER(ctypes.c_double), # lcfs_r
+        ctypes.POINTER(ctypes.c_double), # lcfs_z
+        ctypes.POINTER(ctypes.c_int), # lcfs_n
+        ctypes.POINTER(ctypes.c_double), # coef
+        ctypes.POINTER(ctypes.c_double), # flux_boundary
+        ctypes.POINTER(ctypes.c_double), # plasma_current
+        ctypes.POINTER(ctypes.c_int32), # lcfs_err_code
+        ctypes.POINTER(ctypes.c_int64),  # lapack_dgelss_info
+        ctypes.POINTER(ctypes.c_double),  # meas_model
+        ctypes.c_int32 # n_meas_model
     ]
     # Define the return type for the rtgsfit function
     rtgsfit_lib.rtgsfit.restype = ctypes.c_int
