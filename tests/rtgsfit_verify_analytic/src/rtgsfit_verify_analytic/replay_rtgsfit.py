@@ -44,12 +44,12 @@ def replay_rtgsfit():
         ctypes.POINTER(ctypes.c_double), # flux_boundary
         ctypes.POINTER(ctypes.c_double), # plasma_current
         ctypes.POINTER(ctypes.c_int32), # lcfs_err_code
-        ctypes.POINTER(ctypes.c_int64),  # lapack_dgelss_info
-        ctypes.POINTER(ctypes.c_double),  # meas_model
+        ctypes.POINTER(ctypes.c_int64), # lapack_dgelss_info
+        ctypes.POINTER(ctypes.c_double), # meas_model
         ctypes.c_int32 # n_meas_model
     ]
     # Define the return type for the rtgsfit function
-    rtgsfit_lib.rtgsfit.restype = ctypes.c_int
+    rtgsfit_lib.rtgsfit.restype = None
 
     constants_c_dict = read_constants_c.constants_c_dict(constants_c_path)
     n_r = constants_c_dict["n_r"]
