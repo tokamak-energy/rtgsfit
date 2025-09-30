@@ -32,7 +32,7 @@ with Dataset(data_file_name, "r") as nc:
         print(var)
     psi = np.array(nc.variables["flux_total"][:])
     psi_b = np.array(nc.variables["flux_boundary"][:])
-#    mask = np.array(nc.variables["mask"][:])
+    mask = np.array(nc.variables["mask"][:])
     time = np.array(nc.variables["time"][:])
     plasma_current = np.array(nc.variables["plasma_current"][:])
     r = np.array(nc.variables["r"][:])
