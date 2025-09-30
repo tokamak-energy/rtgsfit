@@ -27,7 +27,7 @@ then compile the code with
 ```bash
 cd src/
 make clean
-make SHOT=99000230 RUN_NAME=RUN02
+make SHOT=99000230 RUN_NAME=RUN02 DEBUG=1
 ```
 
 
