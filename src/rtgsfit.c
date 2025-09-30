@@ -320,12 +320,13 @@ void rtgsfit(
             N_MEAS, coef, 1, 0.0, meas_model, 1);
     
     // find chi squared error between meas and model
-    *chi_sq_err = 0.0;
-    for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
+    double local_sum = 0.0;
+    for (int32_t i_meas = 0; i_meas < N_MEAS_NO_REG; i_meas++)
     {
-        *chi_sq_err = *chi_sq_err + (meas_no_coil[i_meas] -  meas_model[i_meas]) \
-                    * (meas_no_coil[i_meas] -  meas_model[i_meas]);
+        double diff = meas_no_coil[i_meas] - meas_model[i_meas];
+        local_sum += diff * diff;
     }
+    *chi_sq_err = local_sum;
 
     // convert current to RHS of eq
     for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
