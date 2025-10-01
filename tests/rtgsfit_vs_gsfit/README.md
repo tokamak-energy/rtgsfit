@@ -70,7 +70,7 @@ uv pip install "numpy<2"
 
 To run the tests use 
 ```
-pytest -n 3 tests
+pytest -n 6 tests
 ```
-to use 3 cores. We use 3 cores as this matches the number of elements in defined in the
+to use 6 threads. We use 6 threads as this matches the number of elements in defined in the
 `test_cases` list in `tests/test_integration_rtgsfit_vs_gsfit.py`.

@@ -58,15 +58,19 @@ def replay_rtgsfit(cfg: dict):
         ctypes.POINTER(ctypes.c_double),  # flux_norm
         ctypes.POINTER(ctypes.c_int),     # mask
         ctypes.POINTER(ctypes.c_double),  # flux_total
-        ctypes.POINTER(ctypes.c_double),  # error
+        ctypes.POINTER(ctypes.c_double),  # chi_sq_err
         ctypes.POINTER(ctypes.c_double),  # lcfs_r
         ctypes.POINTER(ctypes.c_double),  # lcfs_z
         ctypes.POINTER(ctypes.c_int),     # lcfs_n
         ctypes.POINTER(ctypes.c_double),  # coef
         ctypes.POINTER(ctypes.c_double),  # flux_boundary
-        ctypes.POINTER(ctypes.c_double)   # plasma_current
+        ctypes.POINTER(ctypes.c_double),  # plasma_current
+        ctypes.POINTER(ctypes.c_int32),   # lcfs_err_code
+        ctypes.POINTER(ctypes.c_int64),   # lapack_dgelss_info
+        ctypes.POINTER(ctypes.c_double),  # meas_model
+        ctypes.c_int32,                   # n_meas_model
     ]
-    rtgsfit_lib.rtgsfit.restype = ctypes.c_int
+    rtgsfit_lib.rtgsfit.restype = None
 
     meas_pcs = prep_meas_coil_curr.prep_meas_pcs(cfg)
     coil_curr = prep_meas_coil_curr.prep_coil_curr(cfg)
@@ -77,6 +81,7 @@ def replay_rtgsfit(cfg: dict):
         n_coef = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_COEF").data()
         n_lcfs_max = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_LCFS_MAX").data()
         n_coil = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_COIL").data()
+        n_meas = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_MEAS").data()
 
     n_r = len(r_vec)
     n_z = len(z_vec)
@@ -96,6 +101,8 @@ def replay_rtgsfit(cfg: dict):
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
     lcfs_err_code = np.array([0], dtype=np.int32)
+    lapack_dgelss_info = np.array([0], dtype=np.int64)
+    meas_model = np.zeros(n_meas, dtype=np.float64)
 
     output_dict = {"meas_pcs" : np.zeros((cfg["n_iters"] + 1, n_meas_pcs), dtype=np.float64),
                    "coil_curr" : np.zeros((cfg["n_iters"] + 1, n_coil), dtype=np.float64),
@@ -143,7 +150,10 @@ def replay_rtgsfit(cfg: dict):
             coef.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_boundary.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+            lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+            lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            ctypes.c_int32(n_meas)
         )
 
         print("Iteration:", i_iter + 1)

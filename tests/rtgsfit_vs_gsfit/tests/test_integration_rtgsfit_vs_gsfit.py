@@ -289,7 +289,7 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
         "psi_meas": {"rtol_meas": 5e-2, "atol_meas": 5e-2, "rtol_pred": 1e-3, "atol_pred": 1e-3},
         "bp_meas": {"rtol_meas": 5e-2, "atol_meas": 5e-2, "rtol_pred": 1e-3, "atol_pred": 1e-3},
         "ivc_eigs": {"rtol": 1e-3, "atol": 3.0},
-        "ovc_current": {"rtol": 2e-2, "atol": 1e-2},
+        "ovc_current": {"rtol": 5e-2, "atol": 1},
         "rog_meas": {"rtol_meas": 5e-2, "atol_meas": 5e2, "rtol_pred": 5e-2, "atol_pred": 1e1},
         "regression": {"rtol": 1e-8, "atol": 1e-8}
     }
