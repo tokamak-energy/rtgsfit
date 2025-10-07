@@ -323,8 +323,8 @@ void rtgsfit(
     *chi_sq_err = 0.0;
     for (int32_t i_meas = 0; i_meas < N_MEAS_NO_REG; i_meas++)
     {
-        double diff = meas_no_coil[i_meas] - meas_model[i_meas];
-        *chi_sq_err += diff * diff;
+        double rel_diff = (meas_no_coil[i_meas] - meas_model[i_meas]) / meas_model[i_meas];
+        *chi_sq_err += rel_diff * rel_diff;
     }
 
     // convert current to RHS of eq
