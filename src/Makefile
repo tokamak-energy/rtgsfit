@@ -46,10 +46,12 @@ $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_p
 	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 $(OBJS): %.o : %.c
-	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
+	#$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
+	$(CC) $(CFLAGS) -I/usr/include/x86_64-linux-gnu -c $< -o $@
 
 rtgsfit.o: rtgsfit.c
-	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< 
+	#$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< 
+	$(CC) $(CFLAGS) -I/usr/include/x86_64-linux-gnu -o $@  -c $< 
 
 constants.c: constants.h
 	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
