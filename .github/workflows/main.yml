@@ -37,7 +37,7 @@ jobs:
         gcc --version
         locate libopenblas
         ls /usr/include/
-        ls /usr/include/openblas/
+        dpkg -L openblas
 
     - name: Install and run tests in venv
       run: |
