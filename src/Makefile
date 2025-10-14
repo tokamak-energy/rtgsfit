@@ -43,7 +43,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -L/usr/lib/x86_64-linux-gnu/openblas
+	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -L/usr/lib/x86_64-linux-gnu/openblas -lm
 
 $(OBJS): %.o : %.c
 	#$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
