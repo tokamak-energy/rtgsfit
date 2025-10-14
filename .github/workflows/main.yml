@@ -33,7 +33,10 @@ jobs:
       run: pip install uv
     
     - name: print gcc version
-      run: gcc --version
+      run: |
+        gcc --version
+        ls /usr/include/
+        ls /usr/include/openblas/
 
     - name: Install and run tests in venv
       run: |
