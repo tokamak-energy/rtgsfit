@@ -34,7 +34,7 @@ jobs:
     
     - name: print gcc version
       run: |
-        which openblas
+        which libopenblas-dev
 
     - name: Install and run tests in venv
       run: |
