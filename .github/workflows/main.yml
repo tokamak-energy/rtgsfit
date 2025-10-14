@@ -34,6 +34,7 @@ jobs:
     
     - name: print gcc version
       run: |
+        ls /usr/include/x86-64-linux-gnu/
         which libopenblas-dev
 
     - name: Install and run tests in venv
