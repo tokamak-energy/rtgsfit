@@ -31,7 +31,7 @@ $(LIB)/libfind_x_point.so: find_x_point.o gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm
 
 $(LIB)/libpoisson_solver.so: poisson_solver.o gradient.o solve_tria.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,-Wl,--no-undefined -o $@ $^ -lopenblas
+	$(CC) $(LDFLAGS) -Wl,-soname,-Wl,--no-undefined -o $@ $^ -L/usr/lib/x86_64-linux-gnu/openblas
 
 $(LIB)/libsolve_tria.so: solve_tria.o  constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
@@ -43,7 +43,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
+	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -L/usr/lib/x86_64-linux-gnu/openblas
 
 $(OBJS): %.o : %.c
 	#$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
