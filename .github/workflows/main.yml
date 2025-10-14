@@ -35,7 +35,6 @@ jobs:
     - name: print gcc version
       run: |
         gcc --version
-        locate libopenblas
         ls /usr/include/
         dpkg -L openblas
 
