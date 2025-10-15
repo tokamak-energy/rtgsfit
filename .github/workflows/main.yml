@@ -8,10 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  test
     runs-on: ubuntu-latest
     container:
-      image: rockylinux8
+      image: rockylinux:8
 
     steps:
     - name: Checkout current repository
