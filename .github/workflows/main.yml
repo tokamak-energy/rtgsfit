@@ -25,27 +25,24 @@ jobs:
         dnf -y install git gcc gcc-c++ make openblas openblas-devel
         dnf -y groupinstall "Development Tools"
         dnf -y install gcc-toolset-14
-        yum list available | grep python
         dnf -y install python3.12 python3.12-pip
 
     - name: Clone rtgsfit repository into subdirectory
       run: |
         git clone https://github.com/tokamak-energy/rtgsfit rtgsfit
 
-    - name: print gcc version
-      run: |
-        ls /usr/include/
-        gcc --version
-
     - name: Install uv
       run: python3.12 -m pip install uv
 
-    - name: Install and run tests in venv
+    - name: Activate the environment
       run: |
         scl enable gcc-toolset-14 bash
+        gcc --version
         cd tests/rtgsfit_verify_analytic
         pwd
         uv venv --python 3.13
         source .venv/bin/activate
         uv pip install -e "."
-        pytest
+
+    - name: Run tests
+      run: pytest
