@@ -10,30 +10,35 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container:
+      image: rockylinux:8.5
 
     steps:
     - name: Checkout current repository
       uses: actions/checkout@v4
+    
+    - name: Setup Rocky 8 environment
+      run: |
+        dnf -y update
+        dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
+        dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
+        dnf -y install git gcc gcc-c++ make openblas openblas-devel
+        dnf -y groupinstall "Development Tools"
+        dnf -y install gcc-toolset-14
+        dnf -y install python3.12 python3.12-pip
 
     - name: Clone rtgsfit repository into subdirectory
       run: |
         git clone https://github.com/tokamak-energy/rtgsfit rtgsfit
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libopenblas-dev liblapacke-dev
 
     - name: Install uv
-      run: pip install uv
+      run: python3.12 -m pip install uv
 
     - name: Install and run tests in venv
       run: |
+        scl enable gcc-toolset-14 bash
+        gcc --version
         cd tests/rtgsfit_verify_analytic
         pwd
         uv venv --python 3.13

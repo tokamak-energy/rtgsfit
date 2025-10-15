@@ -43,13 +43,13 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas -llapacke
+	$(CC) $(LDFLAGS) $(CFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 $(OBJS): %.o : %.c
 	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
 
 rtgsfit.o: rtgsfit.c
-	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< -I/usr/include/lapacke
+	$(CC) $(CFLAGS) -I/usr/include/openblas -o $@  -c $< 
 
 constants.c: constants.h
 	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
