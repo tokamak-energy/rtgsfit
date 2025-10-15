@@ -23,7 +23,7 @@ jobs:
         dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
         dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
         dnf -y install git gcc gcc-c++ make openblas openblas-devel
-        dnf -y install python311 python311-pip
+        dnf -y install python3.13 python3.13-pip
         dnf -y groupinstall "Development Tools"
         dnf -y install gcc-toolset-14
 
@@ -37,7 +37,7 @@ jobs:
         gcc --version
 
     - name: Install uv
-      run: python311 -m pip install uv
+      run: python3.13 -m pip install uv
 
     - name: Install and run tests in venv
       run: |
