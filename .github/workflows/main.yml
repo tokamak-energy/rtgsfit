@@ -23,9 +23,10 @@ jobs:
         dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
         dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
         dnf -y install git gcc gcc-c++ make openblas openblas-devel
-        dnf -y install python3.13 python3.13-pip
         dnf -y groupinstall "Development Tools"
         dnf -y install gcc-toolset-14
+        yum list available | grep python
+        dnf -y install python3.13 python3.13-pip
 
     - name: Clone rtgsfit repository into subdirectory
       run: |
