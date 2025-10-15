@@ -11,7 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: rockylinux:8
+      image: rockylinux:8.5
 
     steps:
     - name: Checkout current repository
@@ -31,10 +31,11 @@ jobs:
       run: |
         git clone https://github.com/tokamak-energy/rtgsfit rtgsfit
 
+
     - name: Install uv
       run: python3.12 -m pip install uv
 
-    - name: Activate the environment
+    - name: Install and run tests in venv
       run: |
         scl enable gcc-toolset-14 bash
         gcc --version
@@ -43,6 +44,4 @@ jobs:
         uv venv --python 3.13
         source .venv/bin/activate
         uv pip install -e "."
-
-    - name: Run tests
-      run: pytest
+        pytest
