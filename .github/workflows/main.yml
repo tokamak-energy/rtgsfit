@@ -22,7 +22,7 @@ jobs:
         dnf -y update
         dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
         dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
-        dnf -y install git gcc gcc-c++ make openblas openblas-devel netcdf
+        dnf -y install git gcc gcc-c++ make openblas openblas-devel
 
     - name: Clone rtgsfit repository into subdirectory
       run: |
