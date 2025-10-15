@@ -32,14 +32,14 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.13'
-
-    - name: Install uv
-      run: pip install uv
     
     - name: print gcc version
       run: |
-        ls /usr/include/x86_64-linux-gnu
-        ls /usr/lib/x86_64-linux-gnu
+        ls /usr/include/
+        gcc --version
+
+    - name: Install uv
+      run: pip install uv
 
     - name: Install and run tests in venv
       run: |
