@@ -26,7 +26,7 @@ jobs:
         dnf -y groupinstall "Development Tools"
         dnf -y install gcc-toolset-14
         yum list available | grep python
-        dnf -y install python3.13 python3.13-pip
+        dnf -y install python3.12 python3.12-pip
 
     - name: Clone rtgsfit repository into subdirectory
       run: |
@@ -38,7 +38,7 @@ jobs:
         gcc --version
 
     - name: Install uv
-      run: python3.13 -m pip install uv
+      run: python3.12 -m pip install uv
 
     - name: Install and run tests in venv
       run: |
