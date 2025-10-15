@@ -23,6 +23,8 @@ jobs:
         dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
         dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
         dnf -y install git gcc gcc-c++ make openblas openblas-devel
+        dnf groupinstall "Development Tools"
+        dnf install gcc-toolset-14
 
     - name: Clone rtgsfit repository into subdirectory
       run: |
@@ -43,6 +45,7 @@ jobs:
 
     - name: Install and run tests in venv
       run: |
+        scl enable gcc-toolset-14 bash
         cd tests/rtgsfit_verify_analytic
         pwd
         uv venv --python 3.13
