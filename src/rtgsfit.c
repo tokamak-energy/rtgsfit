@@ -214,7 +214,7 @@ void rtgsfit(
         double* flux_boundary, // output
         double* plasma_current, // output
         int32_t *lcfs_err_code, // output
-        int64_t *lapack_dgelss_info, // output
+        int* lapack_dgelss_info, // output
         double *meas_model, // output
         int32_t n_meas_model // input
         )
@@ -278,7 +278,7 @@ void rtgsfit(
     lapack_int rank;
     double rcond = -1.0;
     double single_vals[N_COEF];
-    *lapack_dgelss_info = (int64_t)LAPACKE_dgelss(
+    *lapack_dgelss_info = LAPACKE_dgelss(
       LAPACK_COL_MAJOR,
       N_MEAS,
       N_COEF,
