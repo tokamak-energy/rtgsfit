@@ -60,7 +60,7 @@ def contour_ana_vs_num(output_dict):
         flux_norm_flat = flux_norm.flatten()
         lcfs_r = output_dict['lcfs_r'][i_iter]
         lcfs_z = output_dict['lcfs_z'][i_iter]
-        lcfs_n = output_dict['lcfs_n'][i_iter][0]
+        lcfs_n = output_dict['lcfs_n'][i_iter]
         coef = output_dict['coef'][i_iter]
         # Extract just the first N_PLS coefficients
         coef = coef[:cnst.N_PLS]
