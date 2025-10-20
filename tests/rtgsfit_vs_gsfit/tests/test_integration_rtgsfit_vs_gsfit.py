@@ -243,6 +243,23 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
                                        rtol=rtol, atol=atol,
                                        err_msg=f"Key: {key}")
 
+    def check_error_codes(cfg: dict) -> None:
+        """
+        Check that all values of lcfs_err_code and lapack_dgelss_info
+        are zero at all iterations.
+        """
+
+        rtgsfit_output_dict =np.load(cfg["rtgsfit_output_dict_path"],
+                                     allow_pickle=True).item()
+        
+        rtgsfit_lcfs_err_codes = rtgsfit_output_dict["lcfs_err_code"]
+        rtgsfit_lapack_dgelss_infos = rtgsfit_output_dict["lapack_dgelss_info"]
+        
+        assert np.all(rtgsfit_lcfs_err_codes == 0), \
+            "Non-zero lcfs_err_code found in RTGSFIT output."
+        assert np.all(rtgsfit_lapack_dgelss_infos == 0), \
+            "Non-zero lapack_dgelss_info found in RTGSFIT output."
+
     run_name = f"t{int(time*1e3):03d}ms"
     cfg = config_loader.load_and_prepare_config(
         run_name=run_name,
@@ -307,4 +324,6 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
     check_rog_meas(cfg, **tolerances["rog_meas"])
     # logging.info(f"Checking regression...")
     # check_regression(cfg, **tolerances["regression"])
+    logging.info(f"Checking error codes...")
+    check_error_codes(cfg)
     logging.info(f"Results checked successfully.")
