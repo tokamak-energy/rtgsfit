@@ -84,6 +84,12 @@ def write_data_to_mdsplus(
 
 args = sys.argv
 pulseNo = int(args[1])
-run_name = args[2]
-write_data_to_mdsplus(pulseNo, run_name)
+print(args[0])
+print(args[1])
+print(len(args))
+if len(args) > 2:
+    run_name = args[2]
+    write_data_to_mdsplus(pulseNo, run_name)
+else:
+    write_data_to_mdsplus(pulseNo)
 
