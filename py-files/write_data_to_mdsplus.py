@@ -3,95 +3,87 @@ import standard_utility as util  # type: ignore
 from diagnostics_analysis_base import NestedDict
 from netCDF4 import Dataset
 import numpy as np
-import os
+import sys
 
 
-# username = "peter.buxton"
-# username = "filip.janky"
-username = os.getlogin()
-
-
-
-if username == "filip.janky":
-    # Variables to write to MDSplus
-    pulseNo = 13349
-    pulseNo_write = pulseNo + 30_000_000
-    run_name = "RUN05"
-    run_description = "All data storing run newsmaug2"
-    #data_file_name = f"/home/filip.janky/ops/rtgsfit/results/rtgsfit_results_{pulseNo}.nc"
+def write_data_to_mdsplus(
+    pulseNo: int,
+    run_name: str = "RUN01",
+    run_description: str = "Standard run with default settings",
+    settings_path: str = "default",
+    write_to_mds: bool = True,
+    pulseNo_write: int | None = None,
+)-> None:
+    data_file_name = f"/home/pcs.user/ops_double_threaded/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
     data_file_name = f"/home/filip.janky/ops/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
-elif username == "peter.buxton":
-    # Variables to write to MDSplus
-    pulseNo = 12_050
-    pulseNo_write = pulseNo + 11_000_000
-    run_name = "RUN01"
-    run_description = "test writing"
-    data_file_name = f"/home/peter.buxton/0_Version_Controlled/rtgsfit_github/results/rtgsfit_results_{pulseNo}.nc"
 
-# Load data from netCDF file
-with Dataset(data_file_name, "r") as nc:
-    print("Variables in netCDF file new:")
-    for var in nc.variables:
-        print(var)
-    time = np.array(nc.variables["time"][:])
-    flux_norm = np.array(nc.variables["flux_norm"][:])
-    mask = np.array(nc.variables["mask"][:])
-    chi_sq_err = np.array(nc.variables["chi_sq_err"][:])
-    lcfs_n = np.array(nc.variables["lcfs_n"][:])
-    flux_total = np.array(nc.variables["flux_total"][:])
-    lcfs_r = np.array(nc.variables["lcfs_r"][:])
-    lcfs_z = np.array(nc.variables["lcfs_z"][:])
-    coef = np.array(nc.variables["coef"][:])
-    flux_boundary = np.array(nc.variables["flux_boundary"][:])
-    plasma_current = np.array(nc.variables["plasma_current"][:])
-    lcfs_err_code = np.array(nc.variables["lcfs_err_code"][:])
-    lapack_dgelss_info = np.array(nc.variables["lapack_dgelss_info"][:])
-    meas_model = np.array(nc.variables["meas_model"][:])
-    sensors_IN = np.array(nc.variables["sensors_IN"][:])
-    I_PF_IN = np.array(nc.variables["I_PF_IN"][:])
-    r = np.array(nc.variables["r"][:])
-    z = np.array(nc.variables["z"][:])
+    # Load data from netCDF file
+    with Dataset(data_file_name, "r") as nc:
+        print("Variables in netCDF file new:")
+        for var in nc.variables:
+	        print(var)
+        time = np.array(nc.variables["time"][:])
+        flux_norm = np.array(nc.variables["flux_norm"][:])
+        mask = np.array(nc.variables["mask"][:])
+        chi_sq_err = np.array(nc.variables["chi_sq_err"][:])
+        lcfs_n = np.array(nc.variables["lcfs_n"][:])
+        flux_total = np.array(nc.variables["flux_total"][:])
+        lcfs_r = np.array(nc.variables["lcfs_r"][:])
+        lcfs_z = np.array(nc.variables["lcfs_z"][:])
+        coef = np.array(nc.variables["coef"][:])
+        flux_boundary = np.array(nc.variables["flux_boundary"][:])
+        plasma_current = np.array(nc.variables["plasma_current"][:])
+        lcfs_err_code = np.array(nc.variables["lcfs_err_code"][:])
+        lapack_dgelss_info = np.array(nc.variables["lapack_dgelss_info"][:])
+        meas_model = np.array(nc.variables["meas_model"][:])
+        sensors_IN = np.array(nc.variables["sensors_IN"][:])
+        I_PF_IN = np.array(nc.variables["I_PF_IN"][:])
+        r = np.array(nc.variables["r"][:])
+        z = np.array(nc.variables["z"][:])
+
+        # Create a nested dictionary to store data
+        results = NestedDict()
+
+        ## Store results
+        results["TIME"] = time
+        results["TWO_D"]["PSI_N"] = flux_norm
+        results["TWO_D"]["MASK"] = mask
+        results["GLOBAL"]["CHIT"] = chi_sq_err
+        results["P_BOUNDARY"]["NBND"] = lcfs_n
+        results["TWO_D"]["PSI"] = flux_total
+        results["P_BOUNDARY"]["RBND"] = lcfs_r
+        results["P_BOUNDARY"]["ZBND"] = lcfs_z
+        #results[""][""] = coef
+        results["GLOBAL"]["PSI_B"] = flux_boundary
+        results["GLOBAL"]["IP"] = plasma_current
+        results["GLOBAL"]["LCFS_ERR"] = lcfs_err_code
+        results["GLOBAL"]["DGELSS_INFO"] = lapack_dgelss_info
+        #results[""][""] = meas_model
+        #results[""][""] = sensors_IN
+        results["TWO_D"]["RGRID"] = r
+        results["TWO_D"]["ZGRID"] = z
+
+        util.create_script_nodes(
+            script_name="RTGSFIT",
+            pulseNo_write=pulseNo + 30000000,
+            pulseNo_cal=None,
+            run_name=run_name,
+            run_info=run_description,
+            workflows=None,
+            link_best=False,
+        )
+        util.write_script_data(
+            script_name="RTGSFIT",
+            pulseNo_write=pulseNo + 30000000,
+            data_to_write=results.to_dictionary(),
+            pulseNo_cal=None,
+            run_name=run_name,
+            run_description=run_description,
+        )
 
 
-# Create a nested dictionary to store data
-results = NestedDict()
+args = sys.argv
+pulseNo = int(args[1])
+run_name = args[2]
+write_data_to_mdsplus(pulseNo, run_name)
 
-## Store results
-results["TIME"] = time
-results["TWO_D"]["PSI_N"] = flux_norm
-results["TWO_D"]["MASK"] = mask
-results["GLOBAL"]["CHIT"] = chi_sq_err
-results["P_BOUNDARY"]["NBND"] = lcfs_n
-results["TWO_D"]["PSI"] = flux_total
-results["P_BOUNDARY"]["RBND"] = lcfs_r
-results["P_BOUNDARY"]["ZBND"] = lcfs_z
-#results[""][""] = coef
-results["GLOBAL"]["PSI_B"] = flux_boundary
-results["GLOBAL"]["IP"] = plasma_current
-results["GLOBAL"]["LCFS_ERR"] = lcfs_err_code
-results["GLOBAL"]["DGELSS_INFO"] = lapack_dgelss_info
-#results[""][""] = meas_model
-#results[""][""] = sensors_IN
-results["TWO_D"]["RGRID"] = r
-results["TWO_D"]["ZGRID"] = z
-
-# Write to MDSplus
-print(results)
-print(results["TIME"].shape)
-util.create_script_nodes(
-    script_name="RTGSFIT",
-    pulseNo_write=pulseNo_write,
-    pulseNo_cal=None,
-    run_name=run_name,
-    run_info=run_description,
-    workflows=None,
-    link_best=False,
-)
-util.write_script_data(
-    script_name="RTGSFIT",
-    pulseNo_write=pulseNo_write,
-    data_to_write=results.to_dictionary(),
-    pulseNo_cal=None,
-    run_name=run_name,
-    run_description=run_description,
-)
