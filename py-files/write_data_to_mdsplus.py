@@ -5,16 +5,19 @@ from netCDF4 import Dataset
 import numpy as np
 import os
 
+
 # username = "peter.buxton"
 # username = "filip.janky"
 username = os.getlogin()
+
+
 
 if username == "filip.janky":
     # Variables to write to MDSplus
     pulseNo = 13349
     pulseNo_write = pulseNo + 30_000_000
-    run_name = "RUN01"
-    run_description = "test writing"
+    run_name = "RUN05"
+    run_description = "All data storing run newsmaug2"
     #data_file_name = f"/home/filip.janky/ops/rtgsfit/results/rtgsfit_results_{pulseNo}.nc"
     data_file_name = f"/home/filip.janky/ops/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
 elif username == "peter.buxton":
@@ -27,31 +30,50 @@ elif username == "peter.buxton":
 
 # Load data from netCDF file
 with Dataset(data_file_name, "r") as nc:
-    print("Variables in netCDF file:")
+    print("Variables in netCDF file new:")
     for var in nc.variables:
         print(var)
-    psi = np.array(nc.variables["flux_total"][:])
-    psi_b = np.array(nc.variables["flux_boundary"][:])
-    mask = np.array(nc.variables["mask"][:])
     time = np.array(nc.variables["time"][:])
+    flux_norm = np.array(nc.variables["flux_norm"][:])
+    mask = np.array(nc.variables["mask"][:])
+    chi_sq_err = np.array(nc.variables["chi_sq_err"][:])
+    lcfs_n = np.array(nc.variables["lcfs_n"][:])
+    flux_total = np.array(nc.variables["flux_total"][:])
+    lcfs_r = np.array(nc.variables["lcfs_r"][:])
+    lcfs_z = np.array(nc.variables["lcfs_z"][:])
+    coef = np.array(nc.variables["coef"][:])
+    flux_boundary = np.array(nc.variables["flux_boundary"][:])
     plasma_current = np.array(nc.variables["plasma_current"][:])
+    lcfs_err_code = np.array(nc.variables["lcfs_err_code"][:])
+    lapack_dgelss_info = np.array(nc.variables["lapack_dgelss_info"][:])
+    meas_model = np.array(nc.variables["meas_model"][:])
+    sensors_IN = np.array(nc.variables["sensors_IN"][:])
+    I_PF_IN = np.array(nc.variables["I_PF_IN"][:])
     r = np.array(nc.variables["r"][:])
     z = np.array(nc.variables["z"][:])
-    chi_sq_err = np.array(nc.variables["chi_sq_err"][:])
 
 
 # Create a nested dictionary to store data
 results = NestedDict()
 
 ## Store results
-results["TWO_D"]["PSI"] = psi
+results["TIME"] = time
+results["TWO_D"]["PSI_N"] = flux_norm
 results["TWO_D"]["MASK"] = mask
+results["GLOBAL"]["CHIT"] = chi_sq_err
+results["P_BOUNDARY"]["NBND"] = lcfs_n
+results["TWO_D"]["PSI"] = flux_total
+results["P_BOUNDARY"]["RBND"] = lcfs_r
+results["P_BOUNDARY"]["ZBND"] = lcfs_z
+#results[""][""] = coef
+results["GLOBAL"]["PSI_B"] = flux_boundary
+results["GLOBAL"]["IP"] = plasma_current
+results["GLOBAL"]["LCFS_ERR"] = lcfs_err_code
+results["GLOBAL"]["DGELSS_INFO"] = lapack_dgelss_info
+#results[""][""] = meas_model
+#results[""][""] = sensors_IN
 results["TWO_D"]["RGRID"] = r
 results["TWO_D"]["ZGRID"] = z
-results["TIME"] = time
-results["GLOBAL"]["IP"] = plasma_current
-results["GLOBAL"]["PSI_B"] = psi_b
-results["GLOBAL"]["CHIT"] = chi_sq_err
 
 # Write to MDSplus
 print(results)
