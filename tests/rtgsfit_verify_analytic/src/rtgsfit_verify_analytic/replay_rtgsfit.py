@@ -34,17 +34,17 @@ def replay_rtgsfit():
         ctypes.POINTER(ctypes.c_double), # meas
         ctypes.POINTER(ctypes.c_double), # coil_curr
         ctypes.POINTER(ctypes.c_double), # flux_norm
-        ctypes.POINTER(ctypes.c_int), # mask
+        ctypes.POINTER(ctypes.c_int32), # mask
         ctypes.POINTER(ctypes.c_double), # flux_total
-        ctypes.POINTER(ctypes.c_double), # error
+        ctypes.POINTER(ctypes.c_double), # chi_sq_err
         ctypes.POINTER(ctypes.c_double), # lcfs_r
         ctypes.POINTER(ctypes.c_double), # lcfs_z
-        ctypes.POINTER(ctypes.c_int), # lcfs_n
+        ctypes.POINTER(ctypes.c_int32), # lcfs_n
         ctypes.POINTER(ctypes.c_double), # coef
         ctypes.POINTER(ctypes.c_double), # flux_boundary
         ctypes.POINTER(ctypes.c_double), # plasma_current
         ctypes.POINTER(ctypes.c_int32), # lcfs_err_code
-        ctypes.POINTER(ctypes.c_int64), # lapack_dgelss_info
+        ctypes.POINTER(ctypes.c_int32), # lapack_dgelss_info
         ctypes.POINTER(ctypes.c_double), # meas_model
         ctypes.c_int32 # n_meas_model
     ]
@@ -90,14 +90,14 @@ def replay_rtgsfit():
     mask = np.ones(n_grid, dtype=np.int32)
     flux_total = np.zeros(n_grid, dtype=np.float64)
     coef = np.zeros(n_coef, dtype=np.float64)
-    error = np.array([0.1], dtype=np.float64) # PROKOPYSZYN: Change to 0.0
+    chi_sq_err = np.array([0.0], dtype=np.float64)
     lcfs_r = np.zeros(n_lcfs_max, dtype=np.float64)
     lcfs_z = np.zeros(n_lcfs_max, dtype=np.float64)
     lcfs_n = np.array([0], dtype=np.int32)
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
     lcfs_err_code = np.array([0], dtype=np.int32)
-    lapack_dgelss_info = np.array([0], dtype=np.int64)
+    lapack_dgelss_info = np.array([0], dtype=np.int32)
     meas_model = np.zeros(n_meas, dtype=np.float64)
 
     output_dict = {"meas" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
@@ -105,24 +105,33 @@ def replay_rtgsfit():
                    "flux_norm" : np.zeros((cnst.N_ITERS + 1, n_grid), dtype=np.float64),
                    "mask" : np.zeros((cnst.N_ITERS + 1, n_grid), dtype=np.int32),
                    "flux_total" : np.zeros((cnst.N_ITERS + 1, n_grid), dtype=np.float64),
-                   "error" : np.zeros((cnst.N_ITERS + 1, 1), dtype=np.float64),
+                   "chi_sq_err" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
                    "lcfs_r" : np.zeros((cnst.N_ITERS + 1, n_lcfs_max), dtype=np.float64),
                    "lcfs_z" : np.zeros((cnst.N_ITERS + 1, n_lcfs_max), dtype=np.float64),
-                   "lcfs_n" : np.zeros((cnst.N_ITERS + 1, 1), dtype=np.int32),
+                   "lcfs_n" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
                    "coef" : np.zeros((cnst.N_ITERS + 1, n_coef), dtype=np.float64),
-                   "flux_boundary" : np.zeros((cnst.N_ITERS + 1, 1), dtype=np.float64),
-                   "plasma_current" : np.zeros((cnst.N_ITERS + 1, 1), dtype=np.float64)}
+                   "flux_boundary" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
+                   "plasma_current" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
+                   "lcfs_err_code" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
+                   "lapack_dgelss_info" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
+                   "meas_model" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
+                   "n_meas_model" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32)}
+    output_dict["meas"][0, :] = meas
     output_dict["coil_curr"][0, :] = coil_curr
     output_dict["flux_norm"][0, :] = flux_norm
     output_dict["mask"][0, :] = mask
     output_dict["flux_total"][0, :] = flux_total
-    output_dict["error"][0, :] = error
+    output_dict["chi_sq_err"][0] = chi_sq_err[0]
     output_dict["lcfs_r"][0, :] = lcfs_r
     output_dict["lcfs_z"][0, :] = lcfs_z
-    output_dict["lcfs_n"][0, :] = lcfs_n
+    output_dict["lcfs_n"][0] = lcfs_n[0]
     output_dict["coef"][0, :] = coef
-    output_dict["flux_boundary"][0, :] = flux_boundary
-    output_dict["plasma_current"][0, :] = plasma_current
+    output_dict["flux_boundary"][0] = flux_boundary[0]
+    output_dict["plasma_current"][0] = plasma_current[0]
+    output_dict["lcfs_err_code"][0] = lcfs_err_code[0]
+    output_dict["lapack_dgelss_info"][0] = lapack_dgelss_info[0]
+    output_dict["meas_model"][0, :] = meas_model
+    output_dict["n_meas_model"][0] = len(meas_model)    
 
     for i_iter in range(cnst.N_ITERS):
 
@@ -140,17 +149,17 @@ def replay_rtgsfit():
             meas.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             coil_curr.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_norm.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            mask.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+            mask.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             flux_total.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            error.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            chi_sq_err.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             lcfs_r.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             lcfs_z.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            lcfs_n.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+            lcfs_n.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             coef.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             flux_boundary.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             plasma_current.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-            lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             ctypes.c_int32(len(meas_model))
         )
@@ -162,28 +171,56 @@ def replay_rtgsfit():
         output_dict["flux_norm"][i_iter + 1, :] = flux_norm
         output_dict["mask"][i_iter + 1, :] = mask
         output_dict["flux_total"][i_iter + 1, :] = flux_total
-        output_dict["error"][i_iter + 1, :] = error
+        output_dict["chi_sq_err"][i_iter + 1] = chi_sq_err[0]
         output_dict["lcfs_r"][i_iter + 1, :] = lcfs_r
         output_dict["lcfs_z"][i_iter + 1, :] = lcfs_z
-        output_dict["lcfs_n"][i_iter + 1, :] = lcfs_n
+        output_dict["lcfs_n"][i_iter + 1] = lcfs_n[0]
         output_dict["coef"][i_iter + 1, :] = coef
-        output_dict["flux_boundary"][i_iter + 1, :] = flux_boundary
-        output_dict["plasma_current"][i_iter + 1, :] = plasma_current
+        output_dict["flux_boundary"][i_iter + 1] = flux_boundary[0]
+        output_dict["plasma_current"][i_iter + 1] = plasma_current[0]
+        output_dict["lcfs_err_code"][i_iter + 1] = lcfs_err_code[0]
+        output_dict["lapack_dgelss_info"][i_iter + 1] = lapack_dgelss_info[0]
+        output_dict["meas_model"][i_iter + 1, :] = meas_model
+        output_dict["n_meas_model"][i_iter + 1] = len(meas_model)
+
+        print("Chi-squared error:", chi_sq_err[0])
+        print("lapack_dgelss_info:", lapack_dgelss_info[0])
+        print("n_meas_model:", len(meas_model))
 
     # Save output_dict to a file
     output_file = os.path.join(cnst.DATA_DIR, 'output_dict.npy')
     np.save(output_file, output_dict, allow_pickle=True)
+      
+    # Save each in a csv file for visual inspection
+    # In the format:
+    # key0
+    # value0, value1, value2, ...
+    # 
+    # key1
+    # value0, value1, value2, ...
+    # ...
+    # Skipping the flux_norm, flux_total, mask, lcfs_r, lcfs_z, lcfs_n for brevity
+    csv_file = os.path.join(cnst.DATA_DIR, 'output_dict.csv')
+    with open(csv_file, 'w') as f:
+        for key, value in output_dict.items():
+            if key in ['flux_norm', 'flux_total', 'mask', 'lcfs_r', 'lcfs_z', 'lcfs_n']:
+                continue
+            f.write(f"{key}\n")
+            for i in range(value.shape[0]):
+                row_values = value[i]
+                if np.isscalar(row_values):
+                    f.write(f"{row_values}\n")
+                else:
+                    row_str = ', '.join([str(v) for v in row_values])
+                    f.write(f"{row_str}\n")
+            f.write("\n")
 
-    # # Save just the last iteration data to a separate file
-    # # for regression testing
-    # reference_output_dict = {}
+    # Save just the last iteration data to a separate file
+    # for regression testing
+    output_dict_final_iter = {}
+    for key, value in output_dict.items():
+        final_iter_value = value[-1]
+        output_dict_final_iter[key] = final_iter_value.copy()
 
-    # for key, value in output_dict.items():
-    #     # Get the last iteration's 1D array
-    #     last_iter_value = value[-1]
-    #     print(key)
-    #     print(np.shape(last_iter_value))
-    #     reference_output_dict[key] = last_iter_value.copy()
-
-    # reference_file = os.path.join(cnst.DATA_DIR, 'reference_output_dict.npy')
-    # np.save(reference_file, reference_output_dict, allow_pickle=True)
+    reference_file = os.path.join(cnst.DATA_DIR, 'output_dict_final_iter.npy')
+    np.save(reference_file, output_dict_final_iter, allow_pickle=True)
