@@ -1,9 +1,10 @@
-import matplotlib.pyplot as plt
+import os
+import sys
+
+import numpy as np
 import standard_utility as util  # type: ignore
 from diagnostics_analysis_base import NestedDict
-from netCDF4 import Dataset
-import numpy as np
-import sys
+from netCDF4 import Dataset  # type: ignore
 
 
 def write_data_to_mdsplus(
@@ -13,15 +14,31 @@ def write_data_to_mdsplus(
     settings_path: str = "default",
     write_to_mds: bool = True,
     pulseNo_write: int | None = None,
-)-> None:
+) -> None:
+    """
+    Write RT-GSFit results to MDSplus
+
+    :param pulseNo: pulse number
+    :param run_name: run_name to save to MDSplus
+    :param run_description: help string for MDSplus Tree
+    :param settings_path: location where code inputs are stored
+    :param write_to_mds: flag to turn on / off writing to MDSplus
+    :param pulseNo_write: pulse number in which data is to be written, if different from the current pulse
+
+    :return: None
+    """
     data_file_name = f"/home/pcs.user/ops_double_threaded/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
     data_file_name = f"/home/filip.janky/ops/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
+
+    # If `pulseNo_write` is not specified, we will write to `pulseNo`
+    if pulseNo_write is None:
+        pulseNo_write = pulseNo
 
     # Load data from netCDF file
     with Dataset(data_file_name, "r") as nc:
         print("Variables in netCDF file new:")
         for var in nc.variables:
-	        print(var)
+            print(var)
         time = np.array(nc.variables["time"][:])
         flux_norm = np.array(nc.variables["flux_norm"][:])
         mask = np.array(nc.variables["mask"][:])
@@ -53,19 +70,19 @@ def write_data_to_mdsplus(
         results["TWO_D"]["PSI"] = flux_total
         results["P_BOUNDARY"]["RBND"] = lcfs_r
         results["P_BOUNDARY"]["ZBND"] = lcfs_z
-        #results[""][""] = coef
+        # results[""][""] = coef
         results["GLOBAL"]["PSI_B"] = flux_boundary
         results["GLOBAL"]["IP"] = plasma_current
         results["GLOBAL"]["LCFS_ERR"] = lcfs_err_code
         results["GLOBAL"]["DGELSS_INFO"] = lapack_dgelss_info
-        #results[""][""] = meas_model
-        #results[""][""] = sensors_IN
+        # results[""][""] = meas_model
+        # results[""][""] = sensors_IN
         results["TWO_D"]["RGRID"] = r
         results["TWO_D"]["ZGRID"] = z
 
         util.create_script_nodes(
             script_name="RTGSFIT",
-            pulseNo_write=pulseNo + 30000000,
+            pulseNo_write=pulseNo_write,
             pulseNo_cal=None,
             run_name=run_name,
             run_info=run_description,
@@ -74,7 +91,7 @@ def write_data_to_mdsplus(
         )
         util.write_script_data(
             script_name="RTGSFIT",
-            pulseNo_write=pulseNo + 30000000,
+            pulseNo_write=pulseNo_write,
             data_to_write=results.to_dictionary(),
             pulseNo_cal=None,
             run_name=run_name,
@@ -82,14 +99,29 @@ def write_data_to_mdsplus(
         )
 
 
-args = sys.argv
-pulseNo = int(args[1])
-print(args[0])
-print(args[1])
-print(len(args))
-if len(args) > 2:
-    run_name = args[2]
-    write_data_to_mdsplus(pulseNo, run_name)
-else:
-    write_data_to_mdsplus(pulseNo)
+if __name__ == "__main__":
+    """
+    Main function to run the `write_data_to_mdsplus` from the command line, with arguments
 
+    Usage: `python write_data_to_mdsplus.py <pulseNo> [<run_name>]`
+    Note: `run_name` argument is optional
+    """
+    args = sys.argv
+    pulseNo = int(args[1])
+    print(args[0])
+    print(args[1])
+    print(len(args))
+
+    username = os.getlogin()
+    # only PCS user should write to the real 5 digit pulse
+    if username == "pcs.user":
+        pulseNo_write = None
+    else:
+        # Write to Filip's million pulse range
+        pulseNo_write = pulseNo + 30_000_000
+
+    if len(args) > 2:
+        run_name = args[2]
+        write_data_to_mdsplus(pulseNo, run_name, pulseNo_write=pulseNo_write)
+    else:
+        write_data_to_mdsplus(pulseNo, pulseNo_write=pulseNo_write)
