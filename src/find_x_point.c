@@ -324,13 +324,14 @@ double lin_intrp(
   return flux_at_null;
 }
 
-void find_lcfs_rz(
+int32_t find_lcfs_rz(
     double *flux,
     double flux_lcfs,
     double *lcfs_r,
     double *lcfs_z,
     int32_t *lcfs_n) {
   double flux_offset[N_GRID];
+  int32_t error = 0;
 
   *lcfs_n = 0;
 
@@ -381,6 +382,11 @@ void find_lcfs_rz(
           }
         }
       }
+      if (*lcfs_n >= N_LCFS_MAX) {
+        // Stop if we exceed maximum number of LCFS points
+        error |= ERR_LCFS_N;
+        return error;
+      }
     }
   }
 
@@ -405,9 +411,11 @@ void find_lcfs_rz(
       (*lcfs_n)++;
     }
   }
+
+  return error;
 }
 
-int inside_lcfs(
+int32_t inside_lcfs(
     double r_opt,
     double z_opt,
     double *lcfs_r,
