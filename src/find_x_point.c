@@ -18,12 +18,13 @@
 #define N_Z_TIMES_2 (N_Z * 2 - 1)
 #define MIN(aa,bb) ((aa)<=(bb)?(aa):(bb))
 #define MAX(aa,bb) ((aa)>=(bb)?(aa):(bb))
-#define ERR_MID_BDRY 0b000001 // 1
-#define ERR_COL_START 0b000010 // 2
-#define ERR_COL_END 0b000100 // 4
-#define ERR_COL_START_END 0b001000 // 8
-#define ERR_VERT_BDRY 0b010000 // 16
-#define ERR_MASK_INDEX 0b100000 // 32
+#define ERR_MID_BDRY 0b0000001 // 1
+#define ERR_COL_START 0b0000010 // 2
+#define ERR_COL_END 0b0000100 // 4
+#define ERR_COL_START_END 0b0001000 // 8
+#define ERR_VERT_BDRY 0b0010000 // 16
+#define ERR_MASK_INDEX 0b0100000 // 32
+#define ERR_LCFS_N 0b1000000 // 64
 
 /// Find crossings along the edges of a patch.
 /// 
@@ -419,6 +420,11 @@ int inside_lcfs(
   double z_tmp[N_Z_TIMES_2];
 
   memset(mask, 0, N_GRID * sizeof(int));
+
+  if (lcfs_n > N_LCFS_MAX) {
+    error |= ERR_LCFS_N;
+    return error;
+  }
 
   // Find the z grid point closest to the o-point (magnetic axis)
   double z_nearest = round((z_opt - Z_VEC[0]) / DZ) * DZ + Z_VEC[0];
