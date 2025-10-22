@@ -402,6 +402,14 @@ void rtgsfit(
         }
     }
 
+    if (fabs(lcfs_flux - axis_flux) < THRESH)
+    {
+        // Check the boundary flux value isn't equal to the axis flux value
+        *lcfs_err_code = 128; // ERR_AX_EQ_BDRY
+        *lcfs_n = 0;
+        return;
+    }
+
     // extract LCFS
     find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
 
