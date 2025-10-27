@@ -403,14 +403,24 @@ void rtgsfit(
     }
 
     // extract LCFS
-    find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
+    *lcfs_err_code = 0;
+    *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
 
     // extract inside of LCFS
     // BUXTON: we think this might have an error??????
-    *lcfs_err_code = inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
+    *lcfs_err_code |= inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
 
     // normalise total psi
-    normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
+    if (fabs(lcfs_flux - axis_flux) < THRESH)
+    {
+        // Check the boundary flux value isn't equal to the axis flux value
+        // To prevent division by zero
+        *lcfs_err_code |= 128; // ERR_AX_EQ_BDRY
+    }
+    else
+    {
+        normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
+    }
 
     // store axis_r, axis_z and axis_flux in the meas_pcs array
     // meas_pcs[0] = axis_r;
