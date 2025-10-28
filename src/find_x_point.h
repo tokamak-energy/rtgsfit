@@ -14,11 +14,11 @@ void find_null_in_gradient(double *psi,
         double *xpt_r, double *xpt_z, double *xpt_psi, int32_t *i_xpt);
 
 
-void find_lcfs_rz(double *psi, double psi_lcfs,
+int32_t find_lcfs_rz(double *psi, double psi_lcfs,
         double *r_lcfs, double *z_lcfs, int32_t *n_lcfs);
 
 
-int inside_lcfs(double r_opt, double z_opt, double *r_lcfs, 
+int32_t inside_lcfs(double r_opt, double z_opt, double *r_lcfs, 
         double *z_lcfs, int32_t n_lcfs, int32_t *mask);
 
 

@@ -31,7 +31,7 @@ def psi_contours(iteration: int,
     rtgsfit_output_dict =np.load(cfg["rtgsfit_output_dict_path"],
                                  allow_pickle=True).item()
     psi_rtgsfit = rtgsfit_output_dict["flux_total"][iteration].reshape(n_z, n_r)
-    rtgsfit_lcfs_n = rtgsfit_output_dict["lcfs_n"][iteration, 0]
+    rtgsfit_lcfs_n = rtgsfit_output_dict["lcfs_n"][iteration]
     rtgsfit_lcfs_r = rtgsfit_output_dict["lcfs_r"][iteration, :rtgsfit_lcfs_n]
     rtgsfit_lcfs_z = rtgsfit_output_dict["lcfs_z"][iteration, :rtgsfit_lcfs_n]
     with mdsthin.Connection('smaug') as conn:

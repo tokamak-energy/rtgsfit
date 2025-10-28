@@ -18,12 +18,14 @@
 #define N_Z_TIMES_2 (N_Z * 2 - 1)
 #define MIN(aa,bb) ((aa)<=(bb)?(aa):(bb))
 #define MAX(aa,bb) ((aa)>=(bb)?(aa):(bb))
-#define ERR_MID_BDRY 0b000001
-#define ERR_COL_START 0b000010
-#define ERR_COL_END 0b000100
-#define ERR_COL_START_END 0b001000
-#define ERR_VERT_BDRY 0b010000
-#define ERR_MASK_INDEX 0b100000
+#define ERR_MID_BDRY 1 // 0b00000001
+#define ERR_COL_START 2 // 0b00000010
+#define ERR_COL_END 4 // 0b00000100
+#define ERR_COL_START_END 8 // 0b00001000
+#define ERR_VERT_BDRY 16 // 0b00010000
+#define ERR_MASK_INDEX 32 // 0b00100000
+#define ERR_LCFS_N 64 // 0b01000000
+#define ERR_AX_EQ_BDRY 128 // 0b10000000
 
 /// Find crossings along the edges of a patch.
 /// 
@@ -322,13 +324,14 @@ double lin_intrp(
   return flux_at_null;
 }
 
-void find_lcfs_rz(
+int32_t find_lcfs_rz(
     double *flux,
     double flux_lcfs,
     double *lcfs_r,
     double *lcfs_z,
     int32_t *lcfs_n) {
   double flux_offset[N_GRID];
+  int32_t error = 0;
 
   *lcfs_n = 0;
 
@@ -379,6 +382,11 @@ void find_lcfs_rz(
           }
         }
       }
+      if (*lcfs_n >= N_LCFS_MAX) {
+        // Stop if we exceed maximum number of LCFS points
+        error |= ERR_LCFS_N;
+        return error;
+      }
     }
   }
 
@@ -403,9 +411,11 @@ void find_lcfs_rz(
       (*lcfs_n)++;
     }
   }
+
+  return error;
 }
 
-int inside_lcfs(
+int32_t inside_lcfs(
     double r_opt,
     double z_opt,
     double *lcfs_r,
@@ -419,6 +429,11 @@ int inside_lcfs(
   double z_tmp[N_Z_TIMES_2];
 
   memset(mask, 0, N_GRID * sizeof(int));
+
+  if (lcfs_n > N_LCFS_MAX) {
+    error |= ERR_LCFS_N;
+    return error;
+  }
 
   // Find the z grid point closest to the o-point (magnetic axis)
   double z_nearest = round((z_opt - Z_VEC[0]) / DZ) * DZ + Z_VEC[0];
