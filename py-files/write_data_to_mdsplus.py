@@ -6,8 +6,6 @@ import standard_utility as util  # type: ignore
 from diagnostics_analysis_base import NestedDict
 import mdsthin
 from netCDF4 import Dataset
-import numpy as np
-import os
 
 
 def write_data_to_mdsplus(
