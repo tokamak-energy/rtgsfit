@@ -30,9 +30,10 @@ def write_data_to_mdsplus(
 
     :return: None
     """
-    data_file_name = f"/home/pcs.user/ops_double_threaded/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
-    data_file_name = f"/home/filip.janky/ops/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
+    # TODO: reminder change this to optional argument to `write_data_to_mdsplus`
+    data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
     # data_file_name = f"/home/alex.prokopyszyn/Data/filip_data/rtgsfit_results_{pulseNo}.nc"
+    # data_file_name = f"/home/alex.prokopyszyn/GitLab/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
 
     # If `pulseNo_write` is not specified, we will write to `pulseNo`
     if pulseNo_write is None:
