@@ -27,6 +27,7 @@ def write_data_to_mdsplus(
 
     :return: None
     """
+    # TODO: reminder change this to optional argument to `write_data_to_mdsplus`
     data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
 
     # If `pulseNo_write` is not specified, we will write to `pulseNo`
