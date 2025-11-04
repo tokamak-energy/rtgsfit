@@ -219,7 +219,9 @@ void rtgsfit(
         int32_t n_meas_model, // input
         double* axis_r, // output
         double* axis_z,  // output
-        double* axis_flux // output
+        double* axis_flux, // output
+        double* plasma_current_centroid_r, // output
+        double* plasma_current_centroid_z  // output
         )
 {
     assert(n_meas_model == N_MEAS);
@@ -309,10 +311,16 @@ void rtgsfit(
     // `source` is the current density in each grid cell;
     // plasma_current = sum(source) * d_area
     double source_sum = 0.0;
+    *plasma_current_centroid_r = 0.0;
+    *plasma_current_centroid_z = 0.0;
     for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++) {
         source_sum += source[i_grid];
+        *plasma_current_centroid_r += source[i_grid] * R_GRID[i_grid];
+        *plasma_current_centroid_z += source[i_grid] * Z_GRID[i_grid];
     }
     *plasma_current = source_sum * DR * DZ;
+    *plasma_current_centroid_r /= source_sum;
+    *plasma_current_centroid_z /= source_sum;
 
 
     // modelled measurements
