@@ -81,10 +81,12 @@ def initialise_rtgsfit_node(cfg: dict):
     #         [1.0,      0.0,      0.0,      0.0,     0.0,      0.0,     0.0,        0.0],  # BVL coil
     #         [0.0,      0.0,      1.0,      0.0,     0.0,      0.0,     0.0,        0.0],  # BVUT coil
     #         [0.0,      1.0,      0.0,      0.0,     0.0,      0.0,     0.0,        0.0],  # BVUB coil
-    #         [0.0,      0.0,      0.0,      0.0,     0.0,      1.0,     0.0,        0.0],  # PSH coil
+    #         [0.0,      0.0,      0.0,      0.0,     0.0,      0.0,     0.0,        0.0],  # PSH coil
     #     ]
     # )
-    coil_matrix = np.array(cfg["coil_matrix"])
+    # Take transpose of coil_matrix as we store in column-major order on MDS+
+    # as this is what Matlab/Simulink expects
+    coil_matrix = np.array(cfg["coil_matrix"]).T
     gsfit_controller.results["PRESHOT"]["COIL_MATRIX"] = coil_matrix
 
     gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_r"] = cfg["n_r"]

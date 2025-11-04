@@ -92,7 +92,9 @@ def prep_coil_curr(cfg: dict) -> np.ndarray:
                     # One of the signals is a Rogowski coil which we read from MAG instead of PSU
                     psu_current = mag.get(coil_signal_psu)
                 psu_currents[i] = np.interp(cfg["time"], time_array_mag, psu_current)
-            coil_curr = psu_currents @ coil_matrix.T
+            # Don't need to transpose coil_matrix here
+            # because it's stored in column-major order on MDS+
+            coil_curr = psu_currents @ coil_matrix
 
     return coil_curr
 
