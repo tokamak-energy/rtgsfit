@@ -116,7 +116,7 @@ double find_flux_on_limiter(double* flux_total)
  * The vector v that points from the x-point to the limiter point is
  * v = (LIMIT_R[j] - xpt_r[i], LIMIT_Z[j] - xpt_z[i]).
  * The vector w that points from the x-point to the axis is
- * w = (axis_r - xpt_r[i], axis_z - xpt_z[i]).
+ * w = (r_mag_axis - xpt_r[i], z_mag_axis - xpt_z[i]).
  * 
  * If the dot product of v and w is negative, then the limiter point
  * is not considered for the flux calculation.
@@ -125,16 +125,16 @@ double find_flux_on_limiter(double* flux_total)
  * @param xpt_r Array of x-point R coordinates.
  * @param xpt_z Array of x-point Z coordinates.
  * @param xpt_n Number of x-points.
- * @param axis_r R coordinate of the axis.
- * @param axis_z Z coordinate of the axis.
+ * @param r_mag_axis R coordinate of the axis.
+ * @param z_mag_axis Z coordinate of the axis.
  * @return The computed flux value on the limiter after x-point-filtering.
  */
 double find_flux_on_limiter_xfiltered(double flux_total[],
                                       double xpt_r[],
                                       double xpt_z[],
                                       int xpt_n,
-                                      double axis_r,
-                                      double axis_z)
+                                      double r_mag_axis,
+                                      double z_mag_axis)
 {
 
     int skip;
@@ -146,12 +146,12 @@ double find_flux_on_limiter_xfiltered(double flux_total[],
     {
 
         // If dot product of (R_LIM[i_limit] - xpt_r, Z_LIM[i_limit] - xpt_z) and 
-        // (axis_r - xpt_r, axis_z - xpt_z) is negative for any xpt, skip this limit point
+        // (r_mag_axis - xpt_r, z_mag_axis - xpt_z) is negative for any xpt, skip this limit point
         skip = 0;
         for (int32_t i_xpt = 0; i_xpt < xpt_n; i_xpt++)
         {
-            double dot_product = (LIMIT_R[i_limit] - xpt_r[i_xpt]) * (axis_r - xpt_r[i_xpt]) +
-                          (LIMIT_Z[i_limit] - xpt_z[i_xpt]) * (axis_z - xpt_z[i_xpt]);
+            double dot_product = (LIMIT_R[i_limit] - xpt_r[i_xpt]) * (r_mag_axis - xpt_r[i_xpt]) +
+                          (LIMIT_Z[i_limit] - xpt_z[i_xpt]) * (z_mag_axis - xpt_z[i_xpt]);
             if (dot_product < 0.0)
             {
                 skip = 1; // skip this limit point
@@ -217,11 +217,11 @@ void rtgsfit(
         int* lapack_dgelss_info, // output
         double *meas_model, // output
         int32_t n_meas_model, // input
-        double* axis_r, // output
-        double* axis_z,  // output
-        double* axis_flux, // output
-        double* plasma_current_centroid_r, // output
-        double* plasma_current_centroid_z  // output
+        double* r_mag_axis, // output
+        double* z_mag_axis,  // output
+        double* mag_axis_flux, // output
+        double* r_cur_centroid, // output
+        double* z_cur_centroid  // output
         )
 {
     assert(n_meas_model == N_MEAS);
@@ -311,16 +311,16 @@ void rtgsfit(
     // `source` is the current density in each grid cell;
     // plasma_current = sum(source) * d_area
     double source_sum = 0.0;
-    *plasma_current_centroid_r = 0.0;
-    *plasma_current_centroid_z = 0.0;
+    *r_cur_centroid = 0.0;
+    *z_cur_centroid = 0.0;
     for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++) {
         source_sum += source[i_grid];
-        *plasma_current_centroid_r += source[i_grid] * R_GRID[i_grid];
-        *plasma_current_centroid_z += source[i_grid] * Z_GRID[i_grid];
+        *r_cur_centroid += source[i_grid] * R_GRID[i_grid];
+        *z_cur_centroid += source[i_grid] * Z_GRID[i_grid];
     }
     *plasma_current = source_sum * DR * DZ;
-    *plasma_current_centroid_r /= source_sum;
-    *plasma_current_centroid_z /= source_sum;
+    *r_cur_centroid /= source_sum;
+    *z_cur_centroid /= source_sum;
 
 
     // modelled measurements
@@ -395,18 +395,18 @@ void rtgsfit(
 
     // select opt
     int32_t i_opt = max_idx(opt_n, opt_flux);
-    *axis_flux = opt_flux[i_opt];
-    *axis_r = opt_r[i_opt];
-    *axis_z = opt_z[i_opt];
+    *mag_axis_flux = opt_flux[i_opt];
+    *r_mag_axis = opt_r[i_opt];
+    *z_mag_axis = opt_z[i_opt];
 
-    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, *axis_r, *axis_z);
+    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, *r_mag_axis, *z_mag_axis);
 
     // select xpt
     if (xpt_n > 0)
     {
         int32_t i_xpt = max_idx(xpt_n, xpt_flux);
         double xpt_flux_max = xpt_flux[i_xpt];
-        xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*(*axis_flux);
+        xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*(*mag_axis_flux);
         if (xpt_flux_max > lcfs_flux)
         {
             lcfs_flux = xpt_flux_max;
@@ -419,18 +419,18 @@ void rtgsfit(
 
     // extract inside of LCFS
     // BUXTON: we think this might have an error??????
-    *lcfs_err_code |= inside_lcfs(*axis_r, *axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
+    *lcfs_err_code |= inside_lcfs(*r_mag_axis, *z_mag_axis, lcfs_r, lcfs_z, *lcfs_n, mask);
 
     // normalise total psi
-    if (fabs(lcfs_flux - (*axis_flux)) < THRESH)
+    if (fabs(lcfs_flux - (*mag_axis_flux)) < THRESH)
     {
-      // Don't call normalise_flux if lcfs_flux is too close to axis_flux
+      // Don't call normalise_flux if lcfs_flux is too close to mag_axis_flux
       // This avoids division by a very small number.
         *lcfs_err_code |= 128; // ERR_AX_EQ_BDRY
     }
     else
     {
-        normalise_flux(flux_total, lcfs_flux, *axis_flux, mask, flux_norm);
+        normalise_flux(flux_total, lcfs_flux, *mag_axis_flux, mask, flux_norm);
     }
 
     // Store psi_b for later
