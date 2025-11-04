@@ -216,7 +216,10 @@ void rtgsfit(
         int32_t *lcfs_err_code, // output
         int* lapack_dgelss_info, // output
         double *meas_model, // output
-        int32_t n_meas_model // input
+        int32_t n_meas_model, // input
+        double* axis_r, // output
+        double* axis_z,  // output
+        double* axis_flux // output
         )
 {
     assert(n_meas_model == N_MEAS);
@@ -384,18 +387,18 @@ void rtgsfit(
 
     // select opt
     int32_t i_opt = max_idx(opt_n, opt_flux);
-    double axis_flux = opt_flux[i_opt];
-    double axis_r = opt_r[i_opt];
-    double axis_z = opt_z[i_opt];
+    *axis_flux = opt_flux[i_opt];
+    *axis_r = opt_r[i_opt];
+    *axis_z = opt_z[i_opt];
 
-    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, axis_r, axis_z);
+    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, *axis_r, *axis_z);
 
     // select xpt
     if (xpt_n > 0)
     {
         int32_t i_xpt = max_idx(xpt_n, xpt_flux);
         double xpt_flux_max = xpt_flux[i_xpt];
-        xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*axis_flux;
+        xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*(*axis_flux);
         if (xpt_flux_max > lcfs_flux)
         {
             lcfs_flux = xpt_flux_max;
@@ -408,24 +411,19 @@ void rtgsfit(
 
     // extract inside of LCFS
     // BUXTON: we think this might have an error??????
-    *lcfs_err_code |= inside_lcfs(axis_r, axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
+    *lcfs_err_code |= inside_lcfs(*axis_r, *axis_z, lcfs_r, lcfs_z, *lcfs_n, mask);
 
     // normalise total psi
-    if (fabs(lcfs_flux - axis_flux) < THRESH)
+    if (fabs(lcfs_flux - (*axis_flux)) < THRESH)
     {
-        // Check the boundary flux value isn't equal to the axis flux value
-        // To prevent division by zero
+      // Don't call normalise_flux if lcfs_flux is too close to axis_flux
+      // This avoids division by a very small number.
         *lcfs_err_code |= 128; // ERR_AX_EQ_BDRY
     }
     else
     {
-        normalise_flux(flux_total, lcfs_flux, axis_flux, mask, flux_norm);
+        normalise_flux(flux_total, lcfs_flux, *axis_flux, mask, flux_norm);
     }
-
-    // store axis_r, axis_z and axis_flux in the meas_pcs array
-    // meas_pcs[0] = axis_r;
-    // meas_pcs[1] = axis_z;
-    // meas_pcs[2] = axis_flux;
 
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
