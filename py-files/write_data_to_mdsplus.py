@@ -62,6 +62,11 @@ def write_data_to_mdsplus(
         I_PF_IN = np.array(nc.variables["I_PF_IN"][:])
         r = np.array(nc.variables["r"][:])
         z = np.array(nc.variables["z"][:])
+        r_mag_axis = np.array(nc.variables["r_mag_axis"][:])
+        z_mag_axis = np.array(nc.variables["z_mag_axis"][:])
+        mag_axis_flux = np.array(nc.variables["mag_axis_flux"][:])
+        r_cur_centroid = np.array(nc.variables["r_cur_centroid"][:])
+        z_cur_centroid = np.array(nc.variables["z_cur_centroid"][:])
         
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("RTGSFIT", pulse_num_preshot)
@@ -160,19 +165,25 @@ def write_data_to_mdsplus(
     pls2_idx = np.where(coef_names == "pls2")[0][0]
     results["GLOBAL"]["ASYM_Z_DOF"] = coef[:, pls2_idx]
 
-    # Calculate PSI_A using
-    # flux_norm = (psi_a - flux_total) / (psi_a - psi_b)
-    # Rearranging gives:
-    # psi_a = (flux_norm * psi_b - flux_total) / (flux_norm - 1)
-    flux_norm_flat = flux_norm.reshape(flux_norm.shape[0], -1)
-    flux_total_flat = flux_total.reshape(flux_total.shape[0], -1)
-    min_indices = np.argmin(flux_norm_flat, axis=1)
-    flux_norm_argmin = flux_norm_flat[np.arange(flux_norm_flat.shape[0]), min_indices]
-    flux_total_argmin = flux_total_flat[np.arange(flux_total_flat.shape[0]), min_indices]
-    psi_a = (flux_norm_argmin * flux_boundary - flux_total_argmin) \
-        / (flux_norm_argmin - 1 + (flux_norm_argmin == 1))
-    # Note that we added (flux_norm_argmin == 1) to the denominator to avoid division by zero
-    results["GLOBAL"]["PSI_A"] = psi_a
+    # # Calculate PSI_A using
+    # # flux_norm = (psi_a - flux_total) / (psi_a - psi_b)
+    # # Rearranging gives:
+    # # psi_a = (flux_norm * psi_b - flux_total) / (flux_norm - 1)
+    # flux_norm_flat = flux_norm.reshape(flux_norm.shape[0], -1)
+    # flux_total_flat = flux_total.reshape(flux_total.shape[0], -1)
+    # min_indices = np.argmin(flux_norm_flat, axis=1)
+    # flux_norm_argmin = flux_norm_flat[np.arange(flux_norm_flat.shape[0]), min_indices]
+    # flux_total_argmin = flux_total_flat[np.arange(flux_total_flat.shape[0]), min_indices]
+    # psi_a = (flux_norm_argmin * flux_boundary - flux_total_argmin) \
+    #     / (flux_norm_argmin - 1 + (flux_norm_argmin == 1))
+    # # Note that we added (flux_norm_argmin == 1) to the denominator to avoid division by zero
+    # results["GLOBAL"]["PSI_A"] = psi_a
+    
+    results['GLOBAL']['R_MAG'] = r_mag_axis
+    results['GLOBAL']['Z_MAG'] = z_mag_axis
+    results['GLOBAL']['PSI_A'] = mag_axis_flux
+    results['GLOBAL']['R_CUR'] = r_cur_centroid
+    results['GLOBAL']['Z_CUR'] = z_cur_centroid
 
     util.create_script_nodes(
         script_name="RTGSFIT",
