@@ -321,9 +321,12 @@ void rtgsfit(
     *plasma_current = source_sum * DR * DZ;
     // Divide r_cur_centroid, z_cur_centroid by source_sum to get centroid position
     // provided the source_sum is not too close to zero or negative.
-    if (*plasma_current > 1.0) {
+    if (*plasma_current > 1e3) {
         *r_cur_centroid /= source_sum;
         *z_cur_centroid /= source_sum;
+    } else {
+        *r_cur_centroid = 0.0;
+        *z_cur_centroid = 0.0;
     }
 
     // modelled measurements
