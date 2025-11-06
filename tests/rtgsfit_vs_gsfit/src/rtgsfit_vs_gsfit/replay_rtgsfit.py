@@ -69,6 +69,11 @@ def replay_rtgsfit(cfg: dict):
         ctypes.POINTER(ctypes.c_int32),   # lapack_dgelss_info
         ctypes.POINTER(ctypes.c_double),  # meas_model
         ctypes.c_int32,                   # n_meas_model
+        ctypes.POINTER(ctypes.c_double),  # r_mag_axis
+        ctypes.POINTER(ctypes.c_double),  # z_mag_axis
+        ctypes.POINTER(ctypes.c_double),  # mag_axis_flux
+        ctypes.POINTER(ctypes.c_double),  # r_cur_centroid
+        ctypes.POINTER(ctypes.c_double)   # z_cur_centroid
     ]
     rtgsfit_lib.rtgsfit.restype = None
 
@@ -104,6 +109,11 @@ def replay_rtgsfit(cfg: dict):
     lapack_dgelss_info = np.array([0], dtype=np.int64)
     meas_model = np.zeros(n_meas, dtype=np.float64)
     n_meas_model = np.array([n_meas], dtype=np.int32)
+    r_mag_axis = np.array([0.0], dtype=np.float64)
+    z_mag_axis = np.array([0.0], dtype=np.float64)
+    mag_axis_flux = np.array([0.0], dtype=np.float64)
+    r_cur_centroid = np.array([0.0], dtype=np.float64)
+    z_cur_centroid = np.array([0.0], dtype=np.float64)
 
     output_dict = {"meas_pcs" : np.zeros((cfg["n_iters"] + 1, n_meas_pcs), dtype=np.float64),
                    "coil_curr" : np.zeros((cfg["n_iters"] + 1, n_coil), dtype=np.float64),
@@ -121,6 +131,11 @@ def replay_rtgsfit(cfg: dict):
                    "lapack_dgelss_info" : np.zeros((cfg["n_iters"] + 1), dtype=np.int32),
                    "meas_model" : np.zeros((cfg["n_iters"] + 1, n_meas), dtype=np.float64),
                    "n_meas_model": np.zeros((cfg["n_iters"] + 1), dtype=np.int32),
+                   "r_mag_axis" : np.zeros((cfg["n_iters"] + 1), dtype=np.float64),
+                   "z_mag_axis" : np.zeros((cfg["n_iters"] + 1), dtype=np.float64),
+                   "mag_axis_flux" : np.zeros((cfg["n_iters"] + 1), dtype=np.float64),
+                   "r_cur_centroid" : np.zeros((cfg["n_iters"] + 1), dtype=np.float64),
+                   "z_cur_centroid" : np.zeros((cfg["n_iters"] + 1), dtype=np.float64)
                    }
     output_dict["meas_pcs"][0, :] = meas_pcs
     output_dict["coil_curr"][0, :] = coil_curr
@@ -138,6 +153,11 @@ def replay_rtgsfit(cfg: dict):
     output_dict["lapack_dgelss_info"][0] = lapack_dgelss_info[0]
     output_dict["meas_model"][0, :] = meas_model
     output_dict["n_meas_model"][0] = n_meas_model[0]
+    output_dict["r_mag_axis"][0] = r_mag_axis[0]
+    output_dict["z_mag_axis"][0] = z_mag_axis[0]
+    output_dict["mag_axis_flux"][0] = mag_axis_flux[0]
+    output_dict["r_cur_centroid"][0] = r_cur_centroid[0]
+    output_dict["z_cur_centroid"][0] = z_cur_centroid[0]
 
     for i_iter in range(cfg["n_iters"]):
 
@@ -161,7 +181,12 @@ def replay_rtgsfit(cfg: dict):
             lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            ctypes.c_int32(n_meas)
+            ctypes.c_int32(n_meas),
+            r_mag_axis.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            z_mag_axis.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            mag_axis_flux.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            r_cur_centroid.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            z_cur_centroid.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         )
 
         print("Iteration:", i_iter + 1)
@@ -181,7 +206,12 @@ def replay_rtgsfit(cfg: dict):
         output_dict["lcfs_err_code"][i_iter + 1] = lcfs_err_code[0]
         output_dict["lapack_dgelss_info"][i_iter + 1] = lapack_dgelss_info[0]
         output_dict["meas_model"][i_iter + 1, :] = meas_model
-        output_dict["n_meas_model"][i_iter + 1] = n_meas_model[0]        
+        output_dict["n_meas_model"][i_iter + 1] = n_meas_model[0]
+        output_dict["r_mag_axis"][i_iter + 1] = r_mag_axis[0]
+        output_dict["z_mag_axis"][i_iter + 1] = z_mag_axis[0]
+        output_dict["mag_axis_flux"][i_iter + 1] = mag_axis_flux[0]
+        output_dict["r_cur_centroid"][i_iter + 1] = r_cur_centroid[0]
+        output_dict["z_cur_centroid"][i_iter + 1] = z_cur_centroid[0]      
 
     # Save output_dict to a file
     np.save(cfg["rtgsfit_output_dict_path"], output_dict, allow_pickle=True)

@@ -46,7 +46,12 @@ def replay_rtgsfit():
         ctypes.POINTER(ctypes.c_int32), # lcfs_err_code
         ctypes.POINTER(ctypes.c_int32), # lapack_dgelss_info
         ctypes.POINTER(ctypes.c_double), # meas_model
-        ctypes.c_int32 # n_meas_model
+        ctypes.c_int32, # n_meas_model
+        ctypes.POINTER(ctypes.c_double), # r_mag_axis
+        ctypes.POINTER(ctypes.c_double), # z_mag_axis
+        ctypes.POINTER(ctypes.c_double), # mag_axis_flux
+        ctypes.POINTER(ctypes.c_double),  # r_cur_centroid
+        ctypes.POINTER(ctypes.c_double)   # z_cur_centroid
     ]
     # Define the return type for the rtgsfit function
     rtgsfit_lib.rtgsfit.restype = None
@@ -99,6 +104,11 @@ def replay_rtgsfit():
     lcfs_err_code = np.array([0], dtype=np.int32)
     lapack_dgelss_info = np.array([0], dtype=np.int32)
     meas_model = np.zeros(n_meas, dtype=np.float64)
+    r_mag_axis = np.array([0.0], dtype=np.float64)
+    z_mag_axis = np.array([0.0], dtype=np.float64)
+    mag_axis_flux = np.array([0.0], dtype=np.float64)
+    r_cur_centroid = np.array([0.0], dtype=np.float64)
+    z_cur_centroid = np.array([0.0], dtype=np.float64)
 
     output_dict = {"meas" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
                    "coil_curr" : np.zeros((cnst.N_ITERS + 1, n_coil), dtype=np.float64),
@@ -115,7 +125,12 @@ def replay_rtgsfit():
                    "lcfs_err_code" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
                    "lapack_dgelss_info" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
                    "meas_model" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
-                   "n_meas_model" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32)}
+                   "n_meas_model" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
+                   "r_mag_axis" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
+                   "z_mag_axis" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
+                   "mag_axis_flux" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
+                   "r_cur_centroid" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64),
+                   "z_cur_centroid" : np.zeros((cnst.N_ITERS + 1), dtype=np.float64)}
     output_dict["meas"][0, :] = meas
     output_dict["coil_curr"][0, :] = coil_curr
     output_dict["flux_norm"][0, :] = flux_norm
@@ -131,7 +146,12 @@ def replay_rtgsfit():
     output_dict["lcfs_err_code"][0] = lcfs_err_code[0]
     output_dict["lapack_dgelss_info"][0] = lapack_dgelss_info[0]
     output_dict["meas_model"][0, :] = meas_model
-    output_dict["n_meas_model"][0] = len(meas_model)    
+    output_dict["n_meas_model"][0] = len(meas_model)
+    output_dict["r_mag_axis"][0] = r_mag_axis[0]
+    output_dict["z_mag_axis"][0] = z_mag_axis[0]
+    output_dict["mag_axis_flux"][0] = mag_axis_flux[0]
+    output_dict["r_cur_centroid"][0] = r_cur_centroid[0]
+    output_dict["z_cur_centroid"][0] = z_cur_centroid[0]
 
     for i_iter in range(cnst.N_ITERS):
 
@@ -161,7 +181,12 @@ def replay_rtgsfit():
             lcfs_err_code.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             lapack_dgelss_info.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
             meas_model.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            ctypes.c_int32(len(meas_model))
+            ctypes.c_int32(len(meas_model)),
+            r_mag_axis.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            z_mag_axis.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            mag_axis_flux.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            r_cur_centroid.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            z_cur_centroid.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         )
 
         print("Iteration:", i_iter + 1)
@@ -182,6 +207,11 @@ def replay_rtgsfit():
         output_dict["lapack_dgelss_info"][i_iter + 1] = lapack_dgelss_info[0]
         output_dict["meas_model"][i_iter + 1, :] = meas_model
         output_dict["n_meas_model"][i_iter + 1] = len(meas_model)
+        output_dict["r_mag_axis"][i_iter + 1] = r_mag_axis[0]
+        output_dict["z_mag_axis"][i_iter + 1] = z_mag_axis[0]
+        output_dict["mag_axis_flux"][i_iter + 1] = mag_axis_flux[0]
+        output_dict["r_cur_centroid"][i_iter + 1] = r_cur_centroid[0]
+        output_dict["z_cur_centroid"][i_iter + 1] = z_cur_centroid[0]
 
         print("Chi-squared error:", chi_sq_err[0])
         print("lapack_dgelss_info:", lapack_dgelss_info[0])
@@ -192,13 +222,6 @@ def replay_rtgsfit():
     np.save(output_file, output_dict, allow_pickle=True)
       
     # Save each in a csv file for visual inspection
-    # In the format:
-    # key0
-    # value0, value1, value2, ...
-    # 
-    # key1
-    # value0, value1, value2, ...
-    # ...
     # Skipping the flux_norm, flux_total, mask, lcfs_r, lcfs_z, lcfs_n for brevity
     csv_file = os.path.join(cnst.DATA_DIR, 'output_dict.csv')
     with open(csv_file, 'w') as f:
