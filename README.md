@@ -76,12 +76,14 @@ Names that could be converted to structures
 * example docstring below ...
 
 
-## Grid convention
+## Grid Convention
 
-The `R_GRID` and `Z_GRID` variables have `N_R × N_Z` elements. In the code, they are explicitly stored as 1D arrays in row-major order, but it is often conceptually useful to think of them as 2D grids. Each row in this conceptual 2D view corresponds to a contiguous block in the flattened 1D array. The following tables show how the 2D indices map to slices of the 1D storage.
+The `R_GRID` and `Z_GRID` variables each contain `N_R × N_Z` elements. In the code, they are explicitly stored as 1D arrays in row-major order, but it is often conceptually useful to treat them as 2D grids. In this view, each row of the 2D grid corresponds to a contiguous block in the flattened 1D array.  
 
-| Row index | R_GRID slice | Corresponding R_VEC |
-|-------------:|:-------------|:--------------------|
+The tables below show how the 2D indices map to slices of the 1D storage. Here, `R_VEC` and `Z_VEC` are 1D arrays of length `N_R` and `N_Z`, respectively, representing the unique values of `R_GRID` and `Z_GRID` in ascending order.
+
+| Row index | `R_GRID` slice | Corresponding `R_VEC` |
+|------------:|:----------------|:----------------------|
 | `0` | `R_GRID[0 : N_R-1]` | `R_VEC[0 : N_R-1]` |
 | `1` | `R_GRID[N_R : 2*N_R-1]` | `R_VEC[0 : N_R-1]` |
 | ... | ... | ... |
@@ -89,14 +91,15 @@ The `R_GRID` and `Z_GRID` variables have `N_R × N_Z` elements. In the code, the
 | ... | ... | ... |
 | `N_Z–1` | `R_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `R_VEC[0 : N_R-1]` |
 
-| Row index | Z_GRID slice | Corresponding Z_VEC |
-|-------------:|:-------------|:--------------------|
+| Row index | `Z_GRID` slice | Corresponding `Z_VEC` |
+|------------:|:----------------|:----------------------|
 | `0` | `Z_GRID[0 : N_R-1]` | `Z_VEC[0]` |
 | `1` | `Z_GRID[N_R : 2*N_R-1]` | `Z_VEC[1]` |
 | ... | ... | ... |
 | `i` | `Z_GRID[i*N_R : (i+1)*N_R-1]` | `Z_VEC[i]` |
 | ... | ... | ... |
 | `N_Z–1` | `Z_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `Z_VEC[N_Z-1]` |
+
 
 ## Boundary Convention 
 * LTRB
