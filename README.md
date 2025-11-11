@@ -77,48 +77,26 @@ Names that could be converted to structures
 
 
 ## Grid convention
-R_GRID[0, 0], Z_GRID[0, 0] - bottom left of grid i.e. (R_MIN, Z_MIN)
-R_GRID[0, N_R], Z_GRID[0, N_R] - bottom right of grid i.e. (R_MAX, Z_MIN)
-R_GRID[N_Z, 0], Z_GRID[N_Z, 0] - top left of grid i.e. (R_MIN, Z_MAX)
-R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
 
-[[ (N_Z - 1, 0), (N_Z - 1, 1)  , ... , (N_Z- 1, N_R -1)  ],
- [ (N_Z - 2, 0), (N_Z - 2, 1)  , ... , (N_Z - 2, N_R -1)],
-                    ...
- [ (0, 0)      , (0, 1)       , ... , (0, N_R -1)       ]]
+We represent the grids conceptually as 2D arrays (R_GRID, Z_GRID), but in the code they are explicitly stored as 1D arrays in row-major order, where each row is contiguous in memory. Each conceptual row of the 2D grid corresponds to a contiguous block in the flattened 1D array. The following tables illustrate how 2D indices map to slices of the 1D storage.
 
-| | | | | | | | | |
-|-|-|-|-|-|-|-|-|-|
-|R_GRID[0]|R_GRID[1]|...|R_GRID[N_R-1]|=|R_VEC[0]|R_VEC[1]|...|R_VEC[N_R-1]|
-|R_GRID[N_R+0]|R_GRID[N_R+1]|...|R_GRID[N_R+N_R-1]|=|R_VEC[0]|R_VEC[1]|...|R_VEC[N_R-1]|
-|...|...|...|...|=|...|...|...|...|=
-|R_GRID[N_R*(N_Z-1)+0]|R_GRID[N_R*(N_Z-1)+1]|...|R_GRID[N_R*(N_Z-1)+N_R-1]|=|R_VEC[0]|R_VEC[1]|...|R_VEC[N_R-1]|
+| Row index | R_GRID slice | Corresponding R_VEC |
+|-------------:|:-------------|:--------------------|
+| `0` | `R_GRID[0 : N_R-1]` | `R_VEC[0 : N_R-1]` |
+| `1` | `R_GRID[N_R : 2*N_R-1]` | `R_VEC[0 : N_R-1]` |
+| ... | ... | ... |
+| `i` | `R_GRID[i*N_R : (i+1)*N_R-1]` | `R_VEC[0 : N_R-1]` |
+| ... | ... | ... |
+| `N_Z–1` | `R_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `R_VEC[0 : N_R-1]` |
 
-| | | | | | | | | |
-|-|-|-|-|-|-|-|-|-|
-|Z_GRID[0]|Z_GRID[1]|...|Z_GRID[N_R-1]|=|Z_VEC[0]|Z_VEC[0]|...|Z_VEC[0]|
-|Z_GRID[N_R+0]|Z_GRID[N_R+1]|...|Z_GRID[N_R+N_R-1]|=|Z_VEC[1]|Z_VEC[1]|...|Z_VEC[1]|
-|...|...|...|...|=|...|...|...|...|=
-|Z_GRID[N_R*(N_Z-1)+0]|Z_GRID[N_R*(N_Z-1)+1]|...|Z_GRID[N_R*(N_Z-1)+N_R-1]|=|Z_VEC[N_Z-1]|Z_VEC[N_Z-1]|...|Z_VEC[N_Z-1]|
-
-### R_GRID Mapping
-
-| R_GRID slice | Corresponding R_VEC |
-|:-------------|:--------------------|
-| `R_GRID[0 : N_R-1]` | `R_VEC[0 : N_R-1]` |
-| `R_GRID[N_R : 2*N_R-1]` | `R_VEC[0 : N_R-1]` |
-| ... | ... |
-| `R_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `R_VEC[0 : N_R-1]` |
-
-
-### Z_GRID Mapping
-
-| Z_GRID slice | Corresponding Z_VEC |
-|:-------------|:--------------------|
-| `Z_GRID[0 : N_R-1]` | `Z_VEC[0]` |
-| `Z_GRID[N_R : 2*N_R-1]` | `Z_VEC[1]` |
-| ... | ... |
-| `Z_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `Z_VEC[N_Z-1]` |
+| Row index | Z_GRID slice | Corresponding Z_VEC |
+|-------------:|:-------------|:--------------------|
+| `0` | `Z_GRID[0 : N_R-1]` | `Z_VEC[0]` |
+| `1` | `Z_GRID[N_R : 2*N_R-1]` | `Z_VEC[1]` |
+| ... | ... | ... |
+| `i` | `Z_GRID[i*N_R : (i+1)*N_R-1]` | `Z_VEC[i]` |
+| ... | ... | ... |
+| `N_Z–1` | `Z_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `Z_VEC[N_Z-1]` |
 
 ## Boundary Convention 
 * LTRB
