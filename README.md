@@ -101,7 +101,7 @@ The tables below show how the 2D indices map to slices of the 1D storage. Here, 
 | `N_Z–1` | `Z_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `Z_VEC[N_Z-1]` |
 
 
-## Boundary Convention 
+### Boundary Convention 
 Variables with the suffix `_LTRB` are defined along the **Left**, **Top**, **Right**, and **Bottom** boundaries of the grid.  
 For example, the variable `INV_R_LTRB_MU0` is ordered sequentially along the boundary as follows:
 
