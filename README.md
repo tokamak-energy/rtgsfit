@@ -102,8 +102,11 @@ The tables below show how the 2D indices map to slices of the 1D storage. Here, 
 
 
 ## Boundary Convention 
-* LTRB
-* (R_MIN, Z_MIN) -> (R_MIN, Z_MAX) -> (R_MAX, Z_MAX) -> (R_MAX, Z_MIN) -> (R_MIN, Z_MIN)
+Variables with the suffix `_LTRB` are defined along the **Left**, **Top**, **Right**, and **Bottom** boundaries of the grid.  
+For example, the variable `INV_R_LTRB_MU0` is ordered sequentially along the boundary as follows:
+
+`(R_MIN, Z_MIN)` → `(R_MIN, Z_MAX)` → `(R_MAX, Z_MAX)` → `(R_MAX, Z_MIN)` → `(R_MIN, Z_MIN)`
+
 
 
  
