@@ -78,7 +78,7 @@ Names that could be converted to structures
 
 ## Grid convention
 
-The `R_GRID` and `Z_GRID` variables have dimensions `N_R × N_Z`. In the code, they are explicitly stored as 1D arrays in row-major order, but it is often conceptually useful to think of them as 2D grids. Each row in this conceptual 2D view corresponds to a contiguous block in the flattened 1D array. The following tables show how the 2D indices map to slices of the 1D storage.
+The `R_GRID` and `Z_GRID` variables have `N_R × N_Z` elements. In the code, they are explicitly stored as 1D arrays in row-major order, but it is often conceptually useful to think of them as 2D grids. Each row in this conceptual 2D view corresponds to a contiguous block in the flattened 1D array. The following tables show how the 2D indices map to slices of the 1D storage.
 
 | Row index | R_GRID slice | Corresponding R_VEC |
 |-------------:|:-------------|:--------------------|
