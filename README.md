@@ -101,6 +101,25 @@ R_GRID[N_Z, N_R], Z_GRID[N_Z, N_R] - top right of grid i.e. (R_MAX, Z_MAX)
 |...|...|...|...|=|...|...|...|...|=
 |Z_GRID[N_R*(N_Z-1)+0]|Z_GRID[N_R*(N_Z-1)+1]|...|Z_GRID[N_R*(N_Z-1)+N_R-1]|=|Z_VEC[N_Z-1]|Z_VEC[N_Z-1]|...|Z_VEC[N_Z-1]|
 
+### R_GRID Mapping
+
+| R_GRID slice | Corresponding R_VEC |
+|:-------------|:--------------------|
+| `R_GRID[0 : N_R-1]` | `R_VEC[0 : N_R-1]` |
+| `R_GRID[N_R : 2*N_R-1]` | `R_VEC[0 : N_R-1]` |
+| ... | ... |
+| `R_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `R_VEC[0 : N_R-1]` |
+
+
+### Z_GRID Mapping
+
+| Z_GRID slice | Corresponding Z_VEC |
+|:-------------|:--------------------|
+| `Z_GRID[0 : N_R-1]` | `Z_VEC[0]` |
+| `Z_GRID[N_R : 2*N_R-1]` | `Z_VEC[1]` |
+| ... | ... |
+| `Z_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `Z_VEC[N_Z-1]` |
+
 ## Boundary Convention 
 * LTRB
 * (R_MIN, Z_MIN) -> (R_MIN, Z_MAX) -> (R_MAX, Z_MAX) -> (R_MAX, Z_MIN) -> (R_MIN, Z_MIN)
