@@ -182,11 +182,11 @@ def write_data_to_mdsplus(
     # # Note that we added (flux_norm_argmin == 1) to the denominator to avoid division by zero
     # results["GLOBAL"]["PSI_A"] = psi_a
     
-    results['GLOBAL']['R_MAG'] = r_mag_axis
-    results['GLOBAL']['Z_MAG'] = z_mag_axis
+    results['GLOBAL']['RMAG'] = r_mag_axis
+    results['GLOBAL']['ZMAG'] = z_mag_axis
     results['GLOBAL']['PSI_A'] = mag_axis_flux
-    results['GLOBAL']['R_CUR'] = r_cur_centroid
-    results['GLOBAL']['Z_CUR'] = z_cur_centroid
+    results['GLOBAL']['RCUR'] = r_cur_centroid
+    results['GLOBAL']['ZCUR'] = z_cur_centroid
 
     util.create_script_nodes(
         script_name="RTGSFIT",
