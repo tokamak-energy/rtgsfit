@@ -77,6 +77,8 @@ def write_data_to_mdsplus(
         sens_rep_mat = sens_rep_mat.reshape((n_sens, n_sens))
         coef_names = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:COEF_NAMES").data()
         weight = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:WEIGHT").data()
+        g_meas_coil = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT.GREENS:MEAS_COIL").data()
+        g_meas_coil = g_meas_coil.reshape((len(meas_names), len(coil_names))).T
     
     flux_loop_indices = []
     bp_probe_indices = []
@@ -127,7 +129,7 @@ def write_data_to_mdsplus(
     results["CONSTRAINTS"]["COIL"]["NAME"] = coil_names
     results["CONSTRAINTS"]["FLOOP"]["NAME"] = meas_names[flux_loop_indices]
     results["CONSTRAINTS"]["BPPROBE"]["NAME"] = meas_names[bp_probe_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["NAME"] = meas_names[rog_coil_indices]
+    results["CONSTRAINTS"]["ROG"]["NAME"] = meas_names[rog_coil_indices]
 
     # Constraint and coil mvalues and weights
     meas_no_reg = sensors_IN @ sens_rep_mat.T
@@ -135,16 +137,17 @@ def write_data_to_mdsplus(
     results["CONSTRAINTS"]["FLOOP"]["WEIGHT"] = weight[flux_loop_indices]
     results["CONSTRAINTS"]["BPPROBE"]["MVALUE"] = meas_no_reg[:, bp_probe_indices]
     results["CONSTRAINTS"]["BPPROBE"]["WEIGHT"] = weight[bp_probe_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["MVALUE"] = meas_no_reg[:, rog_coil_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["WEIGHT"] = weight[rog_coil_indices]
+    results["CONSTRAINTS"]["ROG"]["MVALUE"] = meas_no_reg[:, rog_coil_indices]
+    results["CONSTRAINTS"]["ROG"]["WEIGHT"] = weight[rog_coil_indices]
     results["CONSTRAINTS"]["COIL"]["MVALUE"] = I_PF_IN
 
     # Constraints CVALUEs
     weight_matrix = np.tile(weight, (len(time), 1))
     meas_model_no_weight = meas_model / weight_matrix
-    results["CONSTRAINTS"]["FLOOP"]["CVALUE"] = meas_model_no_weight[:, flux_loop_indices]
-    results["CONSTRAINTS"]["BPPROBE"]["CVALUE"] = meas_model_no_weight[:, bp_probe_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["CVALUE"] = meas_model_no_weight[:, rog_coil_indices]
+    meas = meas_model_no_weight + I_PF_IN @ g_meas_coil
+    results["CONSTRAINTS"]["FLOOP"]["CVALUE"] = meas[:, flux_loop_indices]
+    results["CONSTRAINTS"]["BPPROBE"]["CVALUE"] = meas[:, bp_probe_indices]
+    results["CONSTRAINTS"]["ROG"]["CVALUE"] = meas[:, rog_coil_indices]
 
     # Passive dof values
     for i, ivc_idx in enumerate(ivc_indices):
