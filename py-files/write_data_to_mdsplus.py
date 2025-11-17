@@ -17,6 +17,7 @@ def write_data_to_mdsplus(
     pulseNo_write: int | None = None,
     pulse_num_preshot: int = 99_000_230,
     run_name_preshot: str = "RUN08",
+    data_file_name: str | None = None,
 ) -> None:
     """
     Write RT-GSFit results to MDSplus
@@ -30,10 +31,8 @@ def write_data_to_mdsplus(
 
     :return: None
     """
-    # TODO: reminder change this to optional argument to `write_data_to_mdsplus`
-    data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
-    # data_file_name = f"/home/alex.prokopyszyn/Data/filip_data/rtgsfit_results_{pulseNo}.nc"
-    # data_file_name = f"/home/alex.prokopyszyn/GitLab/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
+    if data_file_name is None:
+        data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
 
     # If `pulseNo_write` is not specified, we will write to `pulseNo`
     if pulseNo_write is None:
@@ -77,6 +76,8 @@ def write_data_to_mdsplus(
         sens_rep_mat = sens_rep_mat.reshape((n_sens, n_sens))
         coef_names = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:COEF_NAMES").data()
         weight = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:WEIGHT").data()
+        g_meas_coil = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT.GREENS:MEAS_COIL").data()
+        g_meas_coil = g_meas_coil.reshape((len(meas_names), len(coil_names))).T
     
     flux_loop_indices = []
     bp_probe_indices = []
@@ -127,7 +128,7 @@ def write_data_to_mdsplus(
     results["CONSTRAINTS"]["COIL"]["NAME"] = coil_names
     results["CONSTRAINTS"]["FLOOP"]["NAME"] = meas_names[flux_loop_indices]
     results["CONSTRAINTS"]["BPPROBE"]["NAME"] = meas_names[bp_probe_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["NAME"] = meas_names[rog_coil_indices]
+    results["CONSTRAINTS"]["ROG"]["NAME"] = meas_names[rog_coil_indices]
 
     # Constraint and coil mvalues and weights
     meas_no_reg = sensors_IN @ sens_rep_mat.T
@@ -135,16 +136,17 @@ def write_data_to_mdsplus(
     results["CONSTRAINTS"]["FLOOP"]["WEIGHT"] = weight[flux_loop_indices]
     results["CONSTRAINTS"]["BPPROBE"]["MVALUE"] = meas_no_reg[:, bp_probe_indices]
     results["CONSTRAINTS"]["BPPROBE"]["WEIGHT"] = weight[bp_probe_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["MVALUE"] = meas_no_reg[:, rog_coil_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["WEIGHT"] = weight[rog_coil_indices]
+    results["CONSTRAINTS"]["ROG"]["MVALUE"] = meas_no_reg[:, rog_coil_indices]
+    results["CONSTRAINTS"]["ROG"]["WEIGHT"] = weight[rog_coil_indices]
     results["CONSTRAINTS"]["COIL"]["MVALUE"] = I_PF_IN
 
     # Constraints CVALUEs
     weight_matrix = np.tile(weight, (len(time), 1))
     meas_model_no_weight = meas_model / weight_matrix
-    results["CONSTRAINTS"]["FLOOP"]["CVALUE"] = meas_model_no_weight[:, flux_loop_indices]
-    results["CONSTRAINTS"]["BPPROBE"]["CVALUE"] = meas_model_no_weight[:, bp_probe_indices]
-    results["CONSTRAINTS"]["ROGOWSKI"]["CVALUE"] = meas_model_no_weight[:, rog_coil_indices]
+    meas = meas_model_no_weight + I_PF_IN @ g_meas_coil
+    results["CONSTRAINTS"]["FLOOP"]["CVALUE"] = meas[:, flux_loop_indices]
+    results["CONSTRAINTS"]["BPPROBE"]["CVALUE"] = meas[:, bp_probe_indices]
+    results["CONSTRAINTS"]["ROG"]["CVALUE"] = meas[:, rog_coil_indices]
 
     # Passive dof values
     for i, ivc_idx in enumerate(ivc_indices):
@@ -179,11 +181,11 @@ def write_data_to_mdsplus(
     # # Note that we added (flux_norm_argmin == 1) to the denominator to avoid division by zero
     # results["GLOBAL"]["PSI_A"] = psi_a
     
-    results['GLOBAL']['R_MAG'] = r_mag_axis
-    results['GLOBAL']['Z_MAG'] = z_mag_axis
+    results['GLOBAL']['RMAG'] = r_mag_axis
+    results['GLOBAL']['ZMAG'] = z_mag_axis
     results['GLOBAL']['PSI_A'] = mag_axis_flux
-    results['GLOBAL']['R_CUR'] = r_cur_centroid
-    results['GLOBAL']['Z_CUR'] = z_cur_centroid
+    results['GLOBAL']['RCUR'] = r_cur_centroid
+    results['GLOBAL']['ZCUR'] = z_cur_centroid
 
     util.create_script_nodes(
         script_name="RTGSFIT",
@@ -221,15 +223,17 @@ if __name__ == "__main__":
     # only PCS user should write to the real 5 digit pulse
     if username == "pcs.user":
         pulseNo_write = None
+        data_file_name = data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
     elif username == "filip.janky":
         # Write to Filip's million pulse range
         pulseNo_write = pulseNo + 30_000_000
     elif username == "alex.prokopyszyn":
         # Write to Alex's million pulse range
         pulseNo_write = pulseNo + 52_000_000
+        data_file_name = f"/home/alex.prokopyszyn/Data/filip_data/rtgsfit_results_{pulseNo}.nc"
 
     if len(args) > 2:
         run_name = args[2]
-        write_data_to_mdsplus(pulseNo, run_name, pulseNo_write=pulseNo_write)
+        write_data_to_mdsplus(pulseNo, run_name, pulseNo_write=pulseNo_write, data_file_name=data_file_name)
     else:
-        write_data_to_mdsplus(pulseNo, pulseNo_write=pulseNo_write)
+        write_data_to_mdsplus(pulseNo, pulseNo_write=pulseNo_write, data_file_name=data_file_name)
