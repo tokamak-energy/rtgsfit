@@ -17,6 +17,7 @@ def write_data_to_mdsplus(
     pulseNo_write: int | None = None,
     pulse_num_preshot: int = 99_000_230,
     run_name_preshot: str = "RUN08",
+    data_file_name: str | None = None,
 ) -> None:
     """
     Write RT-GSFit results to MDSplus
@@ -30,10 +31,8 @@ def write_data_to_mdsplus(
 
     :return: None
     """
-    # TODO: reminder change this to optional argument to `write_data_to_mdsplus`
-    data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
-    # data_file_name = f"/home/alex.prokopyszyn/Data/filip_data/rtgsfit_results_{pulseNo}.nc"
-    # data_file_name = f"/home/alex.prokopyszyn/GitLab/pcs/model/ST40PCS/results/rtgsfit_results_{pulseNo}.nc"
+    if data_file_name is None:
+        data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
 
     # If `pulseNo_write` is not specified, we will write to `pulseNo`
     if pulseNo_write is None:
@@ -224,15 +223,17 @@ if __name__ == "__main__":
     # only PCS user should write to the real 5 digit pulse
     if username == "pcs.user":
         pulseNo_write = None
+        data_file_name = data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
     elif username == "filip.janky":
         # Write to Filip's million pulse range
         pulseNo_write = pulseNo + 30_000_000
     elif username == "alex.prokopyszyn":
         # Write to Alex's million pulse range
         pulseNo_write = pulseNo + 52_000_000
+        data_file_name = f"/home/alex.prokopyszyn/Data/filip_data/rtgsfit_results_{pulseNo}.nc"
 
     if len(args) > 2:
         run_name = args[2]
-        write_data_to_mdsplus(pulseNo, run_name, pulseNo_write=pulseNo_write)
+        write_data_to_mdsplus(pulseNo, run_name, pulseNo_write=pulseNo_write, data_file_name=data_file_name)
     else:
-        write_data_to_mdsplus(pulseNo, pulseNo_write=pulseNo_write)
+        write_data_to_mdsplus(pulseNo, pulseNo_write=pulseNo_write, data_file_name=data_file_name)
