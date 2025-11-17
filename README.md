@@ -1,5 +1,10 @@
-# rtgsfit
-Real-Time equilibrium reconstruction code
+# RTGSFit: Real-Time Grad-Shafranov Fit
+
+RTGSFit is a real-time tokamak equilibrium reconstruction tool designed for use during plasma pulses. The system was successfully deployed for shape control on the ST40 tokamak during the November 2025 experimental campaign, just before ST40 entered its upgrade period in December 2025.
+
+During development, our priority was to achieve reliable experimental performance on ST40 and to deliver meaningful results before the machine shutdown. Now, as we move into 2026, the focus shifts from a single-machine implementation toward improving, extending, and generalizing RTGSFit so it can be used more widely and developed collaboratively within the fusion community.
+
+RTGSFit is still actively evolving, and while the code is available, it is not yet intended for standalone external use. We strongly encourage interested users to contact us and collaborate, so we can support integration, discuss assumptions, and guide usage during this development phase.
 
 ## Compilation
 <!-- A .mat datafile will be required with the same variable names of that of the 
