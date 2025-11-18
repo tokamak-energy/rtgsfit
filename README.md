@@ -1,10 +1,10 @@
-# RTGSFit: Real-Time Grad-Shafranov Fit
+# RT-GSFit: Real-Time Grad-Shafranov Fit
 
-RTGSFit is a real-time tokamak equilibrium reconstruction tool designed for use during plasma pulses. The system was successfully deployed for shape control on the ST40 tokamak during the November 2025 experimental campaign, just before ST40 entered its upgrade period in December 2025.
+RT-GSFit is a real-time tokamak equilibrium reconstruction tool designed for use during plasma pulses. The system was successfully deployed for shape control on the ST40 tokamak during the November 2025 experimental campaign, just before ST40 entered its upgrade period in December 2025.
 
-During development, our priority was to achieve reliable experimental performance on ST40 and to deliver meaningful results before the machine shutdown. Now, as we move into 2026, the focus shifts from a single-machine implementation toward improving, extending, and generalizing RTGSFit so it can be used more widely and developed collaboratively within the fusion community.
+During early development, our priority was to demonstrate RTGSFit working on ST40 and deliver results before shutdown. Because of this, documentation took a back seat and parts of the code remain very ST40-specific. Some important setup steps and information also weren’t fully written down and still sit largely in our heads. Going into 2026, our focus is to improve clarity, organisation, and documentation so that RTGSFit can be understood and used without relying on internal knowledge. The project is still evolving and, although the code is available, it isn’t yet ready for standalone external use. We encourage interested users to get in touch so we can support integration, clarify assumptions, and continue developing the tool collaboratively.
 
-RTGSFit is still actively evolving, and while the code is available, it is not yet intended for standalone external use. We strongly encourage interested users to contact us and collaborate, so we can support integration, discuss assumptions, and guide usage during this development phase.
+
 
 ## Compilation
 <!-- A .mat datafile will be required with the same variable names of that of the 
