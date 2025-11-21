@@ -186,9 +186,6 @@ def write_data_to_mdsplus(
     # Get RBND, ZBND, NBND
     for i_time in range(len(time)):
 
-        if i_time % 100 == 0:
-            print(f"Time index {i_time} / {len(time)}")
-
         # Dilate the mask to ensure LCFS is included, but not too much beyond that
         mask_dilated = binary_dilation(mask[i_time].astype(bool), structure=struct)
 
