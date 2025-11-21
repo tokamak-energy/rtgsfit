@@ -19,7 +19,7 @@ def write_data_to_mdsplus(
     run_description: str = "Standard run with default settings",
     pulseNo_write: int | None = None,
     pulse_num_preshot: int = 99_000_230,
-    run_name_preshot: str = "RUN08",
+    run_name_preshot: str = "RUN13",
     data_file_name: str | None = None,
 ) -> None:
     """
