@@ -14,8 +14,6 @@ def write_data_to_mdsplus(
     pulseNo: int,
     run_name: str = "RUN01",
     run_description: str = "Standard run with default settings",
-    settings_path: str = "default",
-    write_to_mds: bool = True,
     pulseNo_write: int | None = None,
     pulse_num_preshot: int = 99_000_230,
     run_name_preshot: str = "RUN08",
@@ -23,13 +21,6 @@ def write_data_to_mdsplus(
 ) -> None:
     """
     Write RT-GSFit results to MDSplus
-
-    :param pulseNo: pulse number
-    :param run_name: run_name to save to MDSplus
-    :param run_description: help string for MDSplus Tree
-    :param settings_path: location where code inputs are stored
-    :param write_to_mds: flag to turn on / off writing to MDSplus
-    :param pulseNo_write: pulse number in which data is to be written, if different from the current pulse
 
     :return: None
     """
