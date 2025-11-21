@@ -6,14 +6,17 @@ import standard_utility as util  # type: ignore
 from diagnostics_analysis_base import NestedDict
 import mdsthin
 from netCDF4 import Dataset
+from scipy.ndimage import binary_dilation
+from skimage.measure import find_contours
 
+# Parameters
+struct = np.ones((5,5), dtype=bool)
+FILL_VALUE = -1e10  # fill for masked-out region (must be << contour level)
 
 def write_data_to_mdsplus(
     pulseNo: int,
     run_name: str = "RUN01",
     run_description: str = "Standard run with default settings",
-    settings_path: str = "default",
-    write_to_mds: bool = True,
     pulseNo_write: int | None = None,
     pulse_num_preshot: int = 99_000_230,
     run_name_preshot: str = "RUN08",
@@ -21,13 +24,6 @@ def write_data_to_mdsplus(
 ) -> None:
     """
     Write RT-GSFit results to MDSplus
-
-    :param pulseNo: pulse number
-    :param run_name: run_name to save to MDSplus
-    :param run_description: help string for MDSplus Tree
-    :param settings_path: location where code inputs are stored
-    :param write_to_mds: flag to turn on / off writing to MDSplus
-    :param pulseNo_write: pulse number in which data is to be written, if different from the current pulse
 
     :return: None
     """
@@ -113,10 +109,10 @@ def write_data_to_mdsplus(
     results["TIME"] = time
     results["TWO_D"]["MASK"] = mask
     results["GLOBAL"]["CHIT"] = chi_sq_err
-    results["P_BOUNDARY"]["NBND"] = lcfs_n
+    # results["P_BOUNDARY"]["NBND"] = lcfs_n
     results["TWO_D"]["PSI"] = flux_total
-    results["P_BOUNDARY"]["RBND"] = lcfs_r
-    results["P_BOUNDARY"]["ZBND"] = lcfs_z
+    # results["P_BOUNDARY"]["RBND"] = lcfs_r
+    # results["P_BOUNDARY"]["ZBND"] = lcfs_z
     results["GLOBAL"]["PSI_B"] = flux_boundary
     results["GLOBAL"]["IP"] = plasma_current
     results["GLOBAL"]["LCFS_ERR"] = lcfs_err_code
@@ -186,6 +182,49 @@ def write_data_to_mdsplus(
     results['GLOBAL']['PSI_A'] = mag_axis_flux
     results['GLOBAL']['RCUR'] = r_cur_centroid
     results['GLOBAL']['ZCUR'] = z_cur_centroid
+    
+    # Get RBND, ZBND, NBND
+    for i_time in range(len(time)):
+
+        if i_time % 100 == 0:
+            print(f"Time index {i_time} / {len(time)}")
+
+        # Dilate the mask to ensure LCFS is included, but not too much beyond that
+        mask_dilated = binary_dilation(mask[i_time].astype(bool), structure=struct)
+
+        # Replace masked-out values with a large negative sentinel (not NaN)
+        flux_masked = np.where(mask_dilated, flux_total[i_time], FILL_VALUE)
+
+        # Extract contour at the LCFS level
+        contours = find_contours(flux_masked, level=flux_boundary[i_time])
+
+        # Handle no contour found
+        if len(contours) == 0:
+            lcfs_n[i_time] = 0
+            lcfs_r[i_time, :] = np.nan
+            lcfs_z[i_time, :] = np.nan
+            continue
+
+        # Use longest contour (LCFS normally largest closed loop)
+        contour = max(contours, key=len)
+
+        # Convert pixel coordinates → physical (r,z)
+        # contour[:,1] → x-index → r direction
+        # contour[:,0] → y-index → z direction
+        rbnd_contour = np.interp(contour[:,1], np.arange(len(r)), r)
+        zbnd_contour = np.interp(contour[:,0], np.arange(len(z)), z)
+
+        nbnd_contour = len(rbnd_contour)
+
+        lcfs_n[i_time] = nbnd_contour
+        lcfs_r[i_time, :nbnd_contour] = rbnd_contour
+        lcfs_r[i_time, nbnd_contour:] = np.nan
+        lcfs_z[i_time, :nbnd_contour] = zbnd_contour
+        lcfs_z[i_time, nbnd_contour:] = np.nan
+
+    results["P_BOUNDARY"]["RBND"] = lcfs_r
+    results["P_BOUNDARY"]["ZBND"] = lcfs_z
+    results["P_BOUNDARY"]["NBND"] = lcfs_n
 
     util.create_script_nodes(
         script_name="RTGSFIT",
