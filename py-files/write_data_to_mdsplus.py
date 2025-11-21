@@ -7,6 +7,7 @@ from diagnostics_analysis_base import NestedDict
 import matplotlib.pyplot as plt
 import mdsthin
 from netCDF4 import Dataset
+from scipy.ndimage import binary_dilation
 
 
 def write_data_to_mdsplus(
@@ -189,15 +190,18 @@ def write_data_to_mdsplus(
     results['GLOBAL']['ZCUR'] = z_cur_centroid
     
     # Get RBND, ZBND, NBND
+    struct = np.ones((5,5), dtype=bool)
+    ax = plt.subplot()
     for i_time in range(len(time)):
-        mask_dilated = np.copy(mask[i_time])
-        for i in range(1, mask_dilated.shape[0] - 1):
-            for j in range(1, mask_dilated.shape[1] - 1):
-                if mask[i_time][i, j] == 1:
-                    mask_dilated[i-2:i+2, j-2:j+2] = 1
+        
+        if i_time % 100 == 0:
+            print(f"Time index {i_time} / {len(time)}")
+        
+        # Dilate the mask to ensure LCFS is included, but not too much beyond that
+        mask_dilated = binary_dilation(mask[i_time].astype(bool), structure=struct)
         flux_total_masked = flux_total[i_time].copy()
-        flux_total_masked[mask_dilated != 1] = np.nan
-        fig, ax = plt.subplots(figsize=(8, 6))
+        flux_total_masked[~mask_dilated] = np.nan
+
         cs = ax.contour(
             r,
             z,
@@ -206,17 +210,20 @@ def write_data_to_mdsplus(
         )
         rbnd_contour = cs.allsegs[0][0][:, 0]
         zbnd_contour = cs.allsegs[0][0][:, 1]
-        lcfs_n = len(rbnd_contour)
-        if i_time % 100 == 0:
-            print(f"Time index {i_time} / {len(time)}")
-        lcfs_r[i_time, :lcfs_n] = rbnd_contour[:lcfs_n]
-        lcfs_r[i_time, lcfs_n:] = np.nan
-        lcfs_z[i_time, :lcfs_n] = zbnd_contour[:lcfs_n]
-        lcfs_z[i_time, lcfs_n:] = np.nan
-        results["P_BOUNDARY"]["RBND"] = lcfs_r
-        results["P_BOUNDARY"]["ZBND"] = lcfs_z
-        results["P_BOUNDARY"]["NBND"] = lcfs_n
-        plt.close(fig)
+        nbnd_contour = len(rbnd_contour)
+
+        lcfs_n[i_time] = nbnd_contour
+        lcfs_r[i_time, :nbnd_contour] = rbnd_contour
+        lcfs_r[i_time, nbnd_contour:] = np.nan
+        lcfs_z[i_time, :nbnd_contour] = zbnd_contour
+        lcfs_z[i_time, nbnd_contour:] = np.nan
+        
+        for coll in list(ax.collections):
+            coll.remove()
+    plt.close()
+    results["P_BOUNDARY"]["RBND"] = lcfs_r
+    results["P_BOUNDARY"]["ZBND"] = lcfs_z
+    results["P_BOUNDARY"]["NBND"] = lcfs_n
 
     util.create_script_nodes(
         script_name="RTGSFIT",
