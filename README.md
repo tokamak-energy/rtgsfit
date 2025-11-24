@@ -7,7 +7,7 @@ During early development, our priority was to demonstrate RT-GSFit working on ST
 <p align="center">
   <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/6be77fdd28b3902b055506d09e249666fc5c55bd/SVGs/vessel_geometry_14757_t_099749.svg" alt="ST40 Vessel Geometry" width="600">
   <br>
-  <em>Figure: Reconstructed ST40 vessel magnetic geometry example.</em>
+  <em>Figure 1: ST40 Magnetic Field.</em>
 </p>
 
 ## Compilation
