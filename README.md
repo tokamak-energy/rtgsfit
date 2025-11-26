@@ -5,7 +5,7 @@ RT-GSFit is a real-time tokamak equilibrium reconstruction tool designed to appr
 During early development, our priority was to demonstrate RT-GSFit working on ST40 and deliver results before the shutdown. Because of this, documentation took a back seat and parts of the code remain very ST40-specific. Some important setup steps and information also weren’t fully written down and still sit largely in our heads. Going into 2026, our focus is to improve clarity, organisation, and documentation so that RT-GSFit can be understood and used without relying on internal knowledge. We also want to ensure the repository becomes more general, making it easier to apply RT-GSFit to other tokamaks than just ST40. The project is still evolving and, although the code is available, it isn’t yet ready for standalone external use. If you’re interested in using RTGSFit, please get in touch. We can walk you through the code and explore future collaboration.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/f87947f53e4217f7c31a95817af1eb7111ed2732/SVGs/vessel_geometry_14754_t_099749.svg" alt="ST40 Vessel Geometry" width="600">
+  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/f87947f53e4217f7c31a95817af1eb7111ed2732/SVGs/vessel_geometry_14754_t_099749.svg" alt="ST40 Vessel Geometry" style="max-width:100%; height:auto;">
   <br>
   <em>Figure 1: ST40 Magnetic Field.</em>
 </p>
