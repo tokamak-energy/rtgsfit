@@ -1,16 +1,41 @@
 # RT-GSFit: Real-Time Grad-Shafranov Fit
 
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Why C and Python?](#why_c_and_python)
+3. [RT-GSFit vs GSFit](#rtgsfit_vs_gsfit)
+4. [Program Layout and Flow](#program_layout_and_flow)
+
+## 1. Introduction<a name="introduction"></a>
+
 RT-GSFit is a real-time tokamak equilibrium reconstruction tool designed to approximate the 2D magnetic field within less than 1 ms of receiving live data from magnetic sensors and other diagnostics during a plasma pulse. The code was successfully deployed for shape control on the ST40 tokamak during the November 2025 experimental campaign, just before ST40 entered its upgrade period in December 2025.
 
-During early development, our priority was to demonstrate RT-GSFit working on ST40 and deliver results before the shutdown. Because of this, documentation took a back seat and parts of the code remain very ST40-specific. Some important setup steps and information also weren’t fully written down and still sit largely in our heads. Going into 2026, our focus is to improve clarity, organisation, and documentation so that RT-GSFit can be understood and used without relying on internal knowledge. We also want to ensure the repository becomes more general, making it easier to apply RT-GSFit to other tokamaks than just ST40. The project is still evolving and, although the code is available, it isn’t yet ready for standalone external use. If you’re interested in using RTGSFit, please get in touch. We can walk you through the code and explore future collaboration.
+During early development, our priority was to demonstrate RT-GSFit working on ST40 and deliver results before the shutdown. Because of this, documentation took a back seat and parts of the code remain very ST40-specific. Some important setup steps and information also weren’t fully written down and still sit largely in our heads. Going into 2026, our focus is to improve clarity, organisation, and documentation so that RT-GSFit can be understood and used without relying on internal knowledge. We also want to ensure the repository becomes more general, making it easier to apply RT-GSFit to other tokamaks than just ST40. The project is still evolving and, although the code is available, it isn’t yet ready for standalone external use. If you’re interested in using RT-GSFit, please get in touch. We can walk you through the code and explore future collaboration.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/SVGs/vessel_geometry_14757_t_100.svg" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
   <br>
-  <em>Figure 1: ST40 Magnetic Field.</em>
+  <em>Figure1: Snapshot of the magnetic field during an ST40 pulse from the November 2025 campaign. RT-GSFit was used in real time to control the gap between the MCT/MCB (merging compression top/bottom) coils and the last closed flux surface (plasma boundary).</em>
 </p>
 
-## Compilation
+## 2. Why C and Python?<a name="why_c_and_python"></a>
+
+The core routines in the `src/` directory are written in C because RT-GSFit needs to integrate seamlessly with the Tokamak plasma control system. The ST40 control system uses MathWorks Simulink, which auto-generates C code, and this approach is common across many Tokamak control architectures. By writing the core components in C, RT-GSFit can integrate reliably with the existing control stack.
+
+Python is used for utility functions and for some of the integration tests. For example, `tests/rtgsfit_verify_analytic` checks the RT-GSFit output against an analytic solution, and `tests/rtgsfit_vs_gsfit` verifies agreement between RT-GSFit and GSFit for three different ST40 pulses. These tests are described in more detail in the [Testing](#testing) section of this README.
+
+## 3. RT-GSFit vs GSFit<a name="rtgsfit_vs_gsfit"></a>
+
+[GSFit](https://github.com/tokamak-energy/gsfit) is similar to RT-GSFit, except that it is slower and a post-shot code. As a result, GSFit is more suited to post-shot analysis, where it can perform additional post-processing and benefit from higher accuracy. However, as demonstrated in `tests/rtgsfit_vs_gsfit`, RT-GSFit produces results that closely agree with GSFit.
+
+Both RT-GSFit and GSFit solve the plasma equilibrium for an ideal, single-fluid MHD model assuming toroidal symmetry. We plan to release a manual with full algorithmic details. Our approach is closely aligned with that presented in the following excellent paper:<br>
+[J.-M. Moret, et. al., "Tokamak equilibrium reconstruction code LIUQE and its real time implementation", Fusion Eng. Design, 91, 2015](https://doi.org/10.1016/j.fusengdes.2014.09.019)<br>
+
+RT-GSFit also uses routines from GSFit to compute key values that can be calculated before the shot, such as the mutual inductance matrices between the interior coordinates and diagnostic coordinates (e.g., flux loops) for ST40. These are used to generate the `constants.c` file needed in the `src/` directory. Delegating pre-shot calculations to GSFit ensures a single authoritative codebase and helps avoid accidental discrepancies.
+
+## 4. Program Layout and Flow<a name="program_layout_and_flow"></a>
+
+## 4. Installation Compilation
 <!-- A .mat datafile will be required with the same variable names of that of the 
 global constants specified in constants.h. This should 
 contain all matrices in row major order, with indexing also in row major order 
@@ -119,7 +144,7 @@ They are ordered sequentially along the boundary as follows:
 
 
  
-## Testing
+## Testing<a name="testing"></a>
 * pytest
 * seting up python
 * freegs
