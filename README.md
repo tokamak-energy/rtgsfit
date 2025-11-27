@@ -5,6 +5,7 @@
 2. [Why C and Python?](#why_c_and_python)
 3. [RT-GSFit vs GSFit](#rtgsfit_vs_gsfit)
 4. [Program Layout and Flow](#program_layout_and_flow)
+5. [Tests](#tests)
 
 ## 1. Introduction<a name="introduction"></a>
 
@@ -15,14 +16,14 @@ During early development, our priority was to demonstrate RT-GSFit working on ST
 <p align="center">
   <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/SVGs/vessel_geometry_14757_t_100.svg" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
   <br>
-  <em>Figure1: Snapshot of the magnetic field during an ST40 pulse from the November 2025 campaign. RT-GSFit was used in real time to control the gap between the MCT/MCB (merging compression top/bottom) coils and the last closed flux surface (plasma boundary).</em>
+  <em>Figure 1: Snapshot of the magnetic field during an ST40 pulse from the November 2025 campaign. RT-GSFit was used in real time to control the gap between the MCT/MCB (merging compression top/bottom) coils and the last closed flux surface (plasma boundary).</em>
 </p>
 
 ## 2. Why C and Python?<a name="why_c_and_python"></a>
 
 The core routines in the `src/` directory are written in C because RT-GSFit needs to integrate seamlessly with the Tokamak plasma control system. The ST40 control system uses MathWorks Simulink, which auto-generates C code, and this approach is common across many Tokamak control architectures. By writing the core components in C, RT-GSFit can integrate reliably with the existing control stack.
 
-Python is used for utility functions and for some of the integration tests. For example, `tests/rtgsfit_verify_analytic` checks the RT-GSFit output against an analytic solution, and `tests/rtgsfit_vs_gsfit` verifies agreement between RT-GSFit and GSFit for three different ST40 pulses. These tests are described in more detail in the [Testing](#testing) section of this README.
+Python is used for utility functions and for some of the integration tests. For example, `tests/rtgsfit_verify_analytic` checks the RT-GSFit output against an analytic solution, and `tests/rtgsfit_vs_gsfit` verifies agreement between RT-GSFit and GSFit for three different ST40 pulses. These tests are described in more detail in the [Tests](#tests) section of this README.
 
 ## 3. RT-GSFit vs GSFit<a name="rtgsfit_vs_gsfit"></a>
 
@@ -34,6 +35,17 @@ Both RT-GSFit and GSFit solve the plasma equilibrium for an ideal, single-fluid 
 RT-GSFit also uses routines from GSFit to compute key values that can be calculated before the shot, such as the mutual inductance matrices between the interior coordinates and diagnostic coordinates (e.g., flux loops) for ST40. These are used to generate the `constants.c` file needed in the `src/` directory. Delegating pre-shot calculations to GSFit ensures a single authoritative codebase and helps avoid accidental discrepancies.
 
 ## 4. Program Layout and Flow<a name="program_layout_and_flow"></a>
+
+In this section we will give a brief overview of how we setup the code for integration with the ST40 plasma control system.
+
+### 4.1 Initialization
+
+To meet the real-time performance requirements of RT-GSFit, we precompute as many values as possible before the system enters live operation. As part of this design, you’ll notice that while `constants.h` exists in the `src/` directory, the corresponding `constants.c` file is intentionally **not** included.
+
+The `constants.c` file must be generated prior to compiling and running RT-GSFit. An example workflow demonstrating how to generate this file (using a simplified large-aspect-ratio Tokamak model) is provided in the `tests/rtgsfit_verify_analytic` directory. This workflow is described in more detail in Section [5.1 RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution). However, when running RT-GSFit within the Plasma Control System (PCS), the workflow includes additional steps beyond those used in the analytic verification test which we will describe here.
+
+First, the required input data is written to Tokamak Energy’s (TE) [MDSPlus](https://www.mdsplus.org/index.php/Introduction) server using a script similar to the one demonstrated in [GSFit Example 5](https://github.com/tokamak-energy/gsfit/blob/main/examples/example_05_st40_setup_for_rtgsfit.py). During the November 2025 campaign, data was stored in the RTGSFIT tree under pulse number 99,000,230 (with *230* designating Program 2.3), and all relevant values were placed in the `PRESHOT` node. Access to TE’s MDSPlus server is restricted to TE employees and approved collaborators.
+
 
 ## 4. Installation Compilation
 <!-- A .mat datafile will be required with the same variable names of that of the 
@@ -64,7 +76,12 @@ make clean
 make SHOT=99000230 RUN_NAME=RUN02 DEBUG=1
 ```
 
+## 5. Tests<a name="tests"></a>
+* pytest
+* seting up python
+* freegs
 
+### 5.1 RT-GSFit vs. Analytic Solution Test<a name="rtgsfit_vs_analytic_solution"></a>
 
 <!-- ## Program Structure
 * shared libraries
@@ -140,14 +157,6 @@ Variables such as `INV_R_LTRB_MU0` with the suffix `_LTRB` are defined along the
 They are ordered sequentially along the boundary as follows:
 
 `(R_MIN, Z_MIN)` → `(R_MIN, Z_MAX)` → `(R_MAX, Z_MAX)` → `(R_MAX, Z_MIN)` → `(R_MIN, Z_MIN)`
-
-
-
- 
-## Testing<a name="testing"></a>
-* pytest
-* seting up python
-* freegs
 
 ## To Do
 * deglss vs dgelsd
