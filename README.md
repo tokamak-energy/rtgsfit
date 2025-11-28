@@ -137,6 +137,9 @@ In contrast to the previous test, this comparison is not executed automatically 
 
 ## 6. Programming Conventions and Style Recommendations<a name="style_guide"></a>
 
+We use the the COCOS 13 coordinate system, as described in [O. Sauter and S. Y. Medvedev, "Tokamak Coordinate Conventions: COCOS", Comput. Phys. Commun. 184, 2013](https://doi.org/10.1016/j.cpc.2012.09.010).
+In summary, flux is measured in weber, and the poloidal angle increases counterclockwise, starting from the outboard mid-plane.
+
 ### 6.1 Formatting convention
 
 * Allman bracket style
