@@ -6,12 +6,14 @@
 3. [RT-GSFit vs GSFit](#rtgsfit_vs_gsfit)
 4. [Program Layout and Flow](#program_layout_and_flow)
 5. [Tests](#tests)
+6. [Programming Conventions and Style Recommendation](#style_guide)
+7. [To Do](#to_do)
 
 ## 1. Introduction<a name="introduction"></a>
 
 RT-GSFit is a real-time tokamak equilibrium reconstruction tool designed to approximate the 2D magnetic field within less than 1 ms of receiving live data from magnetic sensors and other diagnostics during a plasma pulse. The code was successfully deployed for shape control on the ST40 tokamak during the November 2025 experimental campaign, just before ST40 entered its upgrade period in December 2025.
 
-During early development, our priority was to demonstrate RT-GSFit working on ST40 and deliver results before the shutdown. Because of this, documentation took a back seat and parts of the code remain very ST40-specific. Some important setup steps and information also weren’t fully written down and still sit largely in our heads. Going into 2026, our focus is to improve clarity, organisation, and documentation so that RT-GSFit can be understood and used without relying on internal knowledge. We also want to ensure the repository becomes more general, making it easier to apply RT-GSFit to other tokamaks than just ST40. The project is still evolving and, although the code is available, it isn’t yet ready for standalone external use. If you’re interested in using RT-GSFit, please get in touch. We can walk you through the code and explore future collaboration.
+During early development, our priority was to demonstrate RT-GSFit working on ST40 and deliver results before the shutdown. Because of this, documentation took a back seat and parts of the code remain very ST40-specific. Some important setup steps and information also weren’t fully written down and still sit largely in our heads. Going into 2026, our focus is to improve clarity, organisation, and documentation so that RT-GSFit can be understood and used without relying on internal knowledge. We also want to ensure the repository becomes more general, making it easier to apply RT-GSFit to other tokamaks than just ST40. The project is still evolving and, while the code is publicly available, it is not yet in a state where it can be used independently without guidance. If you’re interested in using RT-GSFit, please get in touch. We can walk you through the code and explore future collaboration.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/SVGs/vessel_geometry_14757_t_100.svg" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
@@ -101,11 +103,13 @@ Further testing and documentation are planned, including:
 
 ### 5.1 RT-GSFit vs. Analytic Solution Test<a name="rtgsfit_vs_analytic_solution"></a>
 
-This test runs automatically as part of the CI/CD workflow for the repository (see `.github/workflows/main.yml`). Its purpose is to verify that RT-GSFit converges to a known analytic equilibrium for a large–aspect-ratio Tokamak with zero plasma beta.
+This test runs automatically as part of the CI/CD workflow for the repository (see `.github/workflows/main.yml`). Its purpose is to verify that RT-GSFit converges to a known analytic equilibrium representing a large–aspect-ratio Tokamak with zero plasma beta.
 
-Further details on the analytic formulation can be found in the accompanying document:<br>
-[`tests/rtgsfit_verify_analytic/latex/Analytic_Solution/Analytic_Solution.pdf`](https://github.com/tokamak-energy/rtgsfit/blob/main/tests/rtgsfit_verify_analytic/latex/Analytic_Solution/Analytic_Solution.pdf)<br>
-For this test, we construct a simplified model Tokamak equipped with flux loops, and magnetic pickup (BP) probes. The geometry and diagnostic locations are shown in Figure 2.
+Details of the analytic formulation are provided in:
+
+[`tests/rtgsfit_verify_analytic/latex/Analytic_Solution/Analytic_Solution.pdf`](https://github.com/tokamak-energy/rtgsfit/blob/main/tests/rtgsfit_verify_analytic/latex/Analytic_Solution/Analytic_Solution.pdf)
+
+For this test, we set up a simplified tokamak configuration including flux loops and magnetic pickup (BP) probes. The computational grid and diagnostic locations are shown in Figure 2.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/SVGs/grid_and_limiter_points.svg" alt="Large-Aspect Ratio Tokamak" style="width:80%; height:auto;">
@@ -113,38 +117,31 @@ For this test, we construct a simplified model Tokamak equipped with flux loops,
   <em>Figure 2: Computational grid with limiter coordinates and diagnostic locations (BP probes and flux loops).</em>
 </p>
 
-We then check if the numerical solution agrees 
+The numerical result produced by RT-GSFit is compared against the analytic reference solution. Despite being intentionally initialised with a poor starting flux guess, the solver successfully converges toward the correct equilibrium. As shown in Figure 3, both the poloidal flux surfaces and diagnostic predictions approach the analytic solution over successive iterations.
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/GIFs/analytic_vs_rtgsfit.gif" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
+  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/GIFs/analytic_vs_rtgsfit.gif" alt="rtgsfit_vs_analytic" style="width:80%; height:auto;">
   <br>
-  <em>Figure 3:</em>
-</p>
-<p align="center">
-  <img src="https://github.com/aleksyprok/rtgsfit_media/raw/refs/heads/main/MP4s/analytic_vs_rtgsfit.mp4" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
-  <br>
-  <em>Figure 4:</em>
+  <em>Figure 3: Convergence of the RT-GSFit poloidal flux and associated flix loop measurements toward the analytic reference solution.</em>
 </p>
 
+### 5.2 RT-GSFit vs. GSFit Test
 
+In contrast to the previous test, this comparison is not executed automatically in the CI/CD pipeline, as it requires access to Tokamak Energy’s internal MDSPlus server. Instead, it is run periodically offline as part of routine validation.
 
-<!-- ## Program Structure
-* shared libraries
-* dependancy graph
+<p align="center">
+  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/GIFs/rtgsfit_vs_gsfit.gif" alt="rtgsfit_vs_gsfit" style="width:100%; height:auto;">
+  <br>
+  <em>Figure 4: Convergence of the RT-GSFit poloidal flux and associated diagnostic signals (flux loops and BP probes) toward the GSFit reference solution. The green markers in the left panel indicate the candidate limiter points used by RT-GSFit.</em>
+</p>
 
-rtgsfit
+## 6. Programming Conventions and Style Recommendations<a name="style_guide"></a>
 
-lapacke.h
-cblas.h
-math.h 
-float.h
-stdio.h
-time.h
-string.h -->
+### 6.1 Formatting convention
 
-## Formatting convention
 * Allman bracket style
 
-## Naming convention
+### 6.2 Naming convention
 * Global constants are fully capitilised with underscores e.g. R_GRID
 * All global variables are constant and defined at compile time
 * variables and function names should be written in snake case 
@@ -161,17 +158,12 @@ true and 0 being false
 as if it was sucessive objects in the OOP paradigme.  
 * Green's functions are prefixed with g_
 
-Names that could be converted to structures
-
-
-
-## Function conventions
+### 6.3 Function conventions
 * docstring format
 * order of inputs outputs
-* example docstring below ...
+<!-- * example docstring below ... -->
 
-
-## Grid Convention
+### 6.4 Grid Convention
 
 The `R_GRID` and `Z_GRID` variables each contain `N_R × N_Z` elements. In the code, they are explicitly stored as 1D arrays in row-major order, but it is often conceptually useful to treat them as 2D grids. In this view, each row of the 2D grid corresponds to a contiguous block in the flattened 1D array.  
 
@@ -196,72 +188,16 @@ The tables below show how the 2D indices map to slices of the 1D storage. Here, 
 | `N_Z–1` | `Z_GRID[N_R*(N_Z-1) : N_R*N_Z-1]` | `Z_VEC[N_Z-1]` |
 
 
-### Boundary Convention 
+#### 6.4.1 Boundary Convention 
 Variables such as `INV_R_LTRB_MU0` with the suffix `_LTRB` are defined along the **Left**, **Top**, **Right**, and **Bottom** boundaries of the grid.  
 They are ordered sequentially along the boundary as follows:
 
 `(R_MIN, Z_MIN)` → `(R_MIN, Z_MAX)` → `(R_MAX, Z_MAX)` → `(R_MAX, Z_MIN)` → `(R_MIN, Z_MIN)`
 
-## To Do
+## 7. To Do <a name="to_do"></a>
 * deglss vs dgelsd
 * python flux testing
 * interpolate hess_rr hess_det
 * boundary index convention
 * timing
 * improve comments code
-* write matlab wrapper for code 
-* create matlab function that takes pulse and produces the .mat file
-* vessel filaments
-
-
-<!-- # To compile
-(Peter's notes)
-```bash
-git checkout replay_rtgsfit
-scl enable devtoolset-11 bash
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/
-cd src/
-make
-```
-
-To check out PCS
-/home/peter.buxton/0_Version_Controlled/pcs/model/ST40PCS
-gcc -c -o bin/mds_tools.o src/mds_tools.c -Iinclude -I/usr/local/mdsplus/include
-gcc -c -o bin/utils.o src/utils.c -Iinclude
-
-To compile tests
-```bash
-cd ../tests/
-make -f makefile_test PCS_PATH=/home/peter.buxton/0_Version_Controlled/pcs
-```
-
-./replay_rtgsfit 12050 0.01 0.002 0.2 -->
-
-
-# Important
-"const_to_file.py" is what adds the constants into the c
-
-
-<!-- 
-make DATAFILE=/home/peter.buxton/0_Version_Controlled/rtgsfit/data/12001000_RUN04_for_c.mat
-
-
-One line running:
-```bash
-cd src/; make DATAFILE=/home/peter.buxton/0_Version_Controlled/rtgsfit/data/12001000_RUN04_for_c.mat; cd ../tests/; rm replay_rtgsfit; make -f makefile_test PCS_PATH=/home/peter.buxton/0_Version_Controlled/pcs; ./replay_rtgsfit 12050 0.01 0.0004 0.2; cd ../
-```
-
-plotting
-```bash
-python3 ../py-files/plot_timed_data.py
-````
-
-
-backtrace
-gdb --args ./replay_rtgsfit 12050 0.02 0.0005 0.2;
-run
-bt
-
-# Instructions for aleksei
-
-source /opt/intel/oneapi/setvars.sh -->
