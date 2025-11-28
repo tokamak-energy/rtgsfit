@@ -38,50 +38,94 @@ RT-GSFit also uses routines from GSFit to compute key values that can be calcula
 
 In this section we will give a brief overview of how we setup the code for integration with the ST40 plasma control system.
 
-### 4.1 Initialization
+### 4.1 Initialisation<a name="initialisation"></a>
 
 To meet the real-time performance requirements of RT-GSFit, we precompute as many values as possible before the system enters live operation. As part of this design, you’ll notice that while `constants.h` exists in the `src/` directory, the corresponding `constants.c` file is intentionally **not** included.
 
 The `constants.c` file must be generated prior to compiling and running RT-GSFit. An example workflow demonstrating how to generate this file (using a simplified large-aspect-ratio Tokamak model) is provided in the `tests/rtgsfit_verify_analytic` directory. This workflow is described in more detail in Section [5.1 RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution). However, when running RT-GSFit within the Plasma Control System (PCS), the workflow includes additional steps beyond those used in the analytic verification test which we will describe here.
 
-First, the required input data is written to Tokamak Energy’s (TE) [MDSPlus](https://www.mdsplus.org/index.php/Introduction) server using a script similar to the one demonstrated in [GSFit Example 5](https://github.com/tokamak-energy/gsfit/blob/main/examples/example_05_st40_setup_for_rtgsfit.py). During the November 2025 campaign, data was stored in the RTGSFIT tree under pulse number 99,000,230 (with *230* designating Program 2.3), and all relevant values were placed in the `PRESHOT` node. Access to TE’s MDSPlus server is restricted to TE employees and approved collaborators.
+First, the required input data is written to Tokamak Energy’s [MDSPlus](https://www.mdsplus.org/index.php/Introduction) server using a script similar to the one demonstrated in [GSFit Example 5](https://github.com/tokamak-energy/gsfit/blob/main/examples/example_05_st40_setup_for_rtgsfit.py). During the November 2025 campaign, data was stored in the RTGSFIT tree under pulse number 99,000,230 (with *230* designating Program 2.3), and all relevant values were placed in the `PRESHOT` node. Access to Tokamak Energy’s MDSPlus server is restricted to TE employees and approved collaborators.
 
+### 4.2 Compilation
 
-## 4. Installation Compilation
-<!-- A .mat datafile will be required with the same variable names of that of the 
-global constants specified in constants.h. This should 
-contain all matrices in row major order, with indexing also in row major order 
-and starting from 0.  The conda environment is only required for running the 
-python tests
+If the `constants.c` file has already been generated and placed in the `src/` directory, the code can be compiled using a command such as:
 
 ```bash
-conda create -n rtgsfit python=3.9
-pip install -r requirements.txt
-cd src
-make DATAFILE=<PATH/TO/DATAFILE.mat>
-cd ../tests
-make
-``` -->
-First install MDS+ with
+cd src/
+make SHOT=0 RUN_NAME=no_mds DEBUG=1
+```
+
+Here, the `SHOT` and `RUN_NAME` parameters may be set to any integer or string, respectively—these values are not required for compilation at this stage and will be explained later. The `DEBUG=1` option enables additional compiler flags that improve diagnostics and debugging support, at the cost of slower runtime performance. This configuration is used in the example provided in the [RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution).
+
+In the ST40 PCS workflow, the `constants.c` file is not manually generated. Instead, it is produced automatically during compilation via the `Makefile`, which calls the script `utility/mdsplus_const_to_file.py`. This script retrieves the input data stored during the [initialisation](#initialisation) step and generates the `constants.c` prior to compilation.
+
+To run this script, a Python environment with MDSplus installed is required. On `newmsmaug2` (Tokamak Energy’s internal server), the environment is currently set up as follows:
 ```bash
 uv venv --python 3.13
 source .venv/bin/activate
 uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
 uv pip install "numpy<2"
 ```
-then compile the code with
+where [uv](https://docs.astral.sh/uv/) is a python package manager.
+
+Once the environment is configured and activated, the compilation step for PCS operation is:
 ```bash
 cd src/
 make clean
-make SHOT=99000230 RUN_NAME=RUN02 DEBUG=1
+make SHOT=99000230 RUN_NAME=RUN12 DEBUG=0
 ```
+**Note:** Running `make clean` will also remove any `constants.c` file in `src/`, in addition to the standard build artefacts.
+
+### 4.3 Running RT-GSFit
+
+The compilation process generates shared library (`.so`) files and places them in the `lib/` directory. Since RT-GSFit is built as a shared library rather than a standalone executable, it must be called from an external runtime environment.
+
+In the [RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution) workflow, RT-GSFit is executed from Python using the script located at:<br>
+`tests/rtgsfit_verify_analytic/src/rtgsfit_verify_analytic/replay_rtgsfit.py`<br>
+This script loads the compiled library, passes measurement and coil data to the solver, and iterates the solution, simulating a real-time control loop. This behaviour is similar to how RT-GSFit is used inside the ST40 Plasma Control System (PCS).
+
+However, the full PCS implementation cannot be shown here, as the Simulink model and deployment pipeline are closed-source. Nevertheless, the analytic replay example provides a representative demonstration of the runtime interaction model used in actual experiments.
 
 ## 5. Tests<a name="tests"></a>
-* pytest
-* seting up python
-* freegs
+
+All tests are located in the `tests/` directory.
+
+The subdirectories `tests/rtgsfit_verify_analytic` and `tests/rtgsfit_vs_gsfit` each contain a self-contained mini-repository, including their own `README.md` and Python virtual environments. These directories provide the main examples for running and validating RT-GSFit.
+
+Additional legacy unit tests are also included in the `tests/` directory. These were developed during earlier stages of the project but are not currently maintained or used, as full documentation for them is not available. 
+
+Further testing and documentation are planned, including:
+- a test case using zero inputs,
+- additional unit tests, and
+- cross-verification against codes written outside Tokamak Energy such as FreeGSNKE.
 
 ### 5.1 RT-GSFit vs. Analytic Solution Test<a name="rtgsfit_vs_analytic_solution"></a>
+
+This test runs automatically as part of the CI/CD workflow for the repository (see `.github/workflows/main.yml`). Its purpose is to verify that RT-GSFit converges to a known analytic equilibrium for a large–aspect-ratio Tokamak with zero plasma beta.
+
+Further details on the analytic formulation can be found in the accompanying document:<br>
+[`tests/rtgsfit_verify_analytic/latex/Analytic_Solution/Analytic_Solution.pdf`](https://github.com/tokamak-energy/rtgsfit/blob/main/tests/rtgsfit_verify_analytic/latex/Analytic_Solution/Analytic_Solution.pdf)<br>
+For this test, we construct a simplified model Tokamak equipped with flux loops, and magnetic pickup (BP) probes. The geometry and diagnostic locations are shown in Figure 2.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/SVGs/grid_and_limiter_points.svg" alt="Large-Aspect Ratio Tokamak" style="width:80%; height:auto;">
+  <br>
+  <em>Figure 2: Computational grid with limiter coordinates and diagnostic locations (BP probes and flux loops).</em>
+</p>
+
+We then check if the numerical solution agrees 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/GIFs/analytic_vs_rtgsfit.gif" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
+  <br>
+  <em>Figure 3:</em>
+</p>
+<p align="center">
+  <img src="https://github.com/aleksyprok/rtgsfit_media/raw/refs/heads/main/MP4s/analytic_vs_rtgsfit.mp4" alt="ST40 Vessel Geometry" style="width:80%; height:auto;">
+  <br>
+  <em>Figure 4:</em>
+</p>
+
+
 
 <!-- ## Program Structure
 * shared libraries
