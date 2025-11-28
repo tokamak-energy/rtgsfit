@@ -122,7 +122,7 @@ The numerical result produced by RT-GSFit is compared against the analytic refer
 <p align="center">
   <img src="https://raw.githubusercontent.com/aleksyprok/rtgsfit_media/refs/heads/main/GIFs/analytic_vs_rtgsfit.gif" alt="rtgsfit_vs_analytic" style="width:80%; height:auto;">
   <br>
-  <em>Figure 3: Convergence of the RT-GSFit poloidal flux and associated flix loop measurements toward the analytic reference solution.</em>
+  <em>Figure 3: Convergence of the RT-GSFit poloidal flux and associated flux loop measurements toward the analytic reference solution.</em>
 </p>
 
 ### 5.2 RT-GSFit vs. GSFit Test
@@ -158,7 +158,7 @@ a Greek letter. e.g. flux instead or psi.
 * Boolean names should be always be in the "positive" affirmation, with 1 being
 true and 0 being false
 * order of variables should go from largest to smallest e.g. GRID_R_MIN
-as if it was sucessive objects in the OOP paradigme.  
+as if it was sucessive objects in the OOP paradigm.  
 * Green's functions are prefixed with g_
 
 ### 6.3 Function conventions
