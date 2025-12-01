@@ -268,11 +268,11 @@ def generate_data_dictionary():
         r_vec, z_vec)
 
     fig, ax = plt.subplots()
-    ax.plot(r_ltrb, z_ltrb, label="Grid Boundary")
-    ax.plot(r_lim, z_lim, label="Limiter Boundary")
-    ax.scatter(r_flat, z_flat, s=0.5, label="Grid Points", color='black')
-    ax.scatter(r_lim, z_lim, s=1, label="Limiter Points", color='red')
-    ax.scatter(r_flat[mask_lim], z_flat[mask_lim], s=0.5, label="MASK_LIM True Grid Points", color='blue')
+    # ax.plot(r_ltrb, z_ltrb, label="Grid Boundary")
+    # ax.plot(r_lim, z_lim, label="Limiter Boundary")
+    ax.scatter(r_flat, z_flat, s=0.5, label="Grid Points", color='black', alpha=0.3)
+    ax.scatter(r_lim, z_lim, s=0.25, label="Limiter Points", color='red')
+    ax.scatter(r_flat[mask_lim], z_flat[mask_lim], s=0.5, label="MASK_LIM True Grid Points", color='blue', alpha = 0.3)
     ax.scatter(r_bp, z_bp, s=1, label="BP Probe Points", color='green')
     ax.scatter(r_fl, z_fl, s=1, label="Flux Loop Points", color='orange')
     ax.scatter(cnst.R_VESSEL, cnst.Z_VESSEL, s=1, label="Vessel Points", color='purple')
@@ -286,11 +286,13 @@ def generate_data_dictionary():
     ax.set_ylabel("Vertical Position (z)")
     ax.set_title("Grid and Limiter Points")
     # Legend box outside the plot
-    ax.legend(loc='upper right', bbox_to_anchor=(2.5, 1))
+    ax.legend(loc='upper right', bbox_to_anchor=(2.5, 1), markerscale=5)
     ax.set_aspect('equal')
-    fig.savefig(os.path.join(cnst.PLOTS_DIR, "grid_and_limiter_points.png"),
-                bbox_inches='tight', dpi=1000)
-
+    # fig.savefig(os.path.join(cnst.PLOTS_DIR, "grid_and_limiter_points.png"),
+    #             bbox_inches='tight', dpi=1000)
+    fig.savefig(os.path.join(cnst.PLOTS_DIR, "grid_and_limiter_points.svg"),
+                bbox_inches='tight')
+    plt.close(fig)
     n_sens_pcs = cnst.N_MEAS
     sens_rep_mat = np.eye(cnst.N_MEAS, cnst.N_MEAS, dtype=np.float64)
     
