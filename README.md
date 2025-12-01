@@ -197,10 +197,13 @@ They are ordered sequentially along the boundary as follows:
 
 `(R_MIN, Z_MIN)` → `(R_MIN, Z_MAX)` → `(R_MAX, Z_MAX)` → `(R_MAX, Z_MIN)` → `(R_MIN, Z_MIN)`
 
-## 7. To Do <a name="to_do"></a>
-* deglss vs dgelsd
-* python flux testing
-* interpolate hess_rr hess_det
-* boundary index convention
-* timing
-* improve comments code
+## 7. To Do<a name="to_do"></a>
+
+Going forward, new tasks will be added and tracked through GitHub Issues rather than documented here. There are still a few older notes from earlier development that haven't yet been migrated, so they're listed below for now.
+
+- dgelss vs dgelsd
+- Python flux testing
+- Interpolation for `hess_rr` and `hess_det`
+- Boundary index convention
+- Timing / performance checks
+- Improve comments and general code documentation
