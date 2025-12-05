@@ -29,12 +29,12 @@ Python is used for utility functions and for some of the integration tests. For 
 
 ## 3. RT-GSFit vs GSFit<a name="rtgsfit_vs_gsfit"></a>
 
-[GSFit](https://github.com/tokamak-energy/gsfit) is similar to RT-GSFit, except that it is slower and a post-shot code. As a result, GSFit is more suited to post-shot analysis, where it can perform additional post-processing and benefit from higher accuracy. However, as demonstrated in `tests/rtgsfit_vs_gsfit`, RT-GSFit produces results that closely agree with GSFit.
+[GSFit](https://github.com/tokamak-energy/gsfit) is similar to RT-GSFit, except that it a post-shot code. GSFit is more suited to post-shot analysis, where it can perform additional post-processing and benefit from higher accuracy. However, as demonstrated in `tests/rtgsfit_vs_gsfit`, RT-GSFit produces results that closely agree with GSFit.
 
 Both RT-GSFit and GSFit solve the plasma equilibrium for an ideal, single-fluid MHD model assuming toroidal symmetry. We plan to release a manual with full algorithmic details. Our approach is closely aligned with that presented in the following excellent paper:<br>
 [J.-M. Moret, et. al., "Tokamak equilibrium reconstruction code LIUQE and its real time implementation", Fusion Eng. Design, 91, 2015](https://doi.org/10.1016/j.fusengdes.2014.09.019)<br>
 
-RT-GSFit also uses routines from GSFit to compute key values that can be calculated before the shot, such as the mutual inductance matrices between the interior coordinates and diagnostic coordinates (e.g., flux loops) for ST40. These are used to generate the `constants.c` file needed in the `src/` directory. Delegating pre-shot calculations to GSFit ensures a single authoritative codebase and helps avoid accidental discrepancies.
+RT-GSFit also uses routines from GSFit to compute key values that can be calculated before each shot, such as the mutual inductance matrices between the interior coordinates and diagnostic coordinates (e.g., flux loops) for ST40. These are used to generate the `constants.c` file needed in the `src/` directory. Delegating pre-shot calculations to GSFit ensures a single authoritative codebase and helps avoid accidental discrepancies.
 
 ## 4. Program Layout and Flow<a name="program_layout_and_flow"></a>
 
