@@ -26,7 +26,6 @@ maintainers = [
 
 description = "This repository sets up and runs both GSFIT and RTGSFIT. It uses MDSPlus data only available on Tokamak Energy's network."
 readme = "README.md"
-license = { text = "GNU GENERAL PUBLIC LICENSE" }
 keywords = ["Grad", "Shafranov"]
 classifiers = [
   "Programming Language :: Python :: 3"
