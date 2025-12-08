@@ -26,7 +26,6 @@ maintainers = [
 
 description = "This repository sets up and runs analytic verification tests for RTGSFIT. Input data based on a known analytic solution to the Grad-Shafranov equation. Runs RTGSFIT and checks that the numerical solution converges to the analytic as the number of iterations increases."
 readme = "README.md"
-license = { text = "GNU GENERAL PUBLIC LICENSE" }
 keywords = ["Grad", "Shafranov"]
 classifiers = [
   "Programming Language :: Python"
