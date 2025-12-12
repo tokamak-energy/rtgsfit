@@ -5,10 +5,18 @@ It provides automated tests to verify that results from `rtgsfit` are consistent
 
 ## Installation
 
+We assume RT-GSFit is stored in `~/GitHub/rtgsfit`.
+
 ```bash
 uv venv --python 3.13
 source .venv/bin/activate
-uv pip install --reinstall -e .
+cd ~/GitHub
+git clone https://github.com/tokamak-energy/gsfit
+cd gsfit
+uv pip install -e .
+cd ~/GitHub/rtgsfit
+uv pip install -e .
+# uv pip install --reinstall -e .
 uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
 uv pip install "numpy<2"
 ```
@@ -70,7 +78,10 @@ uv pip install "numpy<2"
 
 To run the tests use 
 ```
+pytest -s tests
+```
+<!-- ```
 pytest -n 6 tests
 ```
 to use 6 threads. We use 6 threads as this matches the number of elements in defined in the
-`test_cases` list in `tests/test_integration_rtgsfit_vs_gsfit.py`.
+`test_cases` list in `tests/test_integration_rtgsfit_vs_gsfit.py`. -->
