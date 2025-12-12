@@ -10,7 +10,7 @@ from scipy.ndimage import binary_dilation
 from skimage.measure import find_contours
 
 # Parameters
-struct = np.ones((5,5), dtype=bool)
+DILATION_STRUCTURE = np.ones((5,5), dtype=bool)
 FILL_VALUE = -1e10  # fill for masked-out region (must be << contour level)
 
 def write_data_to_mdsplus(
@@ -187,7 +187,7 @@ def write_data_to_mdsplus(
     for i_time in range(len(time)):
 
         # Dilate the mask to ensure LCFS is included, but not too much beyond that
-        mask_dilated = binary_dilation(mask[i_time].astype(bool), structure=struct)
+        mask_dilated = binary_dilation(mask[i_time].astype(bool), structure=DILATION_STRUCTURE)
 
         # Replace masked-out values with a large negative sentinel (not NaN)
         flux_masked = np.where(mask_dilated, flux_total[i_time], FILL_VALUE)
