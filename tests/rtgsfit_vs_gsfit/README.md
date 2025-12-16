@@ -14,7 +14,7 @@ cd ~/GitHub
 git clone https://github.com/tokamak-energy/gsfit
 cd gsfit
 uv pip install -e .
-cd ~/GitHub/rtgsfit
+cd ~/GitHub/rtgsfit/tests/rtgsfit_vs_gsfit
 uv pip install -e .
 # uv pip install --reinstall -e .
 uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
