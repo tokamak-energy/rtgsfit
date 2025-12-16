@@ -124,7 +124,6 @@ void rm_coil_from_meas(
     }
 }
 
-
 void make_basis(
         double* flux_norm,
         int* mask,
