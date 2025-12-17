@@ -17,11 +17,12 @@
 
 #ifdef ENABLE_RT_TIMING
 
-static inline uint64_t now_ns(void)
+static inline uint64_t thread_cpu_ns(void)
 {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    int ret = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    assert(ret == 0);
+    return (uint64_t)ts.tv_sec * 1000000000ull + ts.tv_nsec;
 }
 
 enum {
@@ -48,8 +49,8 @@ enum {
 static uint64_t timing_acc[T_NTIMERS];
 static uint64_t timing_t0;
 
-#define TSTART()        do { timing_t0 = now_ns(); } while (0)
-#define TACC(idx)       do { timing_acc[(idx)] += (now_ns() - timing_t0); } while (0)
+#define TSTART()        do { timing_t0 = thread_cpu_ns(); } while (0)
+#define TACC(idx)       do { timing_acc[(idx)] += (thread_cpu_ns() - timing_t0); } while (0)
 
 void rtgsfit_timing_reset(void)
 {
@@ -294,7 +295,7 @@ void rtgsfit(
         )
 {
 #ifdef ENABLE_RT_TIMING
-    uint64_t t_total_0 = now_ns();
+    uint64_t t_total_0 = thread_cpu_ns();
 #endif // ENABLE_RT_TIMING
 
     assert(n_meas_model == N_MEAS);
@@ -572,6 +573,6 @@ void rtgsfit(
     *flux_boundary = lcfs_flux;
 
 #ifdef ENABLE_RT_TIMING
-    timing_acc[T_TOTAL] += (now_ns() - t_total_0);
+    timing_acc[T_TOTAL] += (thread_cpu_ns() - t_total_0);
 #endif
 }
