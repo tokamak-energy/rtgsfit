@@ -37,7 +37,7 @@ enum {
     T_POISSON,
     T_COIL_FLUX,
     T_VESSEL_FLUX,
-    T_NULLS_AND_AXIS,
+    T_XPTS_AND_AXIS,
     T_LIMITER,
     T_LCFS,
     T_INSIDE,
@@ -71,7 +71,7 @@ void rtgsfit_timing_dump(void)
         "poisson",
         "coil_flux",
         "vessel_flux",
-        "nulls_axis",
+        "xpts_and_axis",
         "limiter",
         "lcfs",
         "inside",
@@ -521,7 +521,7 @@ void rtgsfit(
     *mag_axis_flux = opt_flux[i_opt];
     *r_mag_axis = opt_r[i_opt];
     *z_mag_axis = opt_z[i_opt];
-    TACC(T_NULLS_AND_AXIS);
+    TACC(T_XPTS_AND_AXIS);
 
     // limiter flux with x-point filtering
     TSTART();
