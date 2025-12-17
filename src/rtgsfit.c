@@ -80,7 +80,7 @@ void rtgsfit_timing_dump(void)
     };
 
     for (int i = 0; i < T_NTIMERS; i++) {
-        printf("%-12s : %10.3f us\n", names[i], (double)timing_acc[i] * 1e-3);
+        printf("%-14s : %10.3f us\n", names[i], (double)timing_acc[i] * 1e-3);
     }
 }
 
