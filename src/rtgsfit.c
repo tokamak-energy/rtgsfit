@@ -156,30 +156,6 @@ void make_basis(
     }
 }
 
-double find_flux_on_limiter(double* flux_total)
-{
-
-    int i_limit, i_intrp, idx;
-    double flux_limit_max, flux_limit;
-
-    flux_limit_max = -DBL_MAX;
-
-    for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
-    {
-        flux_limit = 0.0;
-        for (i_intrp = 0; i_intrp < N_INTRP; i_intrp++)
-        {
-            idx = i_limit*N_INTRP + i_intrp;
-            flux_limit += LIMIT_WEIGHT[idx] * flux_total[LIMIT_IDX[idx]];
-        }
-        if (flux_limit > flux_limit_max)
-        {
-            flux_limit_max = flux_limit;
-        }
-    }
-    return flux_limit_max;
-}
-
 /**
  * @brief Calculates the flux on the limiter but excludes some of the
  * limit points based on the location of the x-points.
