@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-void find_nulls(
+int find_nulls(
     double* flux,
     double* opt_r,
     double* opt_z,

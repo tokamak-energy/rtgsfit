@@ -53,9 +53,9 @@
 //   xpt_z     - output array for the x-point Z coordinates
 //   xpt_flux  - output array for flux at the x-points
 //   xpt_n     - pointer which will hold the number of x-points found
-void find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
-                int32_t *opt_n, double *xpt_r, double *xpt_z, double *xpt_flux,
-                int32_t *xpt_n) {
+int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
+               int32_t *opt_n, double *xpt_r, double *xpt_z, double *xpt_flux,
+               int32_t *xpt_n) {
   *opt_n = 0;
   *xpt_n = 0;
   for (int32_t i_row = 1; i_row < N_Z_MIN_1; i_row++) {
@@ -101,17 +101,48 @@ void find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
           opt_z[*opt_n] = null_z;
           opt_flux[*opt_n] = flux_at_null;
           (*opt_n)++;
+          if (*opt_n >= N_XPT_MAX) {
+            return 1024;
+          }
         } else if (hess_det < 0.0) {
           // x-point
           xpt_r[*xpt_n] = null_r;
           xpt_z[*xpt_n] = null_z;
           xpt_flux[*xpt_n] = flux_at_null;
           (*xpt_n)++;
+          if (*xpt_n >= N_XPT_MAX) {
+            return 512;
+          }
         }
       }
     }
   }
+  return 0;
 }
+
+
+// filter_xpts:
+// loop over every x-point and check if they are behind another x-point relative to the o-point.
+// If they are then remove them.
+// See Fig. 2 of Moret et al. (2015) for reference.
+//
+// The ith x-point is located at (xpt_r[i], xpt_z[i]) and the
+// jth x-point is located at (xpt_r[j], xpt_z[j]).
+//
+// The vector v points from the ith x-point to the jth x-point is
+// v = (xpt_r[j] - xpt_r[i], xpt_z[j] - xpt_z[i]).
+// The vector w that points from the ith x-point to the axis is
+// w = (r_mag_axis - xpt_r[i], z_mag_axis - xpt_z[i]).
+//
+// If the dot product of v and w is negative, then the jth x-point
+// is not considered for the flux calculation.
+// void filter_xpts(double *xpt_r,
+//                  double *xpt_z,
+//                  double *xpt_n,
+//                  double r_mag_axis,
+//                  double z_mag_axis) {
+
+  
 
 // find_mask:
 //   Determines which grid points are inside the last closed flux surface (LCFS)

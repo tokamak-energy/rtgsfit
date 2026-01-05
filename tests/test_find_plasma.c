@@ -10,9 +10,10 @@
 #define TOL 1e-6
 
 // Maximum number of points this test is willing to compare.
-// This is a test-only bound chosen to avoid variable length arrays (VLA) and heap allocation while
-// keeping stack usage obvious and portable. If this limit is exceeded,
-// the test should fail loudly rather than invoke undefined behavior.
+// This is a test-only bound chosen to avoid variable length arrays (VLA) and
+// heap allocation while keeping stack usage obvious and portable. If this limit
+// is exceeded, the test should fail loudly rather than invoke undefined
+// behavior.
 #define MAX_TEST_POINTS 64
 
 // -------- CSV reader using N_R and N_Z from constants --------
@@ -127,8 +128,8 @@ static int test_find_nulls(void) {
   double xpt_flux[MAX_TEST_POINTS];
   int32_t xpt_n = 0;
 
-  find_nulls(flux, opt_r, opt_z, opt_flux, &opt_n, xpt_r, xpt_z, xpt_flux,
-             &xpt_n);
+  (void)find_nulls(flux, opt_r, opt_z, opt_flux, &opt_n, xpt_r, xpt_z, xpt_flux,
+                   &xpt_n);
 
   // expected
   const int32_t expected_opt_n = 3;

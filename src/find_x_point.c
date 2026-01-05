@@ -18,15 +18,17 @@
 #define N_Z_TIMES_2 (N_Z * 2 - 1)
 #define MIN(aa,bb) ((aa)<=(bb)?(aa):(bb))
 #define MAX(aa,bb) ((aa)>=(bb)?(aa):(bb))
-#define ERR_MID_BDRY 1 // 0b000000001
-#define ERR_COL_START 2 // 0b000000010
-#define ERR_COL_END 4 // 0b000000100
-#define ERR_COL_START_END 8 // 0b000001000
-#define ERR_VERT_BDRY 16 // 0b000010000
-#define ERR_MASK_INDEX 32 // 0b000100000
-#define ERR_LCFS_N 64 // 0b001000000
-#define ERR_AX_EQ_BDRY 128 // 0b010000000
-#define ERR_NO_AXIS 256 // 0b100000000
+#define ERR_MID_BDRY 1
+#define ERR_COL_START 2
+#define ERR_COL_END 4
+#define ERR_COL_START_END 8
+#define ERR_VERT_BDRY 16
+#define ERR_MASK_INDEX 32
+#define ERR_LCFS_N 64
+#define ERR_AX_EQ_BDRY 128
+#define ERR_NO_AXIS 256
+#define ERR_NUM_XPTS 512
+#define ERR_NUM_OPTS 1024
 
 /// Find crossings along the edges of a patch.
 /// 

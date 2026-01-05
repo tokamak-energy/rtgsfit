@@ -493,7 +493,8 @@ void rtgsfit(
     // find_null_in_gradient_march(flux_total,
     //                             opt_r, opt_z, opt_flux, &opt_n,
     //                             xpt_r, xpt_z, xpt_flux, &xpt_n);
-    find_nulls(flux_total,
+    *lcfs_err_code = 0;
+    *lcfs_err_code |= find_nulls(flux_total,
                opt_r, opt_z, opt_flux, &opt_n,
                xpt_r, xpt_z, xpt_flux, &xpt_n);
 
@@ -532,8 +533,6 @@ void rtgsfit(
     }
 
     // extract LCFS
-    *lcfs_err_code = 0;
-
     TSTART();
     *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
     TACC(T_LCFS);
