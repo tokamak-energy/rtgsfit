@@ -62,3 +62,6 @@ tests/c_*.py
 
 # Virtual environment
 venv_rtgsfit/
+
+# Test binary
+src/test_*
