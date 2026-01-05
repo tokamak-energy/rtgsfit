@@ -7,10 +7,16 @@
 #include "../src/constants.h"
 #include "../src/find_plasma.h"
 
-#define TOL 1e-6 // tolerance for comparing doubles
+#define TOL 1e-6
 
-// CSV reader using N_R and N_Z from constants
-int read_flux_csv(const char *filename, double *flux) {
+// Maximum number of points this test is willing to compare.
+// This is a test-only bound chosen to avoid variable length arrays (VLA) and heap allocation while
+// keeping stack usage obvious and portable. If this limit is exceeded,
+// the test should fail loudly rather than invoke undefined behavior.
+#define MAX_TEST_POINTS 64
+
+// -------- CSV reader using N_R and N_Z from constants --------
+static int read_flux_csv(const char *filename, double *flux) {
   FILE *fp = fopen(filename, "r");
   if (!fp) {
     perror("Error opening file");
@@ -46,96 +52,117 @@ int read_flux_csv(const char *filename, double *flux) {
   return 0;
 }
 
-// Helper to compare doubles within a tolerance
-int double_equal(double a, double b, double tol) { return fabs(a - b) < tol; }
+// -------- Helpers --------
+static int double_equal(double a, double b, double tol) {
+  return fabs(a - b) < tol;
+}
 
-int main() {
-  double flux[N_R * N_Z];
+static void fail_count(const char *label, int got, int expected) {
+  fprintf(stderr, "FAILED: Expected %d %s, found %d\n", expected, label, got);
+}
 
-  if (read_flux_csv("../test_data/flux_65x33.csv", flux) != 0) {
-    return 1;
+static void print_points(const char *label, const double *r, const double *z,
+                         int32_t n) {
+  printf("%s (%d):\n", label, (int)n);
+  for (int32_t i = 0; i < n; i++) {
+    printf("  (%0.17g, %0.17g)\n", r[i], z[i]);
+  }
+}
+
+static int match_points_unordered(const char *label, const double *got_r,
+                                  const double *got_z, int32_t got_n,
+                                  const double *exp_r, const double *exp_z,
+                                  int32_t exp_n, double tol) {
+  if (got_n != exp_n) {
+    fail_count(label, (int)got_n, (int)exp_n);
+    return 0;
   }
 
-  double opt_r[10], opt_z[10], opt_flux[10];
+  // One-to-one bookkeeping for unordered point comparison.
+  // matched[j] == 1 means expected point j has already been matched.
+  // A fixed-size array is used intentionally (no VLAs / no malloc);
+  // the runtime check below ensures we never write out of bounds.
+  int matched[MAX_TEST_POINTS] = {0};
+
+  if (exp_n > MAX_TEST_POINTS) {
+    fprintf(stderr,
+            "FAILED: %s: expected %d points, exceeds MAX_TEST_POINTS=%d\n",
+            label, (int)exp_n, MAX_TEST_POINTS);
+    return 0;
+  }
+
+  for (int32_t i = 0; i < got_n; i++) {
+    int found = 0;
+    for (int32_t j = 0; j < exp_n; j++) {
+      if (!matched[j] && double_equal(got_r[i], exp_r[j], tol) &&
+          double_equal(got_z[i], exp_z[j], tol)) {
+        matched[j] = 1;
+        found = 1;
+        break;
+      }
+    }
+    if (!found) {
+      fprintf(stderr, "FAILED: %s point not expected: (%0.17g, %0.17g)\n",
+              label, got_r[i], got_z[i]);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+// -------- find_nulls() test --------
+static int test_find_nulls(void) {
+  double flux[N_R * N_Z];
+  if (read_flux_csv("../test_data/flux_65x33.csv", flux) != 0)
+    return 0;
+
+  double opt_r[MAX_TEST_POINTS];
+  double opt_z[MAX_TEST_POINTS];
+  double opt_flux[MAX_TEST_POINTS];
   int32_t opt_n = 0;
 
-  double xpt_r[10], xpt_z[10], xpt_flux[10];
+  double xpt_r[MAX_TEST_POINTS];
+  double xpt_z[MAX_TEST_POINTS];
+  double xpt_flux[MAX_TEST_POINTS];
   int32_t xpt_n = 0;
 
   find_nulls(flux, opt_r, opt_z, opt_flux, &opt_n, xpt_r, xpt_z, xpt_flux,
              &xpt_n);
 
-  // === Check counts ===
-  if (opt_n != 3) {
-    printf("FAILED: Expected 3 O-points, found %d\n", opt_n);
+  // expected
+  const int32_t expected_opt_n = 3;
+  const double expected_opt_r[3] = {0.14585184486585667, 0.5504987458865702,
+                                    0.14588535485454304};
+  const double expected_opt_z[3] = {
+      -0.3649616878952398, -0.00033762600061724556, 0.3660190742308108};
+
+  const int32_t expected_xpt_n = 3;
+  const double expected_xpt_r[3] = {0.3153374696769646, 0.14116510830539897,
+                                    0.31518440224014677};
+  const double expected_xpt_z[3] = {-0.5379372821229703, -0.0001838273485009369,
+                                    0.5378137974139481};
+
+  // checks
+  if (!match_points_unordered("O-points", opt_r, opt_z, opt_n, expected_opt_r,
+                              expected_opt_z, expected_opt_n, TOL)) {
+    print_points("Found O-points", opt_r, opt_z, opt_n);
+    return 0;
+  }
+
+  if (!match_points_unordered("X-points", xpt_r, xpt_z, xpt_n, expected_xpt_r,
+                              expected_xpt_z, expected_xpt_n, TOL)) {
+    print_points("Found X-points", xpt_r, xpt_z, xpt_n);
+    return 0;
+  }
+
+  return 1;
+}
+
+// -------- main --------
+int main(void) {
+  if (!test_find_nulls())
     return 1;
-  }
-  if (xpt_n != 3) {
-    printf("FAILED: Expected 3 X-points, found %d\n", xpt_n);
-    return 1;
-  }
-
-  // === Expected O-points ===
-  double expected_opt_r[3] = {0.14585184486585667, 0.5504987458865702,
-                              0.14588535485454304};
-  double expected_opt_z[3] = {-0.3649616878952398, -0.00033762600061724556,
-                              0.3660190742308108};
-
-  // === Expected X-points ===
-  double expected_xpt_r[3] = {0.3153374696769646, 0.14116510830539897,
-                              0.31518440224014677};
-  double expected_xpt_z[3] = {-0.5379372821229703, -0.0001838273485009369,
-                              0.5378137974139481};
-
-  // === Matching results ===
-  int matched_O[3] = {0};
-  int matched_X[3] = {0};
-
-  // === Match O-points ===
-  for (int i = 0; i < opt_n; i++) {
-    int found = 0;
-    for (int j = 0; j < 3; j++) {
-      if (!matched_O[j] && double_equal(opt_r[i], expected_opt_r[j], TOL) &&
-          double_equal(opt_z[i], expected_opt_z[j], TOL)) {
-        matched_O[j] = 1;
-        found = 1;
-        break;
-      }
-    }
-    if (!found) {
-      printf("FAILED: O-point not expected: (%g, %g)\n", opt_r[i], opt_z[i]);
-      return 1;
-    }
-  }
-
-  // === Match X-points ===
-  for (int i = 0; i < xpt_n; i++) {
-    int found = 0;
-    for (int j = 0; j < 3; j++) {
-      if (!matched_X[j] && double_equal(xpt_r[i], expected_xpt_r[j], TOL) &&
-          double_equal(xpt_z[i], expected_xpt_z[j], TOL)) {
-        matched_X[j] = 1;
-        found = 1;
-        break;
-      }
-    }
-    if (!found) {
-      printf("FAILED: X-point not expected: (%g, %g)\n", xpt_r[i], xpt_z[i]);
-      return 1;
-    }
-  }
-
-  // === Success ===
-  printf("Test PASSED\n");
-  printf("Found O-points:\n");
-  for (int i = 0; i < opt_n; i++) {
-    printf("  (%g, %g)\n", opt_r[i], opt_z[i]);
-  }
-
-  printf("Found X-points:\n");
-  for (int i = 0; i < xpt_n; i++) {
-    printf("  (%g, %g)\n", xpt_r[i], xpt_z[i]);
-  }
-
+  printf("Test PASSED: find_nulls\n");
   return 0;
 }
