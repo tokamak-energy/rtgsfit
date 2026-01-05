@@ -3,6 +3,7 @@
 #include "rtgsfit.h"
 #include "poisson_solver.h"
 #include "find_x_point.h"
+#include "find_plasma.h"
 #include <stdio.h>
 #include <float.h>
 #include <math.h>
@@ -513,15 +514,27 @@ void rtgsfit(
     int32_t opt_n = 0;
 
     TSTART();
-    find_null_in_gradient_march(flux_total,
-                                opt_r, opt_z, opt_flux, &opt_n,
-                                xpt_r, xpt_z, xpt_flux, &xpt_n);
+    // find_null_in_gradient_march(flux_total,
+    //                             opt_r, opt_z, opt_flux, &opt_n,
+    //                             xpt_r, xpt_z, xpt_flux, &xpt_n);
+    find_nulls(flux_total,
+               opt_r, opt_z, opt_flux, &opt_n,
+               xpt_r, xpt_z, xpt_flux, &xpt_n);
+
+    // Check if mag axis found
+    if (opt_n == 0)
+    {
+        *lcfs_err_code = 256; // ERR_NO_AXIS
+        return;
+    }
 
     int32_t i_opt = max_idx(opt_n, opt_flux);
     *mag_axis_flux = opt_flux[i_opt];
     *r_mag_axis = opt_r[i_opt];
     *z_mag_axis = opt_z[i_opt];
     TACC(T_XPTS_AND_AXIS);
+
+    // Filter x-points
 
     // limiter flux with x-point filtering
     TSTART();
