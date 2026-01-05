@@ -76,9 +76,11 @@ OBJS = \
   gradient.o \
   poisson_solver.o \
   find_x_point.o \
-  rtgsfit.o
+  rtgsfit.o \
+  find_plasma.o
 
 LIB     = ../lib
+TEST_DIR = ../tests
 SHARED  = $(patsubst %.o,$(LIB)/lib%.so,$(OBJS))
 
 # --------------------------------------------------
@@ -91,6 +93,9 @@ all: constants.c $(SHARED)
 # --------------------------------------------------
 $(LIB)/libfind_x_point.so: find_x_point.o gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm
+
+$(LIB)/libfind_plasma.so: find_plasma.o constants.o
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/libpoisson_solver.so: poisson_solver.o gradient.o solve_tria.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lopenblas
@@ -105,17 +110,13 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
 
 $(LIB)/librtgsfit.so: \
-  rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o
+  rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o find_plasma.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 # --------------------------------------------------
 # Object compilation
 # --------------------------------------------------
 $(OBJS): %.o : %.c
-	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
-
-# Explicit rule kept (optional but fine)
-rtgsfit.o: rtgsfit.c
 	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
 
 # --------------------------------------------------
@@ -125,7 +126,14 @@ constants.c: constants.h
 	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
 
 # --------------------------------------------------
+# Tests
+# --------------------------------------------------
+test_find_plasma: $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o
+	$(CC) $(CFLAGS) -o test_find_plasma \
+        $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o -lm
+
+# --------------------------------------------------
 # Cleanup
 # --------------------------------------------------
 clean:
-	rm -f $(SHARED) $(OBJS) constants.c *.pyc
+	rm -f $(SHARED) $(OBJS) constants.c *.pyc test_*
