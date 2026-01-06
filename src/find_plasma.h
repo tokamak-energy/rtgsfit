@@ -16,4 +16,12 @@ int find_nulls(
     int32_t* xpt_n
 );
 
+void filter_xpts(
+    double* xpt_r,
+    double* xpt_z,
+    int32_t* xpt_n,
+    double r_mag_axis,
+    double z_mag_axis
+);
+
 #endif // FIND_PLASMA_H

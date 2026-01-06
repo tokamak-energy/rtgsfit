@@ -120,29 +120,64 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
   return 0;
 }
 
-
 // filter_xpts:
-// loop over every x-point and check if they are behind another x-point relative to the o-point.
-// If they are then remove them.
-// See Fig. 2 of Moret et al. (2015) for reference.
+// loop over every x-point and check if they are behind another x-point relative
+// to the o-point. If they are then remove them. See Fig. 2 of Moret et al.
+// (2015) for reference.
 //
 // The ith x-point is located at (xpt_r[i], xpt_z[i]) and the
 // jth x-point is located at (xpt_r[j], xpt_z[j]).
 //
 // The vector v points from the ith x-point to the jth x-point is
 // v = (xpt_r[j] - xpt_r[i], xpt_z[j] - xpt_z[i]).
-// The vector w that points from the ith x-point to the axis is
+// The vector w that points from the ith x-point to the magnetic axis is
 // w = (r_mag_axis - xpt_r[i], z_mag_axis - xpt_z[i]).
 //
 // If the dot product of v and w is negative, then the jth x-point
 // is not considered for the flux calculation.
-// void filter_xpts(double *xpt_r,
-//                  double *xpt_z,
-//                  double *xpt_n,
-//                  double r_mag_axis,
-//                  double z_mag_axis) {
+void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n, double r_mag_axis,
+                 double z_mag_axis) {
 
-  
+  // keep[i] = 1 if x-point i is kept, 0 if removed
+  int keep[N_XPT_MAX];
+  for (int i = 0; i < *xpt_n; ++i)
+    keep[i] = 1;
+
+  for (int i = 0; i < *xpt_n; ++i) {
+
+    // w = mag_axis - xpt_i
+    const double wi_r = r_mag_axis - xpt_r[i];
+    const double wi_z = z_mag_axis - xpt_z[i];
+
+    for (int j = 0; j < *xpt_n; ++j) {
+      if (j == i)
+        continue;
+
+      // v = xpt_j - xpt_i
+      const double vij_r = xpt_r[j] - xpt_r[i];
+      const double vij_z = xpt_z[j] - xpt_z[i];
+
+      const double dot = vij_r * wi_r + vij_z * wi_z;
+
+      // If dot < 0, j is behind i relative to the axis => remove j
+      if (dot < 0) {
+        keep[j] = 0;
+      }
+    }
+  }
+
+  // Flush the kept x-points to the front of the arrays.
+  int k = 0;
+  for (int i = 0; i < *xpt_n; ++i) {
+    if (keep[i]) {
+      xpt_r[k] = xpt_r[i];
+      xpt_z[k] = xpt_z[i];
+      ++k;
+    }
+  }
+
+  *xpt_n = k;
+}
 
 // find_mask:
 //   Determines which grid points are inside the last closed flux surface (LCFS)
