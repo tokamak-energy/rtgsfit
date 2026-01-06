@@ -135,8 +135,8 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
 //
 // If the dot product of v and w is negative, then the jth x-point
 // is not considered for the flux calculation.
-void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n, double r_mag_axis,
-                 double z_mag_axis) {
+void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
+                 double r_mag_axis, double z_mag_axis) {
 
   // keep[i] = 1 if x-point i is kept, 0 if removed
   int keep[N_XPT_MAX];
