@@ -509,6 +509,8 @@ void rtgsfit(
     *mag_axis_flux = opt_flux[i_opt];
     *r_mag_axis = opt_r[i_opt];
     *z_mag_axis = opt_z[i_opt];
+
+    filter_xpts(xpt_r, xpt_z, &xpt_n, *r_mag_axis, *z_mag_axis);
     TACC(T_XPTS_AND_AXIS);
 
     // Filter x-points
