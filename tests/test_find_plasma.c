@@ -135,8 +135,8 @@ static int test_find_nulls(void) {
   const int32_t expected_opt_n = 3;
   const double expected_opt_r[3] = {0.14585184486585667, 0.5504987458865702,
                                     0.14588535485454304};
-  const double expected_opt_z[3] = {
-      -0.3649616878952398, -0.00033762600061724556, 0.3660190742308108};
+  const double expected_opt_z[3] = {-0.3649616878952398, -0.00033762600061724556,
+                                    0.3660190742308108};
 
   const int32_t expected_xpt_n = 3;
   const double expected_xpt_r[3] = {0.3153374696769646, 0.14116510830539897,
@@ -160,10 +160,46 @@ static int test_find_nulls(void) {
   return 1;
 }
 
+// -------- filter_xpts() test --------
+static int test_filter_xpts(void) {
+    double xpt_r[N_XPT_MAX];
+    double xpt_z[N_XPT_MAX];
+    int32_t xpt_n = 6;
+
+    /* initialize only the active entries */
+    xpt_r[0] = -0.5;  xpt_z[0] = +0.0;
+    xpt_r[1] = +0.5;  xpt_z[1] = +0.0;
+    xpt_r[2] = +1.0;  xpt_z[2] = +0.0;
+    xpt_r[3] = +0.0;  xpt_z[3] = -0.5;
+    xpt_r[4] = +0.0;  xpt_z[4] = +0.5;
+    xpt_r[5] = +0.0;  xpt_z[5] = +1.0;
+
+  double r_mag_axis = 0.0;
+  double z_mag_axis = 0.0;
+
+  filter_xpts(xpt_r, xpt_z, &xpt_n, r_mag_axis, z_mag_axis);
+
+  const int32_t expected_xpt_n = 4;
+  const double expected_xpt_r[4] = {-0.5, +0.5, +0.0, +0.0};
+  const double expected_xpt_z[4] = {+0.0, +0.0, -0.5, +0.5};
+
+  if (!match_points_unordered("Filtered X-points", xpt_r, xpt_z, xpt_n,
+                              expected_xpt_r, expected_xpt_z,
+                              expected_xpt_n, TOL)) {
+    print_points("Filtered X-points", xpt_r, xpt_z, xpt_n);
+    return 0;
+  }
+
+  return 1;
+}
+
 // -------- main --------
 int main(void) {
   if (!test_find_nulls())
     return 1;
   printf("Test PASSED: find_nulls\n");
+  if (!test_filter_xpts())
+    return 1;
+  printf("Test PASSED: filter_xpts\n");
   return 0;
 }
