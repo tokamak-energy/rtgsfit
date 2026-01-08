@@ -497,11 +497,14 @@ void rtgsfit(
     *lcfs_err_code |= find_nulls(flux_total,
                opt_r, opt_z, opt_flux, &opt_n,
                xpt_r, xpt_z, xpt_flux, &xpt_n);
+    if (*lcfs_err_code != 0) {
+        return;
+    }
 
     // Check if mag axis found
     if (opt_n == 0)
     {
-        *lcfs_err_code = 256; // ERR_NO_AXIS
+        *lcfs_err_code = ERR_NO_AXIS;
         return;
     }
 
@@ -510,10 +513,9 @@ void rtgsfit(
     *r_mag_axis = opt_r[i_opt];
     *z_mag_axis = opt_z[i_opt];
 
+    // Filter x-points
     filter_xpts(xpt_r, xpt_z, &xpt_n, *r_mag_axis, *z_mag_axis);
     TACC(T_XPTS_AND_AXIS);
-
-    // Filter x-points
 
     // limiter flux with x-point filtering
     TSTART();
@@ -534,30 +536,52 @@ void rtgsfit(
         }
     }
 
+    if (fabs(lcfs_flux - (*mag_axis_flux)) < THRESH) {
+      // Don't call normalise_flux() if lcfs_flux is too close to mag_axis_flux
+      // This avoids division by a very small number.
+      *lcfs_err_code |= ERR_AX_EQ_BDRY;
+      return;
+    }
+
+    if (lcfs_flux > (*mag_axis_flux)) {
+      // lcfs_flux should never be greater than mag_axis_flux
+      *lcfs_err_code |= ERR_BDRY_GT_AX;
+      return;
+    }
+
     // extract LCFS
     TSTART();
-    *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
+    // *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
+    // No longer calcualting lcfs_r, lcfs_z as we don't use them.
+    // Just set them to zero.
+    for (int32_t i = 0; i < N_LCFS_MAX; i++) {
+        lcfs_r[i] = 0.0;
+        lcfs_z[i] = 0.0;
+    }
+    *lcfs_n = 0;
     TACC(T_LCFS);
 
     // inside LCFS mask
     TSTART();
-    *lcfs_err_code |= inside_lcfs(*r_mag_axis, *z_mag_axis,
-                                  lcfs_r, lcfs_z, *lcfs_n, mask);
+    // *lcfs_err_code |= inside_lcfs(*r_mag_axis, *z_mag_axis,
+    //                               lcfs_r, lcfs_z, *lcfs_n, mask);
+// int flood_fill_plasma_core(int32_t *mask, double *flux_total,
+//                            double flux_boundary, double r_mag_axis,
+//                            double z_mag_axis, double *xpt_r, double *xpt_z,
+//                            int32_t xpt_n);
+
+    *lcfs_err_code |=
+        flood_fill_plasma_core(mask, flux_total, lcfs_flux, *r_mag_axis,
+                              *z_mag_axis, xpt_r, xpt_z, xpt_n);
+    if (*lcfs_err_code != 0) {
+        return;
+    }
     TACC(T_INSIDE);
 
     // normalise total psi
-    if (fabs(lcfs_flux - (*mag_axis_flux)) < THRESH)
-    {
-        // Don't call normalise_flux if lcfs_flux is too close to mag_axis_flux
-        // This avoids division by a very small number.
-        *lcfs_err_code |= 128; // ERR_AX_EQ_BDRY
-    }
-    else
-    {
-        TSTART();
-        normalise_flux(flux_total, lcfs_flux, *mag_axis_flux, mask, flux_norm);
-        TACC(T_NORMALISE);
-    }
+    TSTART();
+    normalise_flux(flux_total, lcfs_flux, *mag_axis_flux, mask, flux_norm);
+    TACC(T_NORMALISE);
 
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
@@ -565,4 +589,5 @@ void rtgsfit(
 #ifdef ENABLE_RT_TIMING
     timing_acc[T_TOTAL] += (thread_cpu_ns() - t_total_0);
 #endif
+
 }
