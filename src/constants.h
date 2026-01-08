@@ -10,9 +10,8 @@
 #define ERR_NO_AXIS         ((int32_t)2)
 #define ERR_NUM_XPTS        ((int32_t)4)
 #define ERR_NUM_OPTS        ((int32_t)8)
-#define ERR_MAX_QUEUE_SIZE  ((int32_t)16)
-#define ERR_AXIS_OUT_CORE   ((int32_t)32)
-#define ERR_BDRY_GT_AX      ((int32_t)64)
+#define ERR_AXIS_OUT_CORE   ((int32_t)16)
+#define ERR_BDRY_GT_AX      ((int32_t)32)
 
 /* N_ROW : number of rows */
 extern const int N_Z;
