@@ -25,10 +25,6 @@
 #define ERR_VERT_BDRY 16
 #define ERR_MASK_INDEX 32
 #define ERR_LCFS_N 64
-#define ERR_AX_EQ_BDRY 128
-#define ERR_NO_AXIS 256
-#define ERR_NUM_XPTS 512
-#define ERR_NUM_OPTS 1024
 
 /// Find crossings along the edges of a patch.
 /// 
