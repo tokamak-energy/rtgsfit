@@ -11,10 +11,10 @@
  *   the boundary, avoiding unnecessary calculations.
  *
  * Notes:
- *   - We refer to the region inside the LCFS as the "plasma region". While
- *     plasma also exists outside the LCFS, the pressure and temperature are
- *     significantly higher within it. This is therefore the region of primary
- *     interest for equilibrium reconstruction.
+ *   - We refer to the region inside the LCFS as the "plasma region" or the
+ * "plasma core". While plasma also exists outside the LCFS, the pressure and
+ * temperature are significantly higher within it. This is therefore the region
+ * of primary interest for equilibrium reconstruction.
  *   - Replacement is ongoing; current implementation may be incomplete.
  *
  * Author: Alex Prokopyszyn
@@ -59,9 +59,9 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
   *opt_n = 0;
   *xpt_n = 0;
   for (int32_t i_row = 1; i_row < N_Z_MIN_1; i_row++) {
-    int32_t row = i_row * N_R;
+    int32_t i_row_n_r = i_row * N_R;
     for (int32_t i_col = 1; i_col < N_R_MIN_1; i_col++) {
-      int32_t idx = row + i_col;
+      int32_t idx = i_row_n_r + i_col;
       if (!MASK_LIM[idx]) {
         continue;
       }
@@ -135,6 +135,13 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
 //
 // If the dot product of v and w is negative, then the jth x-point
 // is not considered for the flux calculation.
+//
+// Parameters:
+//   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
+//   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
+//   xpt_n       - pointer which holds the number of x-points found
+//   r_mag_axis  - R coordinate of the magnetic axis
+//   z_mag_axis  - Z coordinate of the magnetic axis
 void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
                  double r_mag_axis, double z_mag_axis) {
 
@@ -179,43 +186,168 @@ void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
   *xpt_n = k;
 }
 
-// find_mask:
-//   Determines which grid points are inside the last closed flux surface (LCFS)
-//   based on the value of ψ at the LCFS boundary.
-//   Uses a flood-fill algorithm.
-int32_t find_mask(double *flux_total, double z_mag_axis, double *lcfs_r,
-                  double *lcfs_z, int32_t lcfs_n, int32_t *mask) {
-  int32_t i_grid, i_lcfs, i_lcfs_next;
-  double cross_product;
-  int32_t inside;
+// is_core_side_of_xpoint:
+// Similar to filter_xpts, but for a single grid point.
+// Returns 1 if the grid point is on the magnetic axis side of all x-points
+// and 0 otherwise.
+//
+// Parameters:
+//   r_grid      - R coordinate of the grid point
+//   z_grid      - Z coordinate of the grid point
+//   r_mag_axis  - R coordinate of the magnetic axis
+//   z_mag_axis  - Z coordinate of the magnetic axis
+//   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
+//   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
+//   xpt_n       - number of x-points
+int is_core_side_of_xpoint(double r_grid, double z_grid, double r_mag_axis,
+                           double z_mag_axis, double *xpt_r, double *xpt_z,
+                           int32_t xpt_n) {
 
-  for (i_grid = 0; i_grid < N_GRID; i_grid++) {
-    if (!MASK_LIM[i_grid]) {
-      continue;
-    }
+  for (int32_t i_xpt = 0; i_xpt < xpt_n; i_xpt++) {
+    // v = grid_point - xpt_i
+    const double vi_r = r_grid - xpt_r[i_xpt];
+    const double vi_z = z_grid - xpt_z[i_xpt];
 
-    inside = 1;
+    // w = mag_axis - xpt_i
+    const double wi_r = r_mag_axis - xpt_r[i_xpt];
+    const double wi_z = z_mag_axis - xpt_z[i_xpt];
 
-    for (i_lcfs = 0; i_lcfs < lcfs_n; i_lcfs++) {
-      i_lcfs_next = (i_lcfs + 1) % lcfs_n;
+    const double dot = vi_r * wi_r + vi_z * wi_z;
 
-      cross_product = (lcfs_r[i_lcfs_next] - lcfs_r[i_lcfs]) *
-                          (Z_GRID[i_grid] - lcfs_z[i_lcfs]) -
-                      (lcfs_z[i_lcfs_next] - lcfs_z[i_lcfs]) *
-                          (R_GRID[i_grid] - lcfs_r[i_lcfs]);
-
-      if (cross_product > 0.0) {
-        inside = 0;
-        break;
-      }
-    }
-
-    if (inside) {
-      mask[i_grid] = 1;
-    } else {
-      mask[i_grid] = 0;
+    // If dot < 0, grid point is behind xpt_i relative to the axis => filter it
+    if (dot < 0) {
+      return 0; // dont include this grid point as part of the plasma core
     }
   }
 
-  return 0;
+  return 1; // include this grid point as part of the plasma core
+}
+
+static inline int32_t grid_idx(int32_t i_r, int32_t i_z) {
+  // R varies fastest
+  return i_r + N_R * i_z;
+}
+
+static int32_t nearest_index_1d(const double *vec, int32_t n, double x) {
+  int32_t best_i = 0;
+  double best_d = fabs(vec[0] - x);
+  for (int32_t i = 1; i < n; i++) {
+    const double d = fabs(vec[i] - x);
+    if (d < best_d) {
+      best_d = d;
+      best_i = i;
+    }
+  }
+  return best_i;
+}
+
+// is_core_candidate:
+// Checks if the grid point at (i_r, i_z) is a candidate for inclusion
+// in the plasma core region.
+// A candidate must satisfy:
+// 1. ψ > ψ_boundary
+// 2. Be on the magnetic axis side of all x-points
+// 3. MASK_LIM[idx] is true
+// Parameters:
+//   i_r         - R index of the grid point
+//   i_z         - Z index of the grid point
+//   R_VEC       - array of R coordinates (with lenth N_R)
+//   Z_VEC       - array of Z coordinates (with length N_Z)
+//   flux_total  - array of total flux values (with length N_GRID)
+//   flux_boundary- flux value at the LCFS boundary
+//   r_mag_axis  - R coordinate of the magnetic axis
+//   z_mag_axis  - Z coordinate of the magnetic axis
+//   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
+//   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
+//   xpt_n       - number of x-points
+static inline int is_core_candidate(int32_t i_r, int32_t i_z,
+                                    const double *flux_total,
+                                    double flux_boundary, double r_mag_axis,
+                                    double z_mag_axis, double *xpt_r,
+                                    double *xpt_z, int32_t xpt_n) {
+  const int32_t idx = grid_idx(i_r, i_z);
+
+  const double psi = flux_total[idx];
+
+  // psi > flux_boundary in plasma core
+  if (psi <= flux_boundary)
+    return 0;
+
+  if (!MASK_LIM[idx])
+    return 0;
+
+  const double r = R_VEC[i_r];
+  const double z = Z_VEC[i_z];
+  return is_core_side_of_xpoint(r, z, r_mag_axis, z_mag_axis, xpt_r, xpt_z,
+                                xpt_n);
+}
+
+// flood_fill_plasma_core:
+// Flood-fill algorithm to identify the plasma core region inside the LCFS.
+// The mask array is updated in-place to mark grid cells inside the plasma core.
+// We also make sure the private flux region is excluded by using the dot
+// product trick above to make sure the plasma core is not behind any x-points
+// relative to the magnetic axis.
+// returns 0 on success, nonzero on error
+int flood_fill_plasma_core(int32_t *mask, double *flux_total,
+                           double flux_boundary, double r_mag_axis,
+                           double z_mag_axis, double *xpt_r, double *xpt_z,
+                           int32_t xpt_n) {
+
+  int32_t queue[N_GRID];
+  int32_t head = 0, tail = 0;
+
+  // Seed near magnetic axis
+  const int32_t i_r0 = nearest_index_1d(R_VEC, N_R, r_mag_axis);
+  const int32_t i_z0 = nearest_index_1d(Z_VEC, N_Z, z_mag_axis);
+
+  // Strict check: seed must satisfy core conditions
+  if (!is_core_candidate(i_r0, i_z0, flux_total, flux_boundary,
+                         r_mag_axis, z_mag_axis, xpt_r, xpt_z, xpt_n)) {
+    return ERR_AXIS_OUT_CORE;
+  }
+
+  // Reset mask
+  for (int32_t i = 0; i < N_GRID; i++) {
+    mask[i] = 0;
+  }
+
+  // Push seed
+  const int32_t seed_idx = grid_idx(i_r0, i_z0);
+  mask[seed_idx] = 1;
+  queue[tail++] = seed_idx;
+
+  // 4-neighbour BFS (breadth-first search) flood fill
+  while (head < tail) {
+
+    const int32_t idx = queue[head++];
+    const int32_t i_z = idx / N_R;
+    const int32_t i_r = idx - i_z * N_R;
+
+    const int32_t nbr_r[4] = {i_r - 1, i_r + 1, i_r, i_r};
+    const int32_t nbr_z[4] = {i_z, i_z, i_z - 1, i_z + 1};
+
+    for (int k = 0; k < 4; k++) {
+      const int32_t i_r_nbr = nbr_r[k];
+      const int32_t i_z_nbr = nbr_z[k];
+
+      if (i_r_nbr < 0 || i_r_nbr >= N_R)
+        continue;
+      if (i_z_nbr < 0 || i_z_nbr >= N_Z)
+        continue;
+
+      const int32_t idx_nbr = grid_idx(i_r_nbr, i_z_nbr);
+      if (mask[idx_nbr])
+        continue;
+
+      if (is_core_candidate(i_r_nbr, i_z_nbr, flux_total,
+                            flux_boundary, r_mag_axis, z_mag_axis, xpt_r, xpt_z,
+                            xpt_n)) {
+        mask[idx_nbr] = 1;
+        queue[tail++] = idx_nbr;
+      }
+    }
+  }
+
+  return 0; // success
 }
