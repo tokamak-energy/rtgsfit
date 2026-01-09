@@ -87,6 +87,7 @@ void rtgsfit_timing_dump(void)
 
 #else
 
+/* When ENABLE_RT_TIMING is not defined, timing macros are intentional no-ops. */
 #define TSTART()        do {} while (0)
 #define TACC(idx)       do {} while (0)
 
