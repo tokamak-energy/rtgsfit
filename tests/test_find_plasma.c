@@ -9,7 +9,7 @@
 
 #define TOL 1e-6
 
-// Maximum number of points neeeded for for the
+// Maximum number of points needed for for the
 // opt and xpt arrays in the tests below.
 #define MAX_NUM_TEST_POINTS 6
 
