@@ -552,7 +552,7 @@ void rtgsfit(
     // extract LCFS
     TSTART();
     // *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
-    // No longer calcualting lcfs_r, lcfs_z as we don't use them.
+    // No longer calculating lcfs_r, lcfs_z as we don't use them.
     // Just set them to zero.
     for (int32_t i = 0; i < N_LCFS_MAX; i++) {
         lcfs_r[i] = 0.0;
