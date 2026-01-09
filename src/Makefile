@@ -101,7 +101,7 @@ $(LIB)/libpoisson_solver.so: poisson_solver.o gradient.o solve_tria.o constants.
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lopenblas
 
 $(LIB)/libsolve_tria.so: solve_tria.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/libgradient.so: gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
