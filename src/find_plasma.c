@@ -251,7 +251,7 @@ static int32_t nearest_index_1d(const double *vec, int32_t n, double x) {
 // Parameters:
 //   i_r         - R index of the grid point
 //   i_z         - Z index of the grid point
-//   R_VEC       - array of R coordinates (with lenth N_R)
+//   R_VEC       - array of R coordinates (with length N_R)
 //   Z_VEC       - array of Z coordinates (with length N_Z)
 //   flux_total  - array of total flux values (with length N_GRID)
 //   flux_boundary- flux value at the LCFS boundary
