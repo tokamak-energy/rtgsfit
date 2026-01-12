@@ -104,10 +104,10 @@ $(LIB)/libsolve_tria.so: solve_tria.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/libgradient.so: gradient.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/libconstants.so: constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ 
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: \
   rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o find_plasma.o
