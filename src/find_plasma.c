@@ -102,7 +102,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
           opt_flux[*opt_n] = flux_at_null;
           (*opt_n)++;
           if (*opt_n >= N_XPT_MAX) {
-            return 1024;
+            return ERR_NUM_OPTS;
           }
         } else if (hess_det < 0.0) {
           // x-point
@@ -111,7 +111,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
           xpt_flux[*xpt_n] = flux_at_null;
           (*xpt_n)++;
           if (*xpt_n >= N_XPT_MAX) {
-            return 512;
+            return ERR_NUM_XPTS;
           }
         }
       }
