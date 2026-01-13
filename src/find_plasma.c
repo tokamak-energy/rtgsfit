@@ -80,7 +80,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
       double e = 0.25 * (flux[idx_rp_zp] - flux[idx_rm_zp] - flux[idx_rp_zm] +
                          flux[idx_rm_zm]);
       double denom = c * d - e * e;
-      if (fabs(denom) < 1e-14)
+      if (fabs(denom) < THRESH)
         continue;
       double inv_denom = 1.0 / denom;
       double dr_norm = (b * e - a * d) * inv_denom; // (dr / ΔR)
@@ -94,7 +94,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
                               0.5 * d * dz_norm * dz_norm +
                               e * dr_norm * dz_norm;
         // Redundant check (already handled by fabs(denom) above)
-        // if (fabs(hess_det) < 1e-14)
+        // if (fabs(hess_det) < THRESH)
         //     continue;
         if (hess_det > 0.0) {
           // o-point
