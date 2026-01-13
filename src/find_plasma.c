@@ -231,7 +231,7 @@ static inline int32_t grid_idx(int32_t i_r, int32_t i_z) {
   return i_r + N_R * i_z;
 }
 
-// Finds the index of the element in a 1D array `vec` (length `n`) 
+// Finds the index of the element in a 1D array `vec` (length `n`)
 // that is closest to the value `x`.
 static int32_t nearest_index_1d(const double *vec, int32_t n, double x) {
   int32_t best_i = 0;
@@ -253,6 +253,9 @@ static int32_t nearest_index_1d(const double *vec, int32_t n, double x) {
 // 1. ψ > ψ_boundary
 // 2. Be on the magnetic axis side of all x-points
 // 3. MASK_LIM[idx] is true
+//    - MASK_LIM is defined in constants.c and used here
+//    - It is machine-specific
+//    - 0 where PFCs are and outside PFCs, 1 where plasma can exist
 // Parameters:
 //   i_r         - R index of the grid point
 //   i_z         - Z index of the grid point
@@ -294,8 +297,8 @@ static inline int is_core_candidate(int32_t i_r, int32_t i_z,
 // product trick above to make sure the plasma core is not behind any x-points
 // relative to the magnetic axis.
 // Parameters:
-//   mask         - array of size N_GRID; updated in-place (1 = core, 0 = not core)
-//   flux_total   - array of total flux values (size N_GRID)
+//   mask         - array of size N_GRID; updated in-place (1 = core, 0 = not
+//   core) flux_total   - array of total flux values (size N_GRID)
 //   flux_boundary- flux value at the LCFS boundary
 //   r_mag_axis   - R coordinate of the magnetic axis
 //   z_mag_axis   - Z coordinate of the magnetic axis
@@ -307,9 +310,9 @@ static inline int is_core_candidate(int32_t i_r, int32_t i_z,
 //   0 on success, nonzero error code if the seed near the magnetic axis
 //   is not a valid core candidate (ERR_AXIS_OUT_CORE)
 int32_t flood_fill_plasma_core(int32_t *mask, double *flux_total,
-                           double flux_boundary, double r_mag_axis,
-                           double z_mag_axis, double *xpt_r, double *xpt_z,
-                           int32_t xpt_n) {
+                               double flux_boundary, double r_mag_axis,
+                               double z_mag_axis, double *xpt_r, double *xpt_z,
+                               int32_t xpt_n) {
 
   int32_t queue[N_GRID];
   int32_t head = 0, tail = 0;
@@ -338,6 +341,9 @@ int32_t flood_fill_plasma_core(int32_t *mask, double *flux_total,
   while (head < tail) {
 
     const int32_t idx = queue[head++];
+
+    // Convert 1D row-major index `idx` back to 2D grid indices (i_r, i_z)
+    // This is the inverse of `grid_idx()` which maps (i_r, i_z) -> 1D index
     const int32_t i_z = idx / N_R;
     const int32_t i_r = idx - i_z * N_R;
 
