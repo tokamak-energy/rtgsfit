@@ -79,7 +79,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
       double d = flux[idx_zp] - 2.0 * flux[idx] + flux[idx_zm];
       double e = 0.25 * (flux[idx_rp_zp] - flux[idx_rm_zp] - flux[idx_rp_zm] +
                          flux[idx_rm_zm]);
-      double denom = (c * d - e * e);
+      double denom = c * d - e * e;
       if (fabs(denom) < 1e-14)
         continue;
       double inv_denom = 1.0 / denom;
@@ -88,7 +88,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
       if (fabs(dr_norm) <= 0.5 && fabs(dz_norm) <= 0.5) {
         double null_r = R_VEC[i_col] + dr_norm * DR;
         double null_z = Z_VEC[i_row] + dz_norm * DZ;
-        double hess_det = c * d - e * e;
+        double hess_det = denom;
         double flux_at_null = flux[idx] + a * dr_norm + b * dz_norm +
                               0.5 * c * dr_norm * dr_norm +
                               0.5 * d * dz_norm * dz_norm +
