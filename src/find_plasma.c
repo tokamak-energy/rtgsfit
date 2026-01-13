@@ -224,6 +224,8 @@ int is_core_side_of_xpoint(double r_grid, double z_grid, double r_mag_axis,
   return 1; // include this grid point as part of the plasma core
 }
 
+// Converts a 2D grid index (column i_r, row i_z)
+// into a row-major 1D array index.
 static inline int32_t grid_idx(int32_t i_r, int32_t i_z) {
   // R varies fastest
   return i_r + N_R * i_z;
@@ -303,8 +305,8 @@ int flood_fill_plasma_core(int32_t *mask, double *flux_total,
   const int32_t i_z0 = nearest_index_1d(Z_VEC, N_Z, z_mag_axis);
 
   // Strict check: seed must satisfy core conditions
-  if (!is_core_candidate(i_r0, i_z0, flux_total, flux_boundary,
-                         r_mag_axis, z_mag_axis, xpt_r, xpt_z, xpt_n)) {
+  if (!is_core_candidate(i_r0, i_z0, flux_total, flux_boundary, r_mag_axis,
+                         z_mag_axis, xpt_r, xpt_z, xpt_n)) {
     return ERR_AXIS_OUT_CORE;
   }
 
@@ -341,9 +343,8 @@ int flood_fill_plasma_core(int32_t *mask, double *flux_total,
       if (mask[idx_nbr])
         continue;
 
-      if (is_core_candidate(i_r_nbr, i_z_nbr, flux_total,
-                            flux_boundary, r_mag_axis, z_mag_axis, xpt_r, xpt_z,
-                            xpt_n)) {
+      if (is_core_candidate(i_r_nbr, i_z_nbr, flux_total, flux_boundary,
+                            r_mag_axis, z_mag_axis, xpt_r, xpt_z, xpt_n)) {
         mask[idx_nbr] = 1;
         queue[tail++] = idx_nbr;
       }
