@@ -293,8 +293,20 @@ static inline int is_core_candidate(int32_t i_r, int32_t i_z,
 // We also make sure the private flux region is excluded by using the dot
 // product trick above to make sure the plasma core is not behind any x-points
 // relative to the magnetic axis.
-// returns 0 on success, nonzero on error
-int flood_fill_plasma_core(int32_t *mask, double *flux_total,
+// Parameters:
+//   mask         - array of size N_GRID; updated in-place (1 = core, 0 = not core)
+//   flux_total   - array of total flux values (size N_GRID)
+//   flux_boundary- flux value at the LCFS boundary
+//   r_mag_axis   - R coordinate of the magnetic axis
+//   z_mag_axis   - Z coordinate of the magnetic axis
+//   xpt_r        - array of x-point R coordinates (size N_XPT_MAX)
+//   xpt_z        - array of x-point Z coordinates (size N_XPT_MAX)
+//   xpt_n        - number of x-points
+//
+// Returns:
+//   0 on success, nonzero error code if the seed near the magnetic axis
+//   is not a valid core candidate (ERR_AXIS_OUT_CORE)
+int32_t flood_fill_plasma_core(int32_t *mask, double *flux_total,
                            double flux_boundary, double r_mag_axis,
                            double z_mag_axis, double *xpt_r, double *xpt_z,
                            int32_t xpt_n) {
