@@ -93,8 +93,9 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
                               0.5 * c * dr_norm * dr_norm +
                               0.5 * d * dz_norm * dz_norm +
                               e * dr_norm * dz_norm;
-        if (fabs(hess_det) < 1e-14)
-          continue;
+        // Redundant check (already handled by fabs(denom) above)
+        // if (fabs(hess_det) < 1e-14)
+        //     continue;
         if (hess_det > 0.0) {
           // o-point
           opt_r[*opt_n] = null_r;
