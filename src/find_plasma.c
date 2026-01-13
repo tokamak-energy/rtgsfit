@@ -231,6 +231,8 @@ static inline int32_t grid_idx(int32_t i_r, int32_t i_z) {
   return i_r + N_R * i_z;
 }
 
+// Finds the index of the element in a 1D array `vec` (length `n`) 
+// that is closest to the value `x`.
 static int32_t nearest_index_1d(const double *vec, int32_t n, double x) {
   int32_t best_i = 0;
   double best_d = fabs(vec[0] - x);
