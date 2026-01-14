@@ -73,12 +73,26 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
       int32_t idx_rp_zm = idx_rp - N_R;
       int32_t idx_rm_zp = idx_rm + N_R;
       int32_t idx_rm_zm = idx_rm - N_R;
+
+      // a ≈ ∂ψ/∂R * ΔR, finite difference approximation of the R-derivative
       double a = 0.5 * (flux[idx_rp] - flux[idx_rm]);
+
+      // b ≈ ∂ψ/∂Z * ΔZ, finite difference approximation of the Z-derivative
       double b = 0.5 * (flux[idx_zp] - flux[idx_zm]);
+
+      // c ≈ ∂²ψ/∂R² * (ΔR)², finite difference approximation of the second
+      // R-derivative
       double c = flux[idx_rp] - 2.0 * flux[idx] + flux[idx_rm];
+
+      // d ≈ ∂²ψ/∂Z² * (ΔZ)², finite difference approximation of the second
+      // Z-derivative
       double d = flux[idx_zp] - 2.0 * flux[idx] + flux[idx_zm];
+
+      // e ≈ ∂²ψ/∂R∂Z * ΔR * ΔZ, finite difference approximation of the mixed
+      // second derivative
       double e = 0.25 * (flux[idx_rp_zp] - flux[idx_rm_zp] - flux[idx_rp_zm] +
                          flux[idx_rm_zm]);
+
       double denom = c * d - e * e;
       if (fabs(denom) < THRESH)
         continue;
