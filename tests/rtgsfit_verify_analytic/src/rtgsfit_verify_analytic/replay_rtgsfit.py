@@ -22,10 +22,19 @@ def initial_flux_norm(r_vec, z_vec):
     
     return flux_norm.flatten()
 
-def replay_rtgsfit():
+def replay_rtgsfit(zero_test=False):
 
     librtgsfit_path = os.path.join(cnst.RTGSFIT_PATH, 'lib', 'librtgsfit.so')
     constants_c_path = os.path.join(cnst.REPO_PATH, 'data', 'constants.c')
+    
+    if zero_test:
+        output_dict_npy_fname = "output_dict_zero_test.npy"
+        output_dict_csv_fname = "output_dict_zero_test.csv"
+        output_dict_final_iter_npy_fname = "output_dict_final_iter_zero_test.npy"
+    else:
+        output_dict_npy_fname = "output_dict.npy"
+        output_dict_csv_fname = "output_dict.csv"
+        output_dict_final_iter_npy_fname = "output_dict_final_iter.npy"
 
     rtgsfit_lib = ctypes.CDLL(librtgsfit_path)
 
@@ -83,13 +92,22 @@ def replay_rtgsfit():
     bp_probe_coords[:, 1] = bp_z_coords
     bp_probe_coords[:, 2] = bp_alpha_coords
 
-    meas = measurements.generate_measurements(
-        fl_coords,
-        bp_probe_coords,
-        cnst.ANALYTIC_RO,
-        cnst.ANALYTIC_ZO,
-        cnst.ANALYTIC_PLASMA_CURRENT
-    )
+    if zero_test:
+        meas = measurements.generate_measurements(
+            fl_coords,
+            bp_probe_coords,
+            cnst.ANALYTIC_RO,
+            cnst.ANALYTIC_ZO,
+            0.0
+        )
+    else:
+        meas = measurements.generate_measurements(
+            fl_coords,
+            bp_probe_coords,
+            cnst.ANALYTIC_RO,
+            cnst.ANALYTIC_ZO,
+            cnst.ANALYTIC_PLASMA_CURRENT
+        )
     coil_curr = np.zeros(n_coil, dtype=np.float64)
     flux_norm = initial_flux_norm(r_vec, z_vec)
     mask = np.ones(n_grid, dtype=np.int32)
@@ -155,14 +173,23 @@ def replay_rtgsfit():
 
     for i_iter in range(cnst.N_ITERS):
 
-        meas = measurements.generate_measurements(
-            fl_coords,
-            bp_probe_coords,
-            cnst.ANALYTIC_RO,
-            cnst.ANALYTIC_ZO,
-            cnst.ANALYTIC_PLASMA_CURRENT
-        )
-        coil_curr = np.zeros(n_coil, dtype=np.float64)
+        if zero_test:
+            meas = measurements.generate_measurements(
+                fl_coords,
+                bp_probe_coords,
+                cnst.ANALYTIC_RO,
+                cnst.ANALYTIC_ZO,
+                0.0
+            )
+        else:
+            meas = measurements.generate_measurements(
+                fl_coords,
+                bp_probe_coords,
+                cnst.ANALYTIC_RO,
+                cnst.ANALYTIC_ZO,
+                cnst.ANALYTIC_PLASMA_CURRENT
+            )
+            coil_curr = np.zeros(n_coil, dtype=np.float64)
 
         # Call the rtgsfit function
         rtgsfit_lib.rtgsfit(
@@ -218,12 +245,12 @@ def replay_rtgsfit():
         print("n_meas_model:", len(meas_model))
 
     # Save output_dict to a file
-    output_file = os.path.join(cnst.DATA_DIR, 'output_dict.npy')
+    output_file = os.path.join(cnst.DATA_DIR, output_dict_npy_fname)
     np.save(output_file, output_dict, allow_pickle=True)
       
     # Save each in a csv file for visual inspection
     # Skipping the flux_norm, flux_total, mask, lcfs_r, lcfs_z, lcfs_n for brevity
-    csv_file = os.path.join(cnst.DATA_DIR, 'output_dict.csv')
+    csv_file = os.path.join(cnst.DATA_DIR, output_dict_csv_fname)
     with open(csv_file, 'w') as f:
         for key, value in output_dict.items():
             if key in ['flux_norm', 'flux_total', 'mask', 'lcfs_r', 'lcfs_z', 'lcfs_n']:
@@ -245,5 +272,5 @@ def replay_rtgsfit():
         final_iter_value = value[-1]
         output_dict_final_iter[key] = final_iter_value.copy()
 
-    reference_file = os.path.join(cnst.DATA_DIR, 'output_dict_final_iter.npy')
+    reference_file = os.path.join(cnst.DATA_DIR, output_dict_final_iter_npy_fname)
     np.save(reference_file, output_dict_final_iter, allow_pickle=True)

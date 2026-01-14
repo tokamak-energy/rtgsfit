@@ -28,6 +28,7 @@ def run_pipeline():
     )
 
     replay_rtgsfit.replay_rtgsfit()
+    replay_rtgsfit.replay_rtgsfit(zero_test=True)
     
 
 @pytest.fixture(scope="session")
@@ -36,3 +37,10 @@ def output_dict(run_pipeline):
     if not output_file.exists():
         pytest.fail(f"{output_file} does not exist. Run test_run_pipeline first.")
     return np.load(output_file, allow_pickle=True).item()
+
+@pytest.fixture(scope="session")
+def zero_output_dict(run_pipeline):
+    zero_output_file = Path(cnst.DATA_DIR) / "output_dict_zero_test.npy"
+    if not zero_output_file.exists():
+        pytest.fail(f"{zero_output_file} does not exist. Run test_run_pipeline first.")
+    return np.load(zero_output_file, allow_pickle=True).item()
