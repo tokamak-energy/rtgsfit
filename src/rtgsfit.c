@@ -3,6 +3,7 @@
 #include "rtgsfit.h"
 #include "poisson_solver.h"
 #include "find_x_point.h"
+#include "find_plasma.h"
 #include <stdio.h>
 #include <float.h>
 #include <math.h>
@@ -11,13 +12,88 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
-#define N_MEAS_NO_REG N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS
+#define N_MEAS_NO_REG (N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS)
 
-int32_t max_idx(
-        int32_t n_arr,
-        double* arr
-        )
+#ifdef ENABLE_RT_TIMING
+
+static inline uint64_t thread_cpu_ns(void)
+{
+    struct timespec ts;
+    int ret = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    assert(ret == 0);
+    return (uint64_t)ts.tv_sec * 1000000000ull + ts.tv_nsec;
+}
+
+enum {
+    T_MEAS_PREP = 0,
+    T_BASIS,
+    T_MEAS_MATRIX,
+    T_WEIGHTING,
+    T_LS_FIT,
+    T_SOURCE,
+    T_MODEL_MEAS,
+    T_CHI2,
+    T_POISSON,
+    T_COIL_FLUX,
+    T_VESSEL_FLUX,
+    T_XPTS_AND_AXIS,
+    T_LIMITER,
+    T_LCFS,
+    T_INSIDE,
+    T_NORMALISE,
+    T_TOTAL,
+    T_NTIMERS
+};
+
+static uint64_t timing_acc[T_NTIMERS];
+static uint64_t timing_t0;
+
+#define TSTART()        do { timing_t0 = thread_cpu_ns(); } while (0)
+#define TACC(idx)       do { timing_acc[(idx)] += (thread_cpu_ns() - timing_t0); } while (0)
+
+void rtgsfit_timing_reset(void)
+{
+    for (int i = 0; i < T_NTIMERS; i++) timing_acc[i] = 0;
+}
+
+void rtgsfit_timing_dump(void)
+{
+    static const char *names[T_NTIMERS] = {
+        "meas_prep",
+        "basis",
+        "meas_matrix",
+        "weighting",
+        "ls_fit",
+        "source",
+        "model_meas",
+        "chi2",
+        "poisson",
+        "coil_flux",
+        "vessel_flux",
+        "xpts_and_axis",
+        "limiter",
+        "lcfs",
+        "inside",
+        "normalise",
+        "total"
+    };
+
+    for (int i = 0; i < T_NTIMERS; i++) {
+        printf("%-14s : %10.3f us\n", names[i], (double)timing_acc[i] * 1e-3);
+    }
+}
+
+#else
+
+/* When ENABLE_RT_TIMING is not defined, timing macros are intentional no-ops. */
+#define TSTART()        do {} while (0)
+#define TACC(idx)       do {} while (0)
+
+#endif // ENABLE_RT_TIMING
+
+int32_t max_idx(int32_t n_arr, double* arr)
 {
     int i_arr;
     int i_max = 0;
@@ -51,7 +127,6 @@ void rm_coil_from_meas(
     }
 }
 
-
 void make_basis(
         double* flux_norm,
         int* mask,
@@ -80,30 +155,6 @@ void make_basis(
             basis[i_grid + 2*N_GRID] = 0.0;
         }
     }
-}
-
-double find_flux_on_limiter(double* flux_total)
-{
-
-    int i_limit, i_intrp, idx;
-    double flux_limit_max, flux_limit;
-
-    flux_limit_max = -DBL_MAX;
-
-    for (i_limit = 0; i_limit < N_LIMIT; i_limit++)
-    {
-        flux_limit = 0.0;
-        for (i_intrp = 0; i_intrp < N_INTRP; i_intrp++)
-        {
-            idx = i_limit*N_INTRP + i_intrp;
-            flux_limit += LIMIT_WEIGHT[idx] * flux_total[LIMIT_IDX[idx]];
-        }
-        if (flux_limit > flux_limit_max)
-        {
-            flux_limit_max = flux_limit;
-        }
-    }
-    return flux_limit_max;
 }
 
 /**
@@ -145,8 +196,6 @@ double find_flux_on_limiter_xfiltered(double flux_total[],
     for (int32_t i_limit = 0; i_limit < N_LIMIT; i_limit++)
     {
 
-        // If dot product of (R_LIM[i_limit] - xpt_r, Z_LIM[i_limit] - xpt_z) and 
-        // (r_mag_axis - xpt_r, z_mag_axis - xpt_z) is negative for any xpt, skip this limit point
         skip = 0;
         for (int32_t i_xpt = 0; i_xpt < xpt_n; i_xpt++)
         {
@@ -154,7 +203,7 @@ double find_flux_on_limiter_xfiltered(double flux_total[],
                           (LIMIT_Z[i_limit] - xpt_z[i_xpt]) * (z_mag_axis - xpt_z[i_xpt]);
             if (dot_product < 0.0)
             {
-                skip = 1; // skip this limit point
+                skip = 1;
                 break;
             }
         }
@@ -186,7 +235,6 @@ void normalise_flux(
     double inv_flux_diff;
     inv_flux_diff = 1.0/(flux_lcfs - flux_axis);
 
-    // psi norm has to be of total flux, as boundary is defined in terms of total flux !
     for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
     {
         if (mask[i_grid] && MASK_LIM[i_grid])
@@ -224,6 +272,10 @@ void rtgsfit(
         double* z_cur_centroid  // output
         )
 {
+#ifdef ENABLE_RT_TIMING
+    uint64_t t_total_0 = thread_cpu_ns();
+#endif // ENABLE_RT_TIMING
+
     assert(n_meas_model == N_MEAS);
     // N_MEAS includes the number of regularisations.
     // n_meas_no_reg is the number of measurements after the regularisations have been removed.
@@ -235,8 +287,14 @@ void rtgsfit(
     // meas_pcs contains the raw measurements from the PCS that need to be post-processed
     // using the SENSOR_REPLACEMENT_MATRIX.
     double meas[N_MEAS_NO_REG];
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS_NO_REG, N_SENS_PCS, 1.0,
-            SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS, meas_pcs, 1, 0.0, meas, 1);
+
+    TSTART();
+    cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                N_MEAS_NO_REG, N_SENS_PCS,
+                1.0, SENSOR_REPLACEMENT_MATRIX, N_SENS_PCS,
+                meas_pcs, 1,
+                0.0, meas, 1);
+    TACC(T_MEAS_PREP);
 
     // will this be done during compilation?
     double g_coef_meas_w[N_COEF * N_MEAS];
@@ -248,25 +306,37 @@ void rtgsfit(
     // and includes the regularisation elements, which can be thought of as fake Rogowski coil
     // measurements.
     double meas_no_coil[N_MEAS];
+
+    TSTART();
     rm_coil_from_meas(coil_curr, meas, meas_no_coil);
+    TACC(T_MEAS_PREP);
 
     // make basis
     // This makes the transpose of the T_{yg} matrix in eqn. (61) of the Moret et al. (2015)
     // LIUQE paper, without the Delta_R * Delta_Z factor.
     double g_pls_grid[N_PLS * N_GRID];
+
+    TSTART();
     make_basis(flux_norm, mask, g_pls_grid);
+    TACC(T_BASIS);
 
     // make meas-pls matrix
     // g_coef_meas_w = g_pls_grid * G_GRID_MEAS_WEIGHT
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_PLS, N_MEAS, N_GRID,
-            1.0, g_pls_grid, N_GRID, G_GRID_MEAS_WEIGHT, N_MEAS, 0.0,
-            g_coef_meas_w, N_MEAS);
+    TSTART();
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                N_PLS, N_MEAS, N_GRID,
+                1.0, g_pls_grid, N_GRID,
+                G_GRID_MEAS_WEIGHT, N_MEAS,
+                0.0, g_coef_meas_w, N_MEAS);
+    TACC(T_MEAS_MATRIX);
 
     // form meas vectors from measurements
+    TSTART();
     for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
     {
         meas_no_coil[i_meas] *= WEIGHT[i_meas];
     }
+    TACC(T_WEIGHTING);
 
     double meas_no_coil_cp[N_MEAS];
     double g_coef_meas_w_orig[N_COEF * N_MEAS];
@@ -283,19 +353,22 @@ void rtgsfit(
     lapack_int rank;
     double rcond = -1.0;
     double single_vals[N_COEF];
+
+    TSTART();
     *lapack_dgelss_info = LAPACKE_dgelss(
-      LAPACK_COL_MAJOR,
-      N_MEAS,
-      N_COEF,
-      1,
-      g_coef_meas_w,
-      N_MEAS,
-      meas_no_coil_cp,
-      N_MEAS,
-      single_vals,
-      rcond,
-      &rank
+        LAPACK_COL_MAJOR,
+        N_MEAS,
+        N_COEF,
+        1,
+        g_coef_meas_w,
+        N_MEAS,
+        meas_no_coil_cp,
+        N_MEAS,
+        single_vals,
+        rcond,
+        &rank
     );
+    TACC(T_LS_FIT);
 
     // BUXTON: copy "meas_no_coil_cp" into "coef"
     memcpy(coef, meas_no_coil_cp, sizeof(double) * N_COEF);
@@ -305,8 +378,13 @@ void rtgsfit(
     // BUXTON: "source = g_pls_grid * coef"
     // BUXTON: source = plasma current on (R, Z) grid
     double source[N_GRID];
-    cblas_dgemv(CblasRowMajor, CblasTrans, N_PLS, N_GRID, 1.0, g_pls_grid,
-            N_GRID, coef, 1, 0.0, source, 1);
+
+    TSTART();
+    cblas_dgemv(CblasRowMajor, CblasTrans,
+                N_PLS, N_GRID,
+                1.0, g_pls_grid, N_GRID,
+                coef, 1,
+                0.0, source, 1);
 
     // `source` is the current density in each grid cell;
     // plasma_current = sum(source) * d_area
@@ -328,21 +406,29 @@ void rtgsfit(
         *r_cur_centroid = 0.0;
         *z_cur_centroid = 0.0;
     }
+    TACC(T_SOURCE);
 
     // modelled measurements
     // BUXTON: measurements
     // BUXTON: "meas_model = g_coef_meas_w_orig * coef"
     // double meas_model_arr[N_MEAS];
-    cblas_dgemv(CblasRowMajor, CblasTrans, N_COEF, N_MEAS, 1.0, g_coef_meas_w_orig,
-            N_MEAS, coef, 1, 0.0, meas_model, 1);
-    
+    TSTART();
+    cblas_dgemv(CblasRowMajor, CblasTrans,
+                N_COEF, N_MEAS,
+                1.0, g_coef_meas_w_orig, N_MEAS,
+                coef, 1,
+                0.0, meas_model, 1);
+    TACC(T_MODEL_MEAS);
+
     // find chi squared error between meas and model
+    TSTART();
     *chi_sq_err = 0.0;
     for (int32_t i_meas = 0; i_meas < N_MEAS_NO_REG; i_meas++)
     {
         double diff = meas_no_coil[i_meas] - meas_model[i_meas];
         *chi_sq_err += diff * diff;
     }
+    TACC(T_CHI2);
 
     // convert current to RHS of eq
     for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
@@ -353,38 +439,45 @@ void rtgsfit(
     //  poisson solver -> psi_plasma
     // BUXTON: calculate psi_plasma
     double flux_pls[N_GRID];
-    poisson_solver(source, flux_pls);
 
-    // calculate coil psi on grid
-    // BUXTON: "flux_total = G_GRID_COIL * coil_curr"
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_COIL, 1.0, G_GRID_COIL,
-            N_COIL, coil_curr, 1, 0.0, flux_total, 1);
+    TSTART();
+    poisson_solver(source, flux_pls);
+    TACC(T_POISSON);
+
+    // coil psi on grid: flux_total = G_GRID_COIL * coil_curr */
+    TSTART();
+    cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                N_GRID, N_COIL,
+                1.0, G_GRID_COIL, N_COIL,
+                coil_curr, 1,
+                0.0, flux_total, 1);
+    TACC(T_COIL_FLUX);
 
     // calculate vessel flux on grid
     if (N_VESS > 0)
     {
-
         double flux_vessel[N_GRID];
-        cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_VESS, 1.0, G_GRID_VESSEL,
-                N_VESS, &coef[N_PLS], 1, 0.0, flux_vessel, 1);
 
-        // calculate total flux = coil + plasma + vessel
+        TSTART();
+        cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                    N_GRID, N_VESS,
+                    1.0, G_GRID_VESSEL, N_VESS,
+                    &coef[N_PLS], 1,
+                    0.0, flux_vessel, 1);
+
         for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
         {
-            flux_total[i_grid] +=  flux_pls[i_grid] + flux_vessel[i_grid];
-            // BUXTON: do I need to add delta_z*d(psi)/d(psi_n)
+            flux_total[i_grid] += flux_pls[i_grid] + flux_vessel[i_grid];
         }
+        TACC(T_VESSEL_FLUX);
     }
     else
     {
-        for (int32_t i_grid=0; i_grid < N_GRID; i_grid++)
+        for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
         {
-            flux_total[i_grid] +=  flux_pls[i_grid];
+            flux_total[i_grid] += flux_pls[i_grid];
         }
     }
-
-    // flux value on limiter
-    // lcfs_flux = find_flux_on_limiter(flux_total); // Using find_flux_on_limiter_xfiltered instead.
 
     // find x point & opt
     double xpt_r[N_XPT_MAX];
@@ -396,49 +489,106 @@ void rtgsfit(
 
     int32_t xpt_n = 0;
     int32_t opt_n = 0;
-    find_null_in_gradient_march(flux_total, opt_r, opt_z, opt_flux, &opt_n,
-            xpt_r, xpt_z, xpt_flux, &xpt_n);
 
-    // select opt
+    TSTART();
+    // find_null_in_gradient_march(flux_total,
+    //                             opt_r, opt_z, opt_flux, &opt_n,
+    //                             xpt_r, xpt_z, xpt_flux, &xpt_n);
+    *lcfs_err_code = 0;
+    *lcfs_err_code |= find_nulls(flux_total,
+               opt_r, opt_z, opt_flux, &opt_n,
+               xpt_r, xpt_z, xpt_flux, &xpt_n);
+    if (*lcfs_err_code != 0) {
+        return;
+    }
+
+    // Check if mag axis found
+    if (opt_n == 0)
+    {
+        *lcfs_err_code = ERR_NO_AXIS;
+        return;
+    }
+
     int32_t i_opt = max_idx(opt_n, opt_flux);
     *mag_axis_flux = opt_flux[i_opt];
     *r_mag_axis = opt_r[i_opt];
     *z_mag_axis = opt_z[i_opt];
 
-    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total, xpt_r, xpt_z, xpt_n, *r_mag_axis, *z_mag_axis);
+    // Filter x-points
+    filter_xpts(xpt_r, xpt_z, &xpt_n, *r_mag_axis, *z_mag_axis);
+    TACC(T_XPTS_AND_AXIS);
+
+    // limiter flux with x-point filtering
+    TSTART();
+    double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total,
+                                                      xpt_r, xpt_z, xpt_n,
+                                                      *r_mag_axis, *z_mag_axis);
+    TACC(T_LIMITER);
 
     // select xpt
     if (xpt_n > 0)
     {
         int32_t i_xpt = max_idx(xpt_n, xpt_flux);
         double xpt_flux_max = xpt_flux[i_xpt];
-        xpt_flux_max = FRAC * xpt_flux_max + (1.0-FRAC)*(*mag_axis_flux);
+        xpt_flux_max = FRAC * xpt_flux_max + (1.0 - FRAC) * (*mag_axis_flux);
         if (xpt_flux_max > lcfs_flux)
         {
             lcfs_flux = xpt_flux_max;
         }
     }
 
-    // extract LCFS
-    *lcfs_err_code = 0;
-    *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
+    if (fabs(lcfs_flux - (*mag_axis_flux)) < THRESH) {
+      // Don't call normalise_flux() if lcfs_flux is too close to mag_axis_flux
+      // This avoids division by a very small number.
+      *lcfs_err_code |= ERR_AX_EQ_BDRY;
+      return;
+    }
 
-    // extract inside of LCFS
-    // BUXTON: we think this might have an error??????
-    *lcfs_err_code |= inside_lcfs(*r_mag_axis, *z_mag_axis, lcfs_r, lcfs_z, *lcfs_n, mask);
+    if (lcfs_flux > (*mag_axis_flux)) {
+      // lcfs_flux should never be greater than mag_axis_flux
+      *lcfs_err_code |= ERR_BDRY_GT_AX;
+      return;
+    }
+
+    // extract LCFS
+    TSTART();
+    // *lcfs_err_code |= find_lcfs_rz(flux_total, lcfs_flux, lcfs_r, lcfs_z, lcfs_n);
+    // No longer calculating lcfs_r, lcfs_z as we don't use them.
+    // Just set them to zero.
+    for (int32_t i = 0; i < N_LCFS_MAX; i++) {
+        lcfs_r[i] = 0.0;
+        lcfs_z[i] = 0.0;
+    }
+    *lcfs_n = 0;
+    TACC(T_LCFS);
+
+    // inside LCFS mask
+    TSTART();
+    // *lcfs_err_code |= inside_lcfs(*r_mag_axis, *z_mag_axis,
+    //                               lcfs_r, lcfs_z, *lcfs_n, mask);
+// int flood_fill_plasma_core(int32_t *mask, double *flux_total,
+//                            double flux_boundary, double r_mag_axis,
+//                            double z_mag_axis, double *xpt_r, double *xpt_z,
+//                            int32_t xpt_n);
+
+    *lcfs_err_code |=
+        flood_fill_plasma_core(mask, flux_total, lcfs_flux, *r_mag_axis,
+                              *z_mag_axis, xpt_r, xpt_z, xpt_n);
+    if (*lcfs_err_code != 0) {
+        return;
+    }
+    TACC(T_INSIDE);
 
     // normalise total psi
-    if (fabs(lcfs_flux - (*mag_axis_flux)) < THRESH)
-    {
-      // Don't call normalise_flux if lcfs_flux is too close to mag_axis_flux
-      // This avoids division by a very small number.
-        *lcfs_err_code |= 128; // ERR_AX_EQ_BDRY
-    }
-    else
-    {
-        normalise_flux(flux_total, lcfs_flux, *mag_axis_flux, mask, flux_norm);
-    }
+    TSTART();
+    normalise_flux(flux_total, lcfs_flux, *mag_axis_flux, mask, flux_norm);
+    TACC(T_NORMALISE);
 
     // Store psi_b for later
     *flux_boundary = lcfs_flux;
+
+#ifdef ENABLE_RT_TIMING
+    timing_acc[T_TOTAL] += (thread_cpu_ns() - t_total_0);
+#endif
+
 }

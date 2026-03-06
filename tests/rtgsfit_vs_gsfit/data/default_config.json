@@ -14,6 +14,8 @@
   "z_axis0": 0.0,
   "rho_boundary0": 0.2,
 
+  "rt_timing": true,
+
   "n_iters": 10,
 
   "n_r": 33,

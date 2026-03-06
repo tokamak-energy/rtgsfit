@@ -15,6 +15,10 @@ void make_basis(double* psi_norm, int* mask, double* basis);
 void normalise_flux(double* flux_total, double flux_lcfs,
         double flux_axis,int* mask, double* flux_norm);
 
+#if defined(ENABLE_RT_TIMING)
+void rtgsfit_timing_reset(void);
+void rtgsfit_timing_dump(void);
+#endif
 
 void rtgsfit(double *meas_pcs, double *coil_curr, double *flux_norm, int32_t *mask,
         double *flux_total, double *chi_sq_err, double *lcfs_r, double *lcfs_z,

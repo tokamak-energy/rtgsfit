@@ -188,7 +188,7 @@ def compile_rtgsfit(cfg: dict):
     # Compile RTGSFIT
     os.chdir(cfg['rtgsfit_src_path'])
     subprocess.run(
-        f"make SHOT={cfg['pulse_num_write']} RUN_NAME={cfg['run_name']} DEBUG=1",
+        f"make SHOT={cfg['pulse_num_write']} RUN_NAME={cfg['run_name']} DEBUG=0 TIMING={int(cfg.get('rt_timing', True))}",
         cwd=cfg['rtgsfit_src_path'],
         check=True,
         shell=True

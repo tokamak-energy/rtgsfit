@@ -76,6 +76,13 @@ def replay_rtgsfit(cfg: dict):
         ctypes.POINTER(ctypes.c_double)   # z_cur_centroid
     ]
     rtgsfit_lib.rtgsfit.restype = None
+    
+    # Timing helpers
+    if cfg.get("rt_timing", True):
+        rtgsfit_lib.rtgsfit_timing_reset.argtypes = []
+        rtgsfit_lib.rtgsfit_timing_reset.restype = None
+        rtgsfit_lib.rtgsfit_timing_dump.argtypes = []
+        rtgsfit_lib.rtgsfit_timing_dump.restype = None
 
     meas_pcs = prep_meas_coil_curr.prep_meas_pcs(cfg)
     coil_curr = prep_meas_coil_curr.prep_coil_curr(cfg)
@@ -163,8 +170,9 @@ def replay_rtgsfit(cfg: dict):
 
         meas_pcs_copy = meas_pcs.copy()
         coil_curr_copy = coil_curr.copy()
-
-        # Call the rtgsfit function
+        
+        if cfg.get("rt_timing", True):
+            rtgsfit_lib.rtgsfit_timing_reset()
         rtgsfit_lib.rtgsfit(
             meas_pcs_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             coil_curr_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -188,7 +196,8 @@ def replay_rtgsfit(cfg: dict):
             r_cur_centroid.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             z_cur_centroid.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         )
-
+        if cfg.get("rt_timing", True):
+            rtgsfit_lib.rtgsfit_timing_dump()
         print("Iteration:", i_iter + 1)
 
         output_dict["meas_pcs"][i_iter + 1, :] = meas_pcs

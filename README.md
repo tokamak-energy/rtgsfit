@@ -44,7 +44,7 @@ In this section we will give a brief overview of how we setup the code for integ
 
 To meet the real-time performance requirements of RT-GSFit, we precompute as many values as possible before the system enters live operation. As part of this design, you’ll notice that while `constants.h` exists in the `src/` directory, the corresponding `constants.c` file is intentionally **not** included.
 
-The `constants.c` file must be generated prior to compiling and running RT-GSFit. An example workflow demonstrating how to generate this file (using a simplified large-aspect-ratio Tokamak model) is provided in the `tests/rtgsfit_verify_analytic` directory. This workflow is described in more detail in Section [5.1 RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution). However, when running RT-GSFit within the Plasma Control System (PCS), the workflow includes additional steps beyond those used in the analytic verification test which we will describe here.
+The `constants.c` file must be generated prior to compiling and running RT-GSFit. An example workflow demonstrating how to generate this file (using a simplified large-aspect-ratio Tokamak model) is provided in the `tests/rtgsfit_verify_analytic` directory. This workflow is described in more detail in Section [5.2 RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution). However, when running RT-GSFit within the Plasma Control System (PCS), the workflow includes additional steps beyond those used in the analytic verification test which we will describe here.
 
 First, the required input data is written to Tokamak Energy’s [MDSPlus](https://www.mdsplus.org/index.php/Introduction) server using a script similar to the one demonstrated in [GSFit Example 5](https://github.com/tokamak-energy/gsfit/blob/main/examples/example_05_st40_setup_for_rtgsfit.py). During the November 2025 campaign, data was stored in the RTGSFIT tree under pulse number 99,000,230 (with *230* designating Program 2.3), and all relevant values were placed in the `PRESHOT` node. Access to Tokamak Energy’s MDSPlus server is restricted to TE employees and approved collaborators.
 
@@ -101,7 +101,18 @@ Further testing and documentation are planned, including:
 - additional unit tests, and
 - cross-verification against codes written outside Tokamak Energy such as FreeGSNKE.
 
-### 5.1 RT-GSFit vs. Analytic Solution Test<a name="rtgsfit_vs_analytic_solution"></a>
+### 5.1 Unit Tests
+
+We have some unit tests for the `find_plasma.c` file which we can be run using.
+```bash
+cd src/
+cp ../test_data/constants.c .
+make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_find_plasma
+./test_find_plasma
+```
+
+
+### 5.2 RT-GSFit vs. Analytic Solution Test<a name="rtgsfit_vs_analytic_solution"></a>
 
 This test runs automatically as part of the CI/CD workflow for the repository (see `.github/workflows/main.yml`). Its purpose is to verify that RT-GSFit converges to a known analytic equilibrium representing a large–aspect-ratio Tokamak with zero plasma beta.
 
@@ -125,7 +136,7 @@ The numerical result produced by RT-GSFit is compared against the analytic refer
   <em>Figure 3: Convergence of the RT-GSFit poloidal flux and associated flux loop measurements toward the analytic reference solution.</em>
 </p>
 
-### 5.2 RT-GSFit vs. GSFit Test
+### 5.3 RT-GSFit vs. GSFit Test
 
 In contrast to the previous test, this comparison is not executed automatically in the CI/CD pipeline, as it requires access to Tokamak Energy’s internal MDSPlus server. Instead, it is run periodically offline as part of routine validation.
 
