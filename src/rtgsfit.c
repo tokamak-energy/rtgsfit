@@ -183,7 +183,7 @@ void make_basis(
 double find_flux_on_limiter_xfiltered(double flux_total[],
                                       double xpt_r[],
                                       double xpt_z[],
-                                      int xpt_n,
+                                      int32_t xpt_n,
                                       double r_mag_axis,
                                       double z_mag_axis)
 {
@@ -269,7 +269,12 @@ void rtgsfit(
         double* z_mag_axis,  // output
         double* mag_axis_flux, // output
         double* r_cur_centroid, // output
-        double* z_cur_centroid  // output
+        double* z_cur_centroid,  // output
+        double* xpt_r, // output array
+        double* xpt_z, // output array
+        double* xpt_flux, // output array
+        int32_t xpt_arrays_size, // input
+        int32_t* xpt_n // output integer
         )
 {
 #ifdef ENABLE_RT_TIMING
@@ -277,6 +282,8 @@ void rtgsfit(
 #endif // ENABLE_RT_TIMING
 
     assert(n_meas_model == N_MEAS);
+    assert(xpt_arrays_size == N_XPT_MAX);
+
     // N_MEAS includes the number of regularisations.
     // n_meas_no_reg is the number of measurements after the regularisations have been removed.
     // The meas array doesn't need the regularisations as we use meas_no_coil
@@ -480,14 +487,11 @@ void rtgsfit(
     }
 
     // find x point & opt
-    double xpt_r[N_XPT_MAX];
-    double xpt_z[N_XPT_MAX];
-    double xpt_flux[N_XPT_MAX];
     double opt_r[N_XPT_MAX];
     double opt_z[N_XPT_MAX];
     double opt_flux[N_XPT_MAX];
 
-    int32_t xpt_n = 0;
+    *xpt_n = 0;
     int32_t opt_n = 0;
 
     TSTART();
@@ -497,7 +501,7 @@ void rtgsfit(
     *lcfs_err_code = 0;
     *lcfs_err_code |= find_nulls(flux_total,
                opt_r, opt_z, opt_flux, &opt_n,
-               xpt_r, xpt_z, xpt_flux, &xpt_n);
+               xpt_r, xpt_z, xpt_flux, xpt_n);
     if (*lcfs_err_code != 0) {
         return;
     }
@@ -515,20 +519,20 @@ void rtgsfit(
     *z_mag_axis = opt_z[i_opt];
 
     // Filter x-points
-    filter_xpts(xpt_r, xpt_z, &xpt_n, *r_mag_axis, *z_mag_axis);
+    filter_xpts(xpt_r, xpt_z, xpt_n, *r_mag_axis, *z_mag_axis);
     TACC(T_XPTS_AND_AXIS);
 
     // limiter flux with x-point filtering
     TSTART();
     double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total,
-                                                      xpt_r, xpt_z, xpt_n,
+                                                      xpt_r, xpt_z, *xpt_n,
                                                       *r_mag_axis, *z_mag_axis);
     TACC(T_LIMITER);
 
     // select xpt
-    if (xpt_n > 0)
+    if (*xpt_n > 0)
     {
-        int32_t i_xpt = max_idx(xpt_n, xpt_flux);
+        int32_t i_xpt = max_idx(*xpt_n, xpt_flux);
         double xpt_flux_max = xpt_flux[i_xpt];
         xpt_flux_max = FRAC * xpt_flux_max + (1.0 - FRAC) * (*mag_axis_flux);
         if (xpt_flux_max > lcfs_flux)
@@ -573,7 +577,7 @@ void rtgsfit(
 
     *lcfs_err_code |=
         flood_fill_plasma_core(mask, flux_total, lcfs_flux, *r_mag_axis,
-                              *z_mag_axis, xpt_r, xpt_z, xpt_n);
+                              *z_mag_axis, xpt_r, xpt_z, *xpt_n);
     if (*lcfs_err_code != 0) {
         return;
     }
