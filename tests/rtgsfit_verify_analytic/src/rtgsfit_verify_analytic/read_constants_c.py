@@ -68,5 +68,9 @@ def constants_c_dict(constants_c_path,
         g_grid_meas_weight_str = g_grid_meas_weight_match.group(1)
         g_grid_meas_weight_list = list(map(float, g_grid_meas_weight_str.replace('\n', '').split(',')))
         c_dict["g_grid_meas_weight"] = np.array(g_grid_meas_weight_list)
+        
+    # Extract N_XPT_MAX
+    n_xpt_max_match = re.search(r'const int N_XPT_MAX\s*=\s*(\d+);', content)
+    c_dict["n_xpt_max"] = int(n_xpt_max_match.group(1))
 
     return c_dict
