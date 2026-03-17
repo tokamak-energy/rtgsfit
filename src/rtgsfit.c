@@ -495,9 +495,6 @@ void rtgsfit(
     int32_t opt_n = 0;
 
     TSTART();
-    // find_null_in_gradient_march(flux_total,
-    //                             opt_r, opt_z, opt_flux, &opt_n,
-    //                             xpt_r, xpt_z, xpt_flux, &xpt_n);
     *lcfs_err_code = 0;
     *lcfs_err_code |= find_nulls(flux_total,
                opt_r, opt_z, opt_flux, &opt_n,
@@ -519,7 +516,7 @@ void rtgsfit(
     *z_mag_axis = opt_z[i_opt];
 
     // Filter x-points
-    filter_xpts(xpt_r, xpt_z, xpt_flux, &xpt_n, *r_mag_axis, *z_mag_axis);
+    filter_xpts(xpt_r, xpt_z, xpt_flux, xpt_n, *r_mag_axis, *z_mag_axis);
     TACC(T_XPTS_AND_AXIS);
 
     // limiter flux with x-point filtering
