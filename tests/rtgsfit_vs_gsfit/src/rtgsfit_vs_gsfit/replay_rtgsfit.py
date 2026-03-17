@@ -105,7 +105,7 @@ def replay_rtgsfit(cfg: dict):
     n_z = len(z_vec)
     n_grid = n_r * n_z
     n_meas_pcs = len(meas_pcs)
-    xpt_arrays_size = n_xpt_max
+    xpt_arrays_size = np.int32(n_xpt_max)
     flux_norm = initial_flux_norm(r_vec, z_vec,
                                   cfg["r_axis0"], cfg["z_axis0"],
                                   cfg["rho_boundary0"])
@@ -120,7 +120,7 @@ def replay_rtgsfit(cfg: dict):
     flux_boundary = np.array([0.0], dtype=np.float64)
     plasma_current = np.array([0.0], dtype=np.float64)
     lcfs_err_code = np.array([0], dtype=np.int32)
-    lapack_dgelss_info = np.array([0], dtype=np.int64)
+    lapack_dgelss_info = np.array([0], dtype=np.int32)
     meas_model = np.zeros(n_meas, dtype=np.float64)
     n_meas_model = np.array([n_meas], dtype=np.int32)
     r_mag_axis = np.array([0.0], dtype=np.float64)
