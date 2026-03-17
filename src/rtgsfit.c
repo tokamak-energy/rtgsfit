@@ -519,7 +519,7 @@ void rtgsfit(
     *z_mag_axis = opt_z[i_opt];
 
     // Filter x-points
-    filter_xpts(xpt_r, xpt_z, xpt_n, *r_mag_axis, *z_mag_axis);
+    filter_xpts(xpt_r, xpt_z, xpt_flux, &xpt_n, *r_mag_axis, *z_mag_axis);
     TACC(T_XPTS_AND_AXIS);
 
     // limiter flux with x-point filtering

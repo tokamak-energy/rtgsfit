@@ -228,6 +228,7 @@ static int test_find_nulls(void) {
 static int test_filter_xpts(void) {
   double xpt_r[MAX_NUM_TEST_POINTS];
   double xpt_z[MAX_NUM_TEST_POINTS];
+  double xpt_flux[MAX_NUM_TEST_POINTS];
   int32_t xpt_n = 6;
 
   /* initialize only the active entries */
@@ -244,14 +245,22 @@ static int test_filter_xpts(void) {
   xpt_r[5] = +0.0;
   xpt_z[5] = +1.0;
 
+  xpt_flux[0] = -1.0;
+  xpt_flux[1] = +0.0;
+  xpt_flux[2] = +1.0;
+  xpt_flux[3] = +2.0;
+  xpt_flux[4] = +3.0;
+  xpt_flux[5] = +4.0;
+
   double r_mag_axis = 0.0;
   double z_mag_axis = 0.0;
 
-  filter_xpts(xpt_r, xpt_z, &xpt_n, r_mag_axis, z_mag_axis);
+  filter_xpts(xpt_r, xpt_z, xpt_flux, &xpt_n, r_mag_axis, z_mag_axis);
 
   const int32_t expected_xpt_n = 4;
   const double expected_xpt_r[4] = {-0.5, +0.5, +0.0, +0.0};
   const double expected_xpt_z[4] = {+0.0, +0.0, -0.5, +0.5};
+  const double expected_xpt_flux[4] = {-1.0, +0.0, +2.0, +3.0};
 
   if (!match_points_unordered("Filtered X-points", xpt_r, xpt_z, xpt_n,
                               expected_xpt_r, expected_xpt_z, expected_xpt_n,
@@ -260,9 +269,20 @@ static int test_filter_xpts(void) {
     return 0;
   }
 
+  // Check that the flux values were correctly filtered along with the coordinates.
+  for (int32_t i = 0; i < xpt_n; i++) {
+    if (!double_equal(xpt_flux[i], expected_xpt_flux[i], TOL)) {
+      fprintf(stderr,
+              "FAILED: Filtered X-point flux mismatch at index %d: expected "
+              "%0.17g, got %0.17g\n",
+              (int)i, expected_xpt_flux[i], xpt_flux[i]);
+      return 0;
+    }
+  }
+
   // Check case where xpt_n is zero
   xpt_n = 0;
-  filter_xpts(xpt_r, xpt_z, &xpt_n, r_mag_axis, z_mag_axis);
+  filter_xpts(xpt_r, xpt_z, xpt_flux, &xpt_n, r_mag_axis, z_mag_axis);
   if (xpt_n != 0)
     return 0;
 
