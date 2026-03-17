@@ -149,10 +149,11 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
 // Parameters:
 //   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
 //   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
+//   xpt_flux    - array of flux values at the x-points (with size N_XPT_MAX)
 //   xpt_n       - pointer which holds the number of x-points found
 //   r_mag_axis  - R coordinate of the magnetic axis
 //   z_mag_axis  - Z coordinate of the magnetic axis
-void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
+void filter_xpts(double *xpt_r, double *xpt_z, double *xpt_flux, int32_t *xpt_n,
                  double r_mag_axis, double z_mag_axis) {
 
   // keep[i] = 1 if x-point i is kept, 0 if removed
@@ -189,6 +190,7 @@ void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
     if (keep[i]) {
       xpt_r[k] = xpt_r[i];
       xpt_z[k] = xpt_z[i];
+      xpt_flux[k] = xpt_flux[i];
       ++k;
     }
   }
