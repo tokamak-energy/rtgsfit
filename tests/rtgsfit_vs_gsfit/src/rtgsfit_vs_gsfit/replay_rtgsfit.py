@@ -93,12 +93,12 @@ def replay_rtgsfit(cfg: dict):
     coil_curr = prep_meas_coil_curr.prep_coil_curr(cfg)
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("RTGSFIT", cfg["pulse_num_write"])
-        r_vec = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:R_VEC").data()
-        z_vec = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:Z_VEC").data()
-        n_coef = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_COEF").data()
-        n_lcfs_max = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_LCFS_MAX").data()
-        n_coil = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_COIL").data()
-        n_meas = conn.get(f"\\RTGSFIT::TOP.{cfg["run_name"]}.PRESHOT:N_MEAS").data()
+        r_vec = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:R_VEC").data()
+        z_vec = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:Z_VEC").data()
+        n_coef = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:N_COEF").data()
+        n_lcfs_max = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:N_LCFS_MAX").data()
+        n_coil = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:N_COIL").data()
+        n_meas = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:N_MEAS").data()
         n_xpt_max = conn.get(f"\\RTGSFIT::TOP.{cfg['run_name']}.PRESHOT:N_XPT_MAX").data()
 
     n_r = len(r_vec)
