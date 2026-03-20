@@ -18,6 +18,7 @@ def write_data_to_mdsplus(
     pulse_num_preshot: int = 99_000_230,
     run_name_preshot: str = "RUN08",
     data_file_name: str | None = None,
+    return_only_results: bool = False,
 ) -> None:
     """
     Write RT-GSFit results to MDSplus
@@ -28,8 +29,9 @@ def write_data_to_mdsplus(
     :param settings_path: location where code inputs are stored
     :param write_to_mds: flag to turn on / off writing to MDSplus
     :param pulseNo_write: pulse number in which data is to be written, if different from the current pulse
+    :param return_only_results: only returns the results and not create or write node data (for SOPHIA)
 
-    :return: None
+    :return: dict if return_only_results else None
     """
     if data_file_name is None:
         data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
@@ -66,19 +68,31 @@ def write_data_to_mdsplus(
         mag_axis_flux = np.array(nc.variables["mag_axis_flux"][:])
         r_cur_centroid = np.array(nc.variables["r_cur_centroid"][:])
         z_cur_centroid = np.array(nc.variables["z_cur_centroid"][:])
-        
-    with mdsthin.Connection('smaug') as conn:
+
+    with mdsthin.Connection("smaug") as conn:
         conn.openTree("RTGSFIT", pulse_num_preshot)
-        coil_names = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:COIL_NAMES").data()
-        meas_names = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:MEAS_NAMES").data()
-        sens_rep_mat = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:SENS_REP_MAT").data()
+        coil_names = conn.get(
+            f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:COIL_NAMES"
+        ).data()
+        meas_names = conn.get(
+            f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:MEAS_NAMES"
+        ).data()
+        sens_rep_mat = conn.get(
+            f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:SENS_REP_MAT"
+        ).data()
         n_sens = int(np.sqrt(len(sens_rep_mat)))
         sens_rep_mat = sens_rep_mat.reshape((n_sens, n_sens))
-        coef_names = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:COEF_NAMES").data()
-        weight = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:WEIGHT").data()
-        g_meas_coil = conn.get(f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT.GREENS:MEAS_COIL").data()
+        coef_names = conn.get(
+            f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:COEF_NAMES"
+        ).data()
+        weight = conn.get(
+            f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT:WEIGHT"
+        ).data()
+        g_meas_coil = conn.get(
+            f"\\RTGSFIT::TOP.{run_name_preshot}.PRESHOT.GREENS:MEAS_COIL"
+        ).data()
         g_meas_coil = g_meas_coil.reshape((len(meas_names), len(coil_names))).T
-    
+
     flux_loop_indices = []
     bp_probe_indices = []
     rog_coil_indices = []
@@ -123,7 +137,7 @@ def write_data_to_mdsplus(
     results["GLOBAL"]["DGELSS_INFO"] = lapack_dgelss_info
     results["TWO_D"]["RGRID"] = r
     results["TWO_D"]["ZGRID"] = z
-        
+
     # Constraint and coil names
     results["CONSTRAINTS"]["COIL"]["NAME"] = coil_names
     results["CONSTRAINTS"]["FLOOP"]["NAME"] = meas_names[flux_loop_indices]
@@ -132,9 +146,13 @@ def write_data_to_mdsplus(
 
     # Constraint and coil mvalues and weights
     meas_no_reg = sensors_IN @ sens_rep_mat.T
-    results["CONSTRAINTS"]["FLOOP"]["MVALUE"] = meas_no_reg[:, flux_loop_indices]
+    results["CONSTRAINTS"]["FLOOP"]["MVALUE"] = meas_no_reg[
+        :, flux_loop_indices
+    ]
     results["CONSTRAINTS"]["FLOOP"]["WEIGHT"] = weight[flux_loop_indices]
-    results["CONSTRAINTS"]["BPPROBE"]["MVALUE"] = meas_no_reg[:, bp_probe_indices]
+    results["CONSTRAINTS"]["BPPROBE"]["MVALUE"] = meas_no_reg[
+        :, bp_probe_indices
+    ]
     results["CONSTRAINTS"]["BPPROBE"]["WEIGHT"] = weight[bp_probe_indices]
     results["CONSTRAINTS"]["ROG"]["MVALUE"] = meas_no_reg[:, rog_coil_indices]
     results["CONSTRAINTS"]["ROG"]["WEIGHT"] = weight[rog_coil_indices]
@@ -161,9 +179,13 @@ def write_data_to_mdsplus(
 
     # Plasma dof values
     pls0_idx = np.where(coef_names == "pls0")[0][0]
-    results["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["P_PRIME_DOF"] = coef[:, pls0_idx]
+    results["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["P_PRIME_DOF"] = coef[
+        :, pls0_idx
+    ]
     pls1_idx = np.where(coef_names == "pls1")[0][0]
-    results["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["FF_PRIM_DOF"] = coef[:, pls1_idx]
+    results["PROFILES"]["SOURCE_FUN"]["LIUQE_POLY"]["FF_PRIM_DOF"] = coef[
+        :, pls1_idx
+    ]
     pls2_idx = np.where(coef_names == "pls2")[0][0]
     results["GLOBAL"]["ASYM_Z_DOF"] = coef[:, pls2_idx]
 
@@ -180,15 +202,20 @@ def write_data_to_mdsplus(
     #     / (flux_norm_argmin - 1 + (flux_norm_argmin == 1))
     # # Note that we added (flux_norm_argmin == 1) to the denominator to avoid division by zero
     # results["GLOBAL"]["PSI_A"] = psi_a
-    
-    results['GLOBAL']['RMAG'] = r_mag_axis
-    results['GLOBAL']['ZMAG'] = z_mag_axis
-    results['GLOBAL']['PSI_A'] = mag_axis_flux
-    results['GLOBAL']['RCUR'] = r_cur_centroid
-    results['GLOBAL']['ZCUR'] = z_cur_centroid
 
+    results["GLOBAL"]["RMAG"] = r_mag_axis
+    results["GLOBAL"]["ZMAG"] = z_mag_axis
+    results["GLOBAL"]["PSI_A"] = mag_axis_flux
+    results["GLOBAL"]["RCUR"] = r_cur_centroid
+    results["GLOBAL"]["ZCUR"] = z_cur_centroid
+
+    if return_only_results:
+        return results.to_dictionary()
+
+    # creating and writing nodes
+    script_name = "RTGSFIT"
     util.create_script_nodes(
-        script_name="RTGSFIT",
+        script_name=script_name,
         pulseNo_write=pulseNo_write,
         pulseNo_cal=None,
         run_name=run_name,
@@ -197,7 +224,7 @@ def write_data_to_mdsplus(
         link_best=False,
     )
     util.write_script_data(
-        script_name="RTGSFIT",
+        script_name=script_name,
         pulseNo_write=pulseNo_write,
         data_to_write=results.to_dictionary(),
         pulseNo_cal=None,
@@ -223,7 +250,9 @@ if __name__ == "__main__":
     # only PCS user should write to the real 5 digit pulse
     if username == "pcs.user":
         pulseNo_write = None
-        data_file_name = data_file_name = f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
+        data_file_name = data_file_name = (
+            f"/home/pcs.user/st40pcs_dtacq/results/rtgsfit_results_{pulseNo}.nc"
+        )
     elif username == "filip.janky":
         # Write to Filip's million pulse range
         pulseNo_write = pulseNo + 30_000_000
@@ -234,6 +263,13 @@ if __name__ == "__main__":
 
     if len(args) > 2:
         run_name = args[2]
-        write_data_to_mdsplus(pulseNo, run_name, pulseNo_write=pulseNo_write, data_file_name=data_file_name)
+        write_data_to_mdsplus(
+            pulseNo,
+            run_name,
+            pulseNo_write=pulseNo_write,
+            data_file_name=data_file_name,
+        )
     else:
-        write_data_to_mdsplus(pulseNo, pulseNo_write=pulseNo_write, data_file_name=data_file_name)
+        write_data_to_mdsplus(
+            pulseNo, pulseNo_write=pulseNo_write, data_file_name=data_file_name
+        )
