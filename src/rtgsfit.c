@@ -39,6 +39,7 @@ enum {
     T_COIL_FLUX,
     T_VESSEL_FLUX,
     T_XPTS_AND_AXIS,
+    T_XPTS_SORT,
     T_LIMITER,
     T_LCFS,
     T_INSIDE,
@@ -73,6 +74,7 @@ void rtgsfit_timing_dump(void)
         "coil_flux",
         "vessel_flux",
         "xpts_and_axis",
+        "xpts_sort",
         "limiter",
         "lcfs",
         "inside",
@@ -519,6 +521,11 @@ void rtgsfit(
     filter_xpts(xpt_r, xpt_z, xpt_flux, xpt_n, *r_mag_axis, *z_mag_axis);
     TACC(T_XPTS_AND_AXIS);
 
+    // sort x-points in descending order of flux value
+    TSTART();
+    sort_xpts(xpt_r, xpt_z, xpt_flux, *xpt_n);
+    TACC(T_XPTS_SORT);
+
     // limiter flux with x-point filtering
     TSTART();
     double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total,
@@ -529,8 +536,8 @@ void rtgsfit(
     // select xpt
     if (*xpt_n > 0)
     {
-        int32_t i_xpt = max_idx(*xpt_n, xpt_flux);
-        double xpt_flux_max = xpt_flux[i_xpt];
+        // We assume the xpts have already been sorted in descending order of flux value, so the first xpt has the highest flux value.
+        double xpt_flux_max = xpt_flux[0];
         xpt_flux_max = FRAC * xpt_flux_max + (1.0 - FRAC) * (*mag_axis_flux);
         if (xpt_flux_max > lcfs_flux)
         {
