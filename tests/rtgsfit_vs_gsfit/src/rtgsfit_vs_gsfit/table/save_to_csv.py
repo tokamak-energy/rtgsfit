@@ -16,6 +16,9 @@ def save_dfs_to_csv(iterations: np.ndarray, cfg: dict) -> None:
 
     this_plot_dir = os.path.join(cfg["plots_this_run_dir"], "dataframes")
     os.makedirs(this_plot_dir, exist_ok=True)
+    
+    rtgsfit_output_dict = np.load(cfg["rtgsfit_output_dict_path"],
+                                  allow_pickle=True).item()
 
     df_pf_coil_rtgsfit = pf_coil_rtgsfit_df(cfg)
     df_pf_coil_rtgsfit.columns = [f"{col:>8}" for col in df_pf_coil_rtgsfit.columns]
@@ -51,6 +54,9 @@ def save_dfs_to_csv(iterations: np.ndarray, cfg: dict) -> None:
             df_plasma_current = plasma_current_df(iteration, cfg)
             df_plasma_current.columns = [f"{col:>8}" for col in df_plasma_current.columns]
             df_plasma_current.to_csv(f, index=False, float_format="%8.1e")
+            f.write("\n")
+            f.write(f"RT-GSFIT xpt_diverted flag: {rtgsfit_output_dict['xpt_diverted'][iteration]}\n")
+            
 
 if __name__ == "__main__":
 

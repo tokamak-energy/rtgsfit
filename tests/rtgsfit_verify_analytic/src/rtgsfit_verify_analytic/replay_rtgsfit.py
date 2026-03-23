@@ -65,7 +65,8 @@ def replay_rtgsfit(zero_test=False):
         ctypes.POINTER(ctypes.c_double),  # xpt_z
         ctypes.POINTER(ctypes.c_double),  # xpt_flux
         ctypes.c_int32,                   # xpt_arrays_size
-        ctypes.POINTER(ctypes.c_int32)    # xpt_n
+        ctypes.POINTER(ctypes.c_int32),    # xpt_n
+        ctypes.POINTER(ctypes.c_int32)     # xpt_diverted
     ]
     # Define the return type for the rtgsfit function
     rtgsfit_lib.rtgsfit.restype = None
@@ -138,6 +139,7 @@ def replay_rtgsfit(zero_test=False):
     xpt_z = np.zeros(n_xpt_max, dtype=np.float64)
     xpt_flux = np.zeros(n_xpt_max, dtype=np.float64)
     xpt_n = np.array([0], dtype=np.int32)
+    xpt_diverted = np.array([0], dtype=np.int32)
 
     output_dict = {"meas" : np.zeros((cnst.N_ITERS + 1, n_meas), dtype=np.float64),
                    "coil_curr" : np.zeros((cnst.N_ITERS + 1, n_coil), dtype=np.float64),
@@ -163,7 +165,9 @@ def replay_rtgsfit(zero_test=False):
                    "xpt_r" : np.zeros((cnst.N_ITERS + 1, n_xpt_max), dtype=np.float64),
                    "xpt_z" : np.zeros((cnst.N_ITERS + 1, n_xpt_max), dtype=np.float64),
                    "xpt_flux" : np.zeros((cnst.N_ITERS + 1, n_xpt_max), dtype=np.float64),
-                   "xpt_n" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32)}
+                   "xpt_n" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32),
+                   "xpt_diverted" : np.zeros((cnst.N_ITERS + 1), dtype=np.int32)
+                   }
     output_dict["meas"][0, :] = meas
     output_dict["coil_curr"][0, :] = coil_curr
     output_dict["flux_norm"][0, :] = flux_norm
@@ -185,6 +189,11 @@ def replay_rtgsfit(zero_test=False):
     output_dict["mag_axis_flux"][0] = mag_axis_flux[0]
     output_dict["r_cur_centroid"][0] = r_cur_centroid[0]
     output_dict["z_cur_centroid"][0] = z_cur_centroid[0]
+    output_dict["xpt_r"][0, :] = xpt_r
+    output_dict["xpt_z"][0, :] = xpt_z
+    output_dict["xpt_flux"][0, :] = xpt_flux
+    output_dict["xpt_n"][0] = xpt_n[0]
+    output_dict["xpt_diverted"][0] = xpt_diverted[0]
 
     for i_iter in range(cnst.N_ITERS):
 
@@ -233,7 +242,8 @@ def replay_rtgsfit(zero_test=False):
             xpt_z.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             xpt_flux.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
             ctypes.c_int32(xpt_arrays_size),
-            xpt_n.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+            xpt_n.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+            xpt_diverted.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
         )
 
         print("Iteration:", i_iter + 1)
@@ -263,6 +273,7 @@ def replay_rtgsfit(zero_test=False):
         output_dict["xpt_z"][i_iter + 1, :] = xpt_z
         output_dict["xpt_flux"][i_iter + 1, :] = xpt_flux
         output_dict["xpt_n"][i_iter + 1] = xpt_n[0]
+        output_dict["xpt_diverted"][i_iter + 1] = xpt_diverted[0]
 
         print("Chi-squared error:", chi_sq_err[0])
         print("lapack_dgelss_info:", lapack_dgelss_info[0])
