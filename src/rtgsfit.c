@@ -276,7 +276,8 @@ void rtgsfit(
         double* xpt_z, // output array
         double* xpt_flux, // output array
         int32_t xpt_arrays_size, // input
-        int32_t* xpt_n // output integer
+        int32_t* xpt_n, // output integer
+        int32_t* xpt_diverted // output integer
         )
 {
 #ifdef ENABLE_RT_TIMING
@@ -531,6 +532,8 @@ void rtgsfit(
     double lcfs_flux = find_flux_on_limiter_xfiltered(flux_total,
                                                       xpt_r, xpt_z, *xpt_n,
                                                       *r_mag_axis, *z_mag_axis);
+    // By default the plasma is taken to be wall-limited, so the xpt_diverted flag is set to 0.
+    *xpt_diverted = 0;
     TACC(T_LIMITER);
 
     // select xpt
@@ -542,6 +545,8 @@ void rtgsfit(
         if (xpt_flux_max > lcfs_flux)
         {
             lcfs_flux = xpt_flux_max;
+            // The plasma is x-point limited, so set the xpt_diverted flag to 1.
+            *xpt_diverted = 1;
         }
     }
 
