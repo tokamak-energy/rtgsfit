@@ -203,7 +203,7 @@ void filter_xpts(double *xpt_r, double *xpt_z, double *xpt_flux, int32_t *xpt_n,
 //   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
 //   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
 //   xpt_flux    - array of flux values at the x-points (with size N_XPT_MAX)
-//   xpt_n       - pointer which holds the number of x-points found
+//   xpt_n       - number of x-points found (length of the x-point arrays)
 void sort_xpts(double *xpt_r, double *xpt_z, double *xpt_flux, int32_t xpt_n) {
   // Simple selection sort (N_XPT_MAX is small, so efficiency is not a concern)
   for (int i = 0; i < xpt_n - 1; ++i) {
