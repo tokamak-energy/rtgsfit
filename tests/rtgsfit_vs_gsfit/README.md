@@ -83,8 +83,7 @@ pytest -s tests
 
 ### Timing benchmark — GitHub Gist setup
 
-`test_timing_rtgsfit.py` runs 10,000 RTGSFIT calls per test case and uploads per-section timing statistics (mean, median, std, min, max, p95, p99) as CSV rows to a private GitHub Gist.  This provides a persistent, append-only benchmark log across runs and machines.
-
+`test_timing_rtgsfit.py` runs 1,000 RTGSFIT calls per test case and uploads per-section timing statistics (mean, median, std, min, max, p95, p99) as CSV rows to a private GitHub Gist.  This provides a persistent, append-only benchmark log across runs and machines.
 **One-time setup:**
 
 1. Create a GitHub Personal Access Token with only the **`gist`** scope at  
