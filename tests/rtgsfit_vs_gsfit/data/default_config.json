@@ -18,8 +18,8 @@
 
   "n_iters": 10,
 
-  "n_r": 33,
-  "n_z": 65,
+  "n_r": 65,
+  "n_z": 129,
 
   "use_psu2coil": true,
   "psu2coil_run_name": "RUN05",

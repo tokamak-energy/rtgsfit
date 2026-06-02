@@ -228,6 +228,7 @@ static int test_find_nulls(void) {
 static int test_filter_xpts(void) {
   double xpt_r[MAX_NUM_TEST_POINTS];
   double xpt_z[MAX_NUM_TEST_POINTS];
+  double xpt_flux[MAX_NUM_TEST_POINTS];
   int32_t xpt_n = 6;
 
   /* initialize only the active entries */
@@ -244,14 +245,22 @@ static int test_filter_xpts(void) {
   xpt_r[5] = +0.0;
   xpt_z[5] = +1.0;
 
+  xpt_flux[0] = -1.0;
+  xpt_flux[1] = +0.0;
+  xpt_flux[2] = +1.0;
+  xpt_flux[3] = +2.0;
+  xpt_flux[4] = +3.0;
+  xpt_flux[5] = +4.0;
+
   double r_mag_axis = 0.0;
   double z_mag_axis = 0.0;
 
-  filter_xpts(xpt_r, xpt_z, &xpt_n, r_mag_axis, z_mag_axis);
+  filter_xpts(xpt_r, xpt_z, xpt_flux, &xpt_n, r_mag_axis, z_mag_axis);
 
   const int32_t expected_xpt_n = 4;
   const double expected_xpt_r[4] = {-0.5, +0.5, +0.0, +0.0};
   const double expected_xpt_z[4] = {+0.0, +0.0, -0.5, +0.5};
+  const double expected_xpt_flux[4] = {-1.0, +0.0, +2.0, +3.0};
 
   if (!match_points_unordered("Filtered X-points", xpt_r, xpt_z, xpt_n,
                               expected_xpt_r, expected_xpt_z, expected_xpt_n,
@@ -260,9 +269,27 @@ static int test_filter_xpts(void) {
     return 0;
   }
 
+  // Check that the flux values were correctly filtered in an unordered manner.
+  for (int32_t i = 0; i < xpt_n; i++) {
+    int found = 0;
+    for (int32_t j = 0; j < expected_xpt_n; j++) {
+      if (double_equal(xpt_flux[i], expected_xpt_flux[j], TOL)) {
+        found = 1;
+        break;
+      }
+    }
+    if (!found) {
+      fprintf(stderr,
+              "FAILED: Filtered X-point flux mismatch at index %d: got "
+              "%0.17g, not found in expected values\n",
+              (int)i, xpt_flux[i]);
+      return 0;
+    }
+  }
+
   // Check case where xpt_n is zero
   xpt_n = 0;
-  filter_xpts(xpt_r, xpt_z, &xpt_n, r_mag_axis, z_mag_axis);
+  filter_xpts(xpt_r, xpt_z, xpt_flux, &xpt_n, r_mag_axis, z_mag_axis);
   if (xpt_n != 0)
     return 0;
 
@@ -358,19 +385,71 @@ static int test_flood_fill_plasma_core(void) {
   return 1;
 }
 
-  // -------- main --------
-  int main(void) {
-    if (!test_find_nulls())
-      return 1;
-    printf("Test PASSED: find_nulls\n");
-    if (!test_filter_xpts())
-      return 1;
-    printf("Test PASSED: filter_xpts\n");
-    if (!test_is_core_side_of_xpoint())
-      return 1;
-    printf("Test PASSED: is_core_side_of_xpoint\n");
-    if (!test_flood_fill_plasma_core())
-      return 1;
-    printf("Test PASSED: flood_fill_plasma_core\n");
-    return 0;
+// -------- sort_xpts() test --------
+static int test_sort_xpts(void) {
+  double xpt_r[MAX_NUM_TEST_POINTS];
+  double xpt_z[MAX_NUM_TEST_POINTS];
+  double xpt_flux[MAX_NUM_TEST_POINTS];
+  int32_t xpt_n = 6;
+
+  xpt_r[0] = -0.5;
+  xpt_z[0] = +0.0;
+  xpt_flux[0] = -1.0;
+  xpt_r[1] = +0.5;
+  xpt_z[1] = +0.0;
+  xpt_flux[1] = +0.0;
+  xpt_r[2] = +1.0;
+  xpt_z[2] = +0.0;
+  xpt_flux[2] = +1.0;
+  xpt_r[3] = +0.0;
+  xpt_z[3] = -0.5;
+  xpt_flux[3] = +2.0;
+  xpt_r[4] = +0.0;
+  xpt_z[4] = +0.5;
+  xpt_flux[4] = +3.0;
+  xpt_r[5] = +0.0;
+  xpt_z[5] = +1.0;
+  xpt_flux[5] = +4.0;
+  sort_xpts(xpt_r, xpt_z, xpt_flux, xpt_n);
+
+  const double expected_xpt_r[6] = {+0.0, +0.0, +0.0, +1.0, +0.5, -0.5};
+  const double expected_xpt_z[6] = {+1.0, +0.5, -0.5, +0.0, +0.0, +0.0};
+  const double expected_xpt_flux[6] = {+4.0, +3.0, +2.0, +1.0, +0.0, -1.0};
+
+  for (int32_t i = 0; i < xpt_n; i++) {
+    if (!double_equal(xpt_r[i], expected_xpt_r[i], TOL) ||
+        !double_equal(xpt_z[i], expected_xpt_z[i], TOL) ||
+        !double_equal(xpt_flux[i], expected_xpt_flux[i], TOL)) {
+      fprintf(stderr, "FAILED: test_sort_xpts: mismatch at index %d\n", (int)i);
+      fprintf(stderr, "  got:    (%0.17g, %0.17g), flux=%0.17g\n", xpt_r[i],
+              xpt_z[i], xpt_flux[i]);
+      fprintf(stderr, "  expect: (%0.17g, %0.17g), flux=%0.17g\n",
+              expected_xpt_r[i], expected_xpt_z[i], expected_xpt_flux[i]);
+      return 0;
+    }
   }
+
+  return 1;
+}
+
+// -------- main --------
+int main(void) {
+
+  if (!test_find_nulls())
+    return 1;
+  printf("Test PASSED: find_nulls\n");
+  if (!test_filter_xpts())
+    return 1;
+  printf("Test PASSED: filter_xpts\n");
+  if (!test_is_core_side_of_xpoint())
+    return 1;
+  printf("Test PASSED: is_core_side_of_xpoint\n");
+  if (!test_flood_fill_plasma_core())
+    return 1;
+  printf("Test PASSED: flood_fill_plasma_core\n");
+  if (!test_sort_xpts())
+    return 1;
+  printf("Test PASSED: sort_xpts\n");
+
+  return 0;
+}

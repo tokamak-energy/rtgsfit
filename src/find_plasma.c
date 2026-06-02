@@ -149,10 +149,11 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
 // Parameters:
 //   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
 //   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
+//   xpt_flux    - array of flux values at the x-points (with size N_XPT_MAX)
 //   xpt_n       - pointer which holds the number of x-points found
 //   r_mag_axis  - R coordinate of the magnetic axis
 //   z_mag_axis  - Z coordinate of the magnetic axis
-void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
+void filter_xpts(double *xpt_r, double *xpt_z, double *xpt_flux, int32_t *xpt_n,
                  double r_mag_axis, double z_mag_axis) {
 
   // keep[i] = 1 if x-point i is kept, 0 if removed
@@ -189,11 +190,44 @@ void filter_xpts(double *xpt_r, double *xpt_z, int32_t *xpt_n,
     if (keep[i]) {
       xpt_r[k] = xpt_r[i];
       xpt_z[k] = xpt_z[i];
+      xpt_flux[k] = xpt_flux[i];
       ++k;
     }
   }
 
   *xpt_n = k;
+}
+
+// sort_xpts: Sort x-points in descending order of flux value.
+// Parameters:
+//   xpt_r       - array of x-point R coordinates (with size N_XPT_MAX)
+//   xpt_z       - array of x-point Z coordinates (with size N_XPT_MAX)
+//   xpt_flux    - array of flux values at the x-points (with size N_XPT_MAX)
+//   xpt_n       - number of x-points found (length of the x-point arrays)
+void sort_xpts(double *xpt_r, double *xpt_z, double *xpt_flux, int32_t xpt_n) {
+  // Simple selection sort (N_XPT_MAX is small, so efficiency is not a concern)
+  for (int i = 0; i < xpt_n - 1; ++i) {
+    int max_idx = i;
+    for (int j = i + 1; j < xpt_n; ++j) {
+      if (xpt_flux[j] > xpt_flux[max_idx]) {
+        max_idx = j;
+      }
+    }
+    if (max_idx != i) {
+      // Swap xpt_r
+      double temp_r = xpt_r[i];
+      xpt_r[i] = xpt_r[max_idx];
+      xpt_r[max_idx] = temp_r;
+      // Swap xpt_z
+      double temp_z = xpt_z[i];
+      xpt_z[i] = xpt_z[max_idx];
+      xpt_z[max_idx] = temp_z;
+      // Swap xpt_flux
+      double temp_flux = xpt_flux[i];
+      xpt_flux[i] = xpt_flux[max_idx];
+      xpt_flux[max_idx] = temp_flux;
+    }
+  }
 }
 
 // is_core_side_of_xpoint:
