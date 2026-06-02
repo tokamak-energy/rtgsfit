@@ -95,7 +95,7 @@ pytest -s tests
    source ~/.bashrc
    ```
 
-On every `pytest -s tests` run the code finds the Gist automatically by its description, or creates it if it doesn't exist yet.  If `GITHUB_TOKEN` is not set the upload is silently skipped and results are only printed to stdout.
+On every `pytest -s tests` run the code finds the Gist automatically by its description, or creates it if it doesn't exist yet. If `GITHUB_TOKEN` is not set the upload is skipped and results are only printed to stdout.
 <!-- ```
 pytest -n 6 tests
 ```
