@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 import pytest
+import requests
 
 from rtgsfit_vs_gsfit import config_loader, replay_rtgsfit, rtgsfit_compile_setup
 
@@ -60,7 +61,6 @@ GIST_DESCRIPTION = "RTGSFIT per-section timing benchmarks"
 
 def _find_gist_id(headers: dict) -> str:
     """Return the ID of the existing timing Gist, or '' if not found."""
-    import requests
 
     page = 1
     while True:
@@ -82,8 +82,6 @@ def _find_gist_id(headers: dict) -> str:
 
 def _upload_to_gist(csv_rows: str) -> None:
     """Append csv_rows to the Gist CSV file, or skip if no token."""
-    import requests  # only imported when actually needed
-
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         print("\n[timing] GITHUB_TOKEN not set — skipping Gist upload.")

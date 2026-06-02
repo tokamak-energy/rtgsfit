@@ -12,6 +12,7 @@ dependencies = [
   "ipython",
   "jupyter-client",
   "pytest",
+  "requests",
   "st40-database",
   "standard-utility",
 ]
