@@ -10,9 +10,8 @@ Runs automatically as part of `pytest -s tests` when executed from the
 Environment variables:
   GITHUB_TOKEN      Personal-access token with gist scope.  If absent, the
                     upload step is skipped and results are only printed.
-  RTGSFIT_GIST_ID   ID of an existing Gist to update.  If absent a new Gist
-                    is created on the first run and its ID is printed so you
-                    can set the variable for future runs.
+                    The Gist is found automatically by description; a new one
+                    is created if none exists.
 """
 
 import ctypes
