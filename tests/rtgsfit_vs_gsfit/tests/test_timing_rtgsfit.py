@@ -5,9 +5,8 @@ Runs RTGSFIT N_REPEATS times for each of the 6 test cases, records per-section
 CPU time (CLOCK_THREAD_CPUTIME_ID) in microseconds, uploads a summary CSV row
 to a GitHub Gist, and prints a table to stdout.
 
-Runs automatically as part of `pytest -s tests` from
-/home/alex.prokopyszyn/GitHub/rtgsfit/tests/rtgsfit_vs_gsfit/
-
+Runs automatically as part of `pytest -s tests` when executed from the
+`tests/rtgsfit_vs_gsfit/` sub-repository.
 Environment variables:
   GITHUB_TOKEN      Personal-access token with gist scope.  If absent, the
                     upload step is skipped and results are only printed.
