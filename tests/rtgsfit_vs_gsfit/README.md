@@ -80,6 +80,23 @@ To run the tests use
 ```
 pytest -s tests
 ```
+
+### Timing benchmark — GitHub Gist setup
+
+`test_timing_rtgsfit.py` runs 10,000 RTGSFIT calls per test case and uploads per-section timing statistics (mean, median, std, min, max, p95, p99) as CSV rows to a private GitHub Gist.  This provides a persistent, append-only benchmark log across runs and machines.
+
+**One-time setup:**
+
+1. Create a GitHub Personal Access Token with only the **`gist`** scope at  
+   https://github.com/settings/tokens/new
+
+2. Save it to `~/.bashrc`:
+   ```bash
+   echo 'export GITHUB_TOKEN=ghp_xxxxxxxxxxxx' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+On every `pytest -s tests` run the code finds the Gist automatically by its description, or creates it if it doesn't exist yet.  If `GITHUB_TOKEN` is not set the upload is silently skipped and results are only printed to stdout.
 <!-- ```
 pytest -n 6 tests
 ```

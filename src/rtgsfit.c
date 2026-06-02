@@ -87,6 +87,14 @@ void rtgsfit_timing_dump(void)
     }
 }
 
+void rtgsfit_timing_get(double *out_us, int n)
+{
+    int count = (n < T_NTIMERS) ? n : T_NTIMERS;
+    for (int i = 0; i < count; i++) {
+        out_us[i] = (double)timing_acc[i] * 1e-3;
+    }
+}
+
 #else
 
 /* When ENABLE_RT_TIMING is not defined, timing macros are intentional no-ops. */

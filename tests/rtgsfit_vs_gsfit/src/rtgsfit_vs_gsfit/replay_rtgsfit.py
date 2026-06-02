@@ -84,11 +84,17 @@ def replay_rtgsfit(cfg: dict):
     rtgsfit_lib.rtgsfit.restype = None
     
     # Timing helpers
+    T_NTIMERS = 18
     if cfg.get("rt_timing", True):
         rtgsfit_lib.rtgsfit_timing_reset.argtypes = []
         rtgsfit_lib.rtgsfit_timing_reset.restype = None
         rtgsfit_lib.rtgsfit_timing_dump.argtypes = []
         rtgsfit_lib.rtgsfit_timing_dump.restype = None
+        rtgsfit_lib.rtgsfit_timing_get.argtypes = [
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.c_int,
+        ]
+        rtgsfit_lib.rtgsfit_timing_get.restype = None
 
     meas_pcs = prep_meas_coil_curr.prep_meas_pcs(cfg)
     coil_curr = prep_meas_coil_curr.prep_coil_curr(cfg)
@@ -135,6 +141,13 @@ def replay_rtgsfit(cfg: dict):
     xpt_n = np.array([0], dtype=np.int32)
     xpt_diverted = np.array([0], dtype=np.int32)
 
+    timing_labels = [
+        "meas_prep", "basis", "meas_matrix", "weighting", "ls_fit",
+        "source", "model_meas", "chi2", "poisson", "coil_flux",
+        "vessel_flux", "xpts_and_axis", "xpts_sort", "limiter",
+        "lcfs", "inside", "normalise", "total",
+    ]
+
     output_dict = {"meas_pcs" : np.zeros((cfg["n_iters"] + 1, n_meas_pcs), dtype=np.float64),
                    "coil_curr" : np.zeros((cfg["n_iters"] + 1, n_coil), dtype=np.float64),
                    "flux_norm" : np.zeros((cfg["n_iters"] + 1, n_grid), dtype=np.float64),
@@ -160,7 +173,9 @@ def replay_rtgsfit(cfg: dict):
                    "xpt_z" : np.zeros((cfg["n_iters"] + 1, n_xpt_max), dtype=np.float64),
                    "xpt_flux" : np.zeros((cfg["n_iters"] + 1, n_xpt_max), dtype=np.float64),
                    "xpt_n" : np.zeros((cfg["n_iters"] + 1), dtype=np.int32),
-                   "xpt_diverted" : np.zeros((cfg["n_iters"] + 1), dtype=np.int32)
+                   "xpt_diverted" : np.zeros((cfg["n_iters"] + 1), dtype=np.int32),
+                   "timing_us" : np.zeros((cfg["n_iters"], T_NTIMERS), dtype=np.float64),
+                   "timing_labels" : timing_labels,
                    }
     output_dict["meas_pcs"][0, :] = meas_pcs
     output_dict["coil_curr"][0, :] = coil_curr
@@ -226,7 +241,12 @@ def replay_rtgsfit(cfg: dict):
             xpt_diverted.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))            
         )
         if cfg.get("rt_timing", True):
-            rtgsfit_lib.rtgsfit_timing_dump()
+            timing_buf = np.zeros(T_NTIMERS, dtype=np.float64)
+            rtgsfit_lib.rtgsfit_timing_get(
+                timing_buf.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int(T_NTIMERS),
+            )
+            output_dict["timing_us"][i_iter, :] = timing_buf
         print("Iteration:", i_iter + 1)
 
         output_dict["meas_pcs"][i_iter + 1, :] = meas_pcs
