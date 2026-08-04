@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "rtgsfit_vs_gsfit"
 version = "2025.0.0"
 dependencies = [
-  "numpy<2",
+  "numpy",
   "matplotlib",
   "scipy",
   "ipython",
