@@ -17,8 +17,8 @@ uv pip install -e .
 cd ~/GitHub/rtgsfit/tests/rtgsfit_vs_gsfit
 uv pip install -e .
 # uv pip install --reinstall -e .
-uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
-uv pip install "numpy<2"
+# uv pip install /home/alex.prokopyszyn/my_mdsplus/python/MDSplus/.
+# uv pip install "numpy<2"
 ```
 
 ## Repository Structure
