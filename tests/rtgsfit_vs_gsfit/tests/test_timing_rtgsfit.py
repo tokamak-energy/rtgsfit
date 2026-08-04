@@ -265,8 +265,10 @@ def test_timing_rtgsfit(pulse_num, time):
     Timing benchmark: compile, warm-up, then N_REPEATS calls to rtgsfit().
     Uploads per-section stats to GitHub Gist and prints a summary table.
     """
-    run_name = f"t{int(time * 1e3):03d}ms"
-    cfg = config_loader.load_and_prepare_config(run_name=run_name, pulse_num=pulse_num)
+    cfg = config_loader.load_and_prepare_config(
+        pulse_num=pulse_num,
+        run_name=config_loader.next_test_run_name(52_000_000 + pulse_num),
+    )
     cfg["time"] = time
     cfg["rt_timing"] = True
 
