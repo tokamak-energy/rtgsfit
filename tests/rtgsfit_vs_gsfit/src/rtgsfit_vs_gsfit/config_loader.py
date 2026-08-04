@@ -1,5 +1,29 @@
-import os
 import json
+import os
+import re
+
+import mdsthin
+import numpy as np
+
+
+def next_test_run_name(pulse_num_write: int) -> str:
+    """
+    Allocate the next TEST#### run name by inspecting existing RTGSFIT runs.
+    """
+    existing_run_names = []
+    with mdsthin.Connection('smaug') as conn:
+        conn.openTree("RTGSFIT", pulse_num_write)
+        existing_run_names = np.atleast_1d(
+            conn.get('getnci("\\\\RTGSFIT::TOP.*", "node_name")').data()
+        )
+
+    latest_index = 0
+    for raw_name in existing_run_names:
+        name = str(raw_name).strip().upper()
+        match = re.fullmatch(r"TEST(\d{4})", name)
+        if match is not None:
+            latest_index = max(latest_index, int(match.group(1)))
+    return f"TEST{latest_index + 1:04d}"
 
 def load_and_prepare_config(run_name: str = None,
                             pulse_num: int = None) -> dict:
@@ -30,11 +54,11 @@ def load_and_prepare_config(run_name: str = None,
     with open(config_path, 'r') as f:
         cfg = json.load(f)
 
-    if run_name is not None:
-        cfg['run_name'] = run_name
     if pulse_num is not None:
         cfg['pulse_num'] = pulse_num
         cfg["pulse_num_write"] = 52_000_000 + pulse_num
+    if run_name is not None:
+        cfg['run_name'] = run_name
 
     cfg['repo_path'] = repo_path
     cfg['data_dir'] = os.path.join(repo_path, 'data')
