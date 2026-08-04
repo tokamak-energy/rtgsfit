@@ -9,45 +9,9 @@ This module provides utility functions to:
 import os
 import subprocess
 
-import MDSplus
 import numpy as np
 
 from gsfit import Gsfit
-
-def rtgsfit_mds_nodeclear(cfg: dict):
-    """
-    Delete the existing RTGSFIT MDSplus node and ensure it is removed.
-    """
-
-    # Delete the existing RTGSFIT MDSplus node (if it exists)
-    def delete_node_recursive(tree, node):
-        for child in node.getNodeWild('*'):
-            delete_node_recursive(tree, child)
-        print(f"Deleting node {node.getPath()}")
-        tree.deleteNode(node.getPath())
-    tree = MDSplus.Tree("RTGSFIT", cfg["pulse_num_write"], "EDIT")
-    try:
-        node = tree.getNode(f":{cfg['run_name']}")
-        delete_node_recursive(tree, node)
-        print(f"Deleted node {cfg['run_name']} and its children.")
-    except Exception as e:
-        print(f"Failed to delete node {cfg['run_name']}: {e}")
-    tree.write()
-    tree.close()
-
-    # Re-open tree to check if node exists
-    def node_exists(tree, path):
-        try:
-            tree.getNode(path)
-            return True
-        except Exception:
-            return False
-    tree_check = MDSplus.Tree("RTGSFIT", cfg["pulse_num_write"])
-    if not node_exists(tree_check, f":{cfg['run_name']}"):
-        deleted = True
-    else:
-        deleted = False
-    assert deleted, f"Node {cfg['run_name']} was not deleted successfully."
 
 def initialise_rtgsfit_node(cfg: dict):
     """
@@ -200,6 +164,5 @@ if __name__ == "__main__":
     from rtgsfit_vs_gsfit import config_loader
 
     cfg = config_loader.load_and_prepare_config()
-    rtgsfit_mds_nodeclear(cfg)
     initialise_rtgsfit_node(cfg)
     compile_rtgsfit(cfg)
