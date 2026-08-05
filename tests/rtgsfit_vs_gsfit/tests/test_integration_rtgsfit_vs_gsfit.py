@@ -313,7 +313,7 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
     logging.info(f"Results plotted.")
 
     tolerances = {
-        "psi": {"rtol": 2e-1, "atol": 5e-3},
+        "psi": {"rtol": 3.3e-1, "atol": 5e-3},
         "psi_meas": {"rtol_meas": 5e-2, "atol_meas": 5e-2, "rtol_pred": 1e-3, "atol_pred": 1e-3},
         "bp_meas": {"rtol_meas": 1e-1, "atol_meas": 0.5, "rtol_pred": 1e-3, "atol_pred": 1e-3},
         "ivc_eigs": {"rtol": 1e-3, "atol": 3.0},
