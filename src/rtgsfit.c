@@ -113,7 +113,7 @@ int32_t max_idx(int32_t n_arr, double* arr)
 }
 
 void rm_coil_from_meas(
-        double* coil_curr,
+        const double* coil_curr,
         double* meas,
         double* meas_no_coil
         )
@@ -251,8 +251,8 @@ void normalise_flux(
 }
 
 void rtgsfit(
-        double* meas_pcs, // input
-        double* coil_curr, // input
+        const double* meas_pcs, // input
+        const double* coil_curr, // input
         double* flux_norm, // input/output
         int32_t* mask, // input/output
         double* flux_total, // output

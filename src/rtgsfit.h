@@ -5,7 +5,7 @@
 
 int max_idx(int n_arr, double *arr);
 
-void rm_coil_from_meas(double *coil_curr, double *meas, double *meas_no_coil);
+void rm_coil_from_meas(const double *coil_curr, double *meas, double *meas_no_coil);
 
 void make_basis(double *psi_norm, int *mask, double *basis);
 
@@ -17,7 +17,7 @@ void rtgsfit_timing_reset(void);
 void rtgsfit_timing_dump(void);
 #endif
 
-void rtgsfit(double *meas_pcs, double *coil_curr, double *flux_norm, int32_t *mask,
+void rtgsfit(const double *meas_pcs, const double *coil_curr, double *flux_norm, int32_t *mask,
         double *flux_total, double *chi_sq_err, double *lcfs_r, double *lcfs_z,
         int32_t *lcfs_n, double *coef, double *flux_boundary, double *plasma_current,
         int32_t *lcfs_err_code, int *lapack_dgelss_info, double *meas_model,
