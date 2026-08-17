@@ -21,8 +21,8 @@ void rtgsfit(const double *meas_pcs, const double *coil_curr, double *flux_norm,
         double *flux_total, double *chi_sq_err, double *lcfs_r, double *lcfs_z,
         int32_t *lcfs_n, double *coef, double *flux_boundary, double *plasma_current,
         int32_t *lcfs_err_code, int *lapack_dgelss_info, double *meas_model,
-        int32_t n_meas_model, double* r_mag_axis, double* z_mag_axis, double* mag_axis_flux,
+        const int32_t n_meas_model, double* r_mag_axis, double* z_mag_axis, double* mag_axis_flux,
         double* r_cur_centroid, double* z_cur_centroid, double* xpt_r, double* xpt_z,
-        double* xpt_flux, int32_t xpt_arrays_size, int32_t* xpt_n, int32_t* xpt_diverted);
+        double* xpt_flux, const int32_t xpt_arrays_size, int32_t* xpt_n, int32_t* xpt_diverted);
 
 #endif

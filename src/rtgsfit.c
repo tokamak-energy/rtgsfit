@@ -266,7 +266,7 @@ void rtgsfit(
         int32_t *lcfs_err_code, // output
         int* lapack_dgelss_info, // output
         double *meas_model, // output
-        int32_t n_meas_model, // input
+        const int32_t n_meas_model, // input
         double* r_mag_axis, // output
         double* z_mag_axis,  // output
         double* mag_axis_flux, // output
@@ -275,7 +275,7 @@ void rtgsfit(
         double* xpt_r, // output array
         double* xpt_z, // output array
         double* xpt_flux, // output array
-        int32_t xpt_arrays_size, // input
+        const int32_t xpt_arrays_size, // input
         int32_t* xpt_n, // output integer
         int32_t* xpt_diverted // output integer
         )
