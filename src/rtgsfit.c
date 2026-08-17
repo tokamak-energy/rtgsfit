@@ -113,7 +113,7 @@ int32_t max_idx(int32_t n_arr, double* arr)
 }
 
 void rm_coil_from_meas(
-        double* coil_curr,
+        const double* coil_curr,
         double* meas,
         double* meas_no_coil
         )
@@ -251,8 +251,8 @@ void normalise_flux(
 }
 
 void rtgsfit(
-        double* meas_pcs, // input
-        double* coil_curr, // input
+        const double* meas_pcs, // input
+        const double* coil_curr, // input
         double* flux_norm, // input/output
         int32_t* mask, // input/output
         double* flux_total, // output
@@ -266,7 +266,7 @@ void rtgsfit(
         int32_t *lcfs_err_code, // output
         int* lapack_dgelss_info, // output
         double *meas_model, // output
-        int32_t n_meas_model, // input
+        const int32_t n_meas_model, // input
         double* r_mag_axis, // output
         double* z_mag_axis,  // output
         double* mag_axis_flux, // output
@@ -275,7 +275,7 @@ void rtgsfit(
         double* xpt_r, // output array
         double* xpt_z, // output array
         double* xpt_flux, // output array
-        int32_t xpt_arrays_size, // input
+        const int32_t xpt_arrays_size, // input
         int32_t* xpt_n, // output integer
         int32_t* xpt_diverted // output integer
         )
