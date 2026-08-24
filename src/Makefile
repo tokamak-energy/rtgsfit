@@ -106,7 +106,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: \
-  rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o find_plasma.o
+  rtgsfit.o gradient.o constants.o poisson_solver.o solve_tria.o find_plasma.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 # --------------------------------------------------
