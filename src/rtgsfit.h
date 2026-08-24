@@ -15,6 +15,7 @@ void normalise_flux(double *flux_total, double flux_lcfs, double flux_axis,
 #if defined(ENABLE_RT_TIMING)
 void rtgsfit_timing_reset(void);
 void rtgsfit_timing_dump(void);
+void rtgsfit_timing_get(double *out_us, int n);
 #endif
 
 void rtgsfit(const double *meas_pcs, const double *coil_curr, double *flux_norm, int32_t *mask,

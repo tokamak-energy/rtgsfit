@@ -29,7 +29,7 @@ def replay_gsfit(cfg: dict):
 
     gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["method"] = "user_defined"
     gsfit_controller.settings["GSFIT_code_settings.json"]["timeslices"]["user_defined"] = [cfg["time"]]
-    gsfit_controller.settings["GSFIT_code_settings.json"]["database_writer"]["method"] = "tokamak_energy_mdsplus"
+    gsfit_controller.settings["GSFIT_code_settings.json"]["database_writer"]["method"] = "tokamak_energy_mdsplus_new"
     gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_r"] = cfg["n_r"]
     gsfit_controller.settings["GSFIT_code_settings.json"]["grid"]["n_z"] = cfg["n_z"]
 
@@ -47,8 +47,8 @@ def replay_gsfit(cfg: dict):
         conn.openTree("ELMAG", cfg["pulse_num"])
         coil_names = conn.get("\\ELMAG::TOP.BEST.COILS:COIL_NAMES")
     for name in coil_names:
-        coil_curr_experimental = coils.get_array1(["pf", name, "i", "measured_experimental"])
-        coil_time_experimental = coils.get_array1(["pf", name, "i", "time_experimental"])
+        coil_curr_experimental = coils.get_array1(["pf", name, "i", "experimental", "value"])
+        coil_time_experimental = coils.get_array1(["pf", name, "i", "experimental", "time"])
         coil_curr_interp = np.interp(cfg["time"], coil_time_experimental, coil_curr_experimental)
         coils_dict[name] = coil_curr_interp
     with open(cfg["gsfit_pf_coils_path"], "w") as f:

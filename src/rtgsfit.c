@@ -87,6 +87,20 @@ void rtgsfit_timing_dump(void)
     }
 }
 
+/**
+ * Copy timing counters into the provided buffer in microseconds.
+ *
+ * @param out_us Output buffer that receives timing values.
+ * @param n Maximum number of entries to copy.
+ */
+void rtgsfit_timing_get(double *out_us, int n)
+{
+    int count = (n < T_NTIMERS) ? n : T_NTIMERS;
+    for (int i = 0; i < count; i++) {
+        out_us[i] = (double)timing_acc[i] * 1e-3;
+    }
+}
+
 #else
 
 /* When ENABLE_RT_TIMING is not defined, timing macros are intentional no-ops. */
