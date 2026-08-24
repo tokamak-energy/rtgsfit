@@ -13,7 +13,7 @@ source .venv/bin/activate
 cd ~/GitHub
 git clone https://github.com/tokamak-energy/gsfit
 cd gsfit
-uv pip install -e .
+uv pip install -e ~/GitHub/gsfit/.
 cd ~/GitHub/rtgsfit/tests/rtgsfit_vs_gsfit
 uv pip install -e .
 ```
