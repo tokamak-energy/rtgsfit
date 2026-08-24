@@ -90,9 +90,6 @@ all: constants.c $(SHARED)
 # --------------------------------------------------
 # Shared libraries
 # --------------------------------------------------
-$(LIB)/libfind_x_point.so: find_x_point.o gradient.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm
-
 $(LIB)/libfind_plasma.so: find_plasma.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
