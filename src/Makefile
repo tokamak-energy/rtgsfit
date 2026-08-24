@@ -75,7 +75,6 @@ OBJS = \
   solve_tria.o \
   gradient.o \
   poisson_solver.o \
-  find_x_point.o \
   rtgsfit.o \
   find_plasma.o
 
