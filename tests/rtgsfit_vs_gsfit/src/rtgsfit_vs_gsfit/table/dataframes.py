@@ -6,8 +6,7 @@ import mdsthin
 import numpy as np
 import pandas as pd
 
-def _gsfit_node(cfg: dict, suffix: str) -> str:
-    return f"\\GSFIT::TOP.{cfg['run_name']}.{suffix}"
+from rtgsfit_vs_gsfit.gsfit import gsfit_node
 
 def ivc_df(iteration: int, cfg: dict) -> pd.DataFrame:
     """
@@ -31,7 +30,7 @@ def ivc_df(iteration: int, cfg: dict) -> pd.DataFrame:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
             for eig_num in range(1, n_eigs + 1):
                 eigenvalues[eig_num - 1] = conn.get(
-                    _gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
+                    gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
                 ).data()[0]
         return eigenvalues
         
@@ -60,8 +59,8 @@ def rog_df(iteration: int, cfg: dict) -> pd.DataFrame:
     def rog_meas_row(cfg: dict) -> np.ndarray:
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
-            rog_names_gsfit = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
-            meas_values = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:MEASURED")).data()[0]
+            rog_names_gsfit = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
+            meas_values = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:MEASURED")).data()[0]
         rog_indices = np.zeros(len(cfg["rogowski_names"]), dtype=int)
         for i, rog_name in enumerate(cfg["rogowski_names"]):
             for j, rog_name_gsfit in enumerate(rog_names_gsfit):
@@ -88,8 +87,8 @@ def rog_df(iteration: int, cfg: dict) -> pd.DataFrame:
     def rog_gsfit_row(cfg: dict) -> np.ndarray:
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
-            rog_names_gsfit = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
-            calc_values = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT")).data()[0]
+            rog_names_gsfit = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
+            calc_values = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT")).data()[0]
         rog_indices = np.zeros(len(cfg["rogowski_names"]), dtype=int)
         for i, rog_name in enumerate(cfg["rogowski_names"]):
             for j, rog_name_gsfit in enumerate(rog_names_gsfit):

@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 import mdsthin
 import numpy as np
 
-def _gsfit_node(cfg: dict, suffix: str) -> str:
-    return f"\\GSFIT::TOP.{cfg['run_name']}.{suffix}"
+from rtgsfit_vs_gsfit.gsfit import gsfit_node
 
 def psi_contours(iteration: int,
                  ax: plt.Axes,
@@ -39,10 +38,10 @@ def psi_contours(iteration: int,
     rtgsfit_lcfs_z = rtgsfit_output_dict["lcfs_z"][iteration, :rtgsfit_lcfs_n]
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cfg["pulse_num_write"])
-        psi_gsfit = conn.get(_gsfit_node(cfg, "PROFILES_2D.R_Z:PSI")).data()[0, :, :]
-        gsfit_lcfs_n = conn.get(_gsfit_node(cfg, "BOUNDARY.OUTLINE:N")).data()[0]
-        gsfit_lcfs_r = conn.get(_gsfit_node(cfg, "BOUNDARY.OUTLINE:R")).data()[0, :gsfit_lcfs_n]
-        gsfit_lcfs_z = conn.get(_gsfit_node(cfg, "BOUNDARY.OUTLINE:Z")).data()[0, :gsfit_lcfs_n]
+        psi_gsfit = conn.get(gsfit_node(cfg, "PROFILES_2D.R_Z:PSI")).data()[0, :, :]
+        gsfit_lcfs_n = conn.get(gsfit_node(cfg, "BOUNDARY.OUTLINE:N")).data()[0]
+        gsfit_lcfs_r = conn.get(gsfit_node(cfg, "BOUNDARY.OUTLINE:R")).data()[0, :gsfit_lcfs_n]
+        gsfit_lcfs_z = conn.get(gsfit_node(cfg, "BOUNDARY.OUTLINE:Z")).data()[0, :gsfit_lcfs_n]
 
     dot_size = 5
     if plot_rtgsfit:
@@ -149,10 +148,10 @@ def flux_loop_line(iteration: int,
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cfg["pulse_num_write"])
         _, gsfit_fl_meas_all, gsfit_fl_pred_all, fl_include = (
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:NAMES")).data(),
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:MEASURED")).data()[0],
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:RECONSTRUCT")).data()[0],
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:INCLUDE")).data() == 1,
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:NAMES")).data(),
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:MEASURED")).data()[0],
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:RECONSTRUCT")).data()[0],
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:INCLUDE")).data() == 1,
         )
         gsfit_fl_meas = gsfit_fl_meas_all[fl_include]
         gsfit_fl_pred = gsfit_fl_pred_all[fl_include]
@@ -205,10 +204,10 @@ def bp_probe_line(iteration: int,
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cfg["pulse_num_write"])
         _, gsfit_bp_meas_all, gsfit_bp_pred_all, bp_include = (
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:NAMES")).data(),
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:MEASURED")).data()[0],
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:RECONSTRUCT")).data()[0],
-            conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:INCLUDE")).data() == 1,
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:NAMES")).data(),
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:MEASURED")).data()[0],
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:RECONSTRUCT")).data()[0],
+            conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:INCLUDE")).data() == 1,
         )
         gsfit_bp_meas = gsfit_bp_meas_all[bp_include]
         gsfit_bp_pred = gsfit_bp_pred_all[bp_include]
@@ -304,7 +303,7 @@ def ivc_j_gsfit(iteration, ax: plt.Axes, cfg: dict):
         conn.openTree("GSFIT", cfg["pulse_num_write"])
         for eig_num in range(1, n_eigs + 1):
             eigenvalues[eig_num - 1] = conn.get(
-                _gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
+                gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
             ).data()[0]
     
     eigenvector_currents = ivc_dict["current_distributions"] * eigenvalues[:, np.newaxis]
@@ -410,8 +409,8 @@ def passive_j_gsfit(iteration: int, ax: plt.Axes, cfg: dict):
 
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cfg["pulse_num_write"])
-        rog_names = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
-        pred_currents = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT")).data()[0]
+        rog_names = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
+        pred_currents = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT")).data()[0]
 
     for psr_name in passive_support_ring_dict.keys():
         for i, rog_name in enumerate(rog_names):
@@ -464,7 +463,7 @@ def ovc_current_gsfit(cfg: dict) -> float:
     """
     with mdsthin.Connection('smaug') as conn:
         conn.openTree("GSFIT", cfg["pulse_num_write"])
-        ovc_current = conn.get(_gsfit_node(cfg, "CONSTRAINTS.PF_PASSIVE.OVC.DOF.CONSTANT_J:RECONSTRUCT")).data()[0]
+        ovc_current = conn.get(gsfit_node(cfg, "CONSTRAINTS.PF_PASSIVE.OVC.DOF.CONSTANT_J:RECONSTRUCT")).data()[0]
 
     return ovc_current * ovc_area(cfg)
 
@@ -495,7 +494,7 @@ def ivc_eigenvalue_bar_chart(ax: plt.Axes,
             conn.openTree("GSFIT", cfg["pulse_num_write"])
             for eig_num in range(1, n_eigs + 1):
                 eigenvalues[eig_num - 1] = conn.get(
-                    _gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
+                    gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
                 ).data()[0]
         return eigenvalues
     

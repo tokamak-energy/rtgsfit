@@ -12,11 +12,9 @@ import pytest
 
 from rtgsfit_vs_gsfit import config_loader, \
                              replay_gsfit, replay_rtgsfit, rtgsfit_compile_setup
+from rtgsfit_vs_gsfit.gsfit import gsfit_node
 from rtgsfit_vs_gsfit.plot import examples
 from rtgsfit_vs_gsfit.table import save_to_csv
-
-def _gsfit_node(cfg: dict, suffix: str) -> str:
-    return f"\\GSFIT::TOP.{cfg['run_name']}.{suffix}"
 
 test_cases = [
     (13_343, 0.030),
@@ -52,7 +50,7 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
 
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
-            psi_gsfit = conn.get(_gsfit_node(cfg, "PROFILES_2D.R_Z:PSI")).data()[0, :, :]
+            psi_gsfit = conn.get(gsfit_node(cfg, "PROFILES_2D.R_Z:PSI")).data()[0, :, :]
 
         np.testing.assert_allclose(psi_rtgsfit, psi_gsfit,
                                    rtol=rtol, atol=atol)
@@ -85,10 +83,10 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
             _, gsfit_fl_meas_all, gsfit_fl_pred_all, fl_include = (
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:NAMES")).data(),
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:MEASURED")).data()[0],
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:RECONSTRUCT")).data()[0],
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:INCLUDE")).data() == 1,
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:NAMES")).data(),
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:MEASURED")).data()[0],
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:RECONSTRUCT")).data()[0],
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.FLUX_LOOP.ALL:INCLUDE")).data() == 1,
             )
             gsfit_fl_meas = gsfit_fl_meas_all[fl_include]
             gsfit_fl_pred = gsfit_fl_pred_all[fl_include]
@@ -127,10 +125,10 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
             _, gsfit_bp_meas_all, gsfit_bp_pred_all, bp_include = (
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:NAMES")).data(),
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:MEASURED")).data()[0],
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:RECONSTRUCT")).data()[0],
-                conn.get(_gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:INCLUDE")).data() == 1,
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:NAMES")).data(),
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:MEASURED")).data()[0],
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:RECONSTRUCT")).data()[0],
+                conn.get(gsfit_node(cfg, "CONSTRAINTS.BP_PROBE.ALL:INCLUDE")).data() == 1,
             )
             gsfit_bp_meas = gsfit_bp_meas_all[bp_include]
             gsfit_bp_pred = gsfit_bp_pred_all[bp_include]
@@ -164,7 +162,7 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
             conn.openTree("GSFIT", cfg["pulse_num_write"])
             for eig_num in range(1, n_eigs + 1):
                 eigs_gsfit[eig_num - 1] = conn.get(
-                    _gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
+                    gsfit_node(cfg, f"CONSTRAINTS.PF_PASSIVE.IVC.DOF.EIG_{eig_num:02d}:RECONSTRUCT")
                 ).data()[0]
         np.testing.assert_allclose(eigs_rtgsfit, eigs_gsfit,
                                    rtol=rtol, atol=atol)
@@ -214,9 +212,9 @@ def test_rtgsfit_vs_gsfit_consistency(pulse_num, time):
 
         with mdsthin.Connection('smaug') as conn:
             conn.openTree("GSFIT", cfg["pulse_num_write"])
-            rog_names_gsfit = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
-            gsfit_rog_meas = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:MEASURED")).data()[0]
-            gsfit_rog_pred = conn.get(_gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT")).data()[0]
+            rog_names_gsfit = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:NAMES")).data()
+            gsfit_rog_meas = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:MEASURED")).data()[0]
+            gsfit_rog_pred = conn.get(gsfit_node(cfg, "CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT")).data()[0]
         rog_indices = np.zeros(len(cfg["rogowski_names"]), dtype=int)
         for i, rog_name in enumerate(cfg["rogowski_names"]):
             for j, rog_name_gsfit in enumerate(rog_names_gsfit):
