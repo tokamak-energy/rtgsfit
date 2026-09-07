@@ -1,9 +1,49 @@
 #include <cblas.h>
 #include "poisson_solver.h"
+#include "poisson_fast.h"
 #include "solve_tria.h"
 #include "gradient.h"
 #include "constants.h"
 #include <stdio.h>
+
+/* Which solver poisson_solver() uses: the banded LU substitution in
+ * solve_tria.c or the separable sine-transform solver in poisson_fast.c. */
+static int s_method = POISSON_SOLVER_METHOD_UNSET;
+
+/*
+ * Function: poisson_solver_init
+ * Chooses the solver used by poisson_solver(). The fast solver is used only if
+ * poisson_fast_init() recovers the expected operator structure from the LU
+ * factors and reproduces the banded LU results on test right-hand sides;
+ * otherwise the banded LU substitution is kept. Called automatically on the
+ * first poisson_solver() call, but calling it explicitly at start-up keeps the
+ * one-off table construction (a few milliseconds) out of the first real-time
+ * cycle.
+ *
+ * Returns the selected method (POISSON_SOLVER_METHOD_LU or
+ * POISSON_SOLVER_METHOD_FAST).
+ */
+int poisson_solver_init(void)
+{
+    if (poisson_fast_init() == POISSON_FAST_OK)
+    {
+        s_method = POISSON_SOLVER_METHOD_FAST;
+    }
+    else
+    {
+        s_method = POISSON_SOLVER_METHOD_LU;
+    }
+    return s_method;
+}
+
+/*
+ * Function: poisson_solver_method
+ * Returns the active solver (see poisson_solver_init).
+ */
+int poisson_solver_method(void)
+{
+    return s_method;
+}
 /*
  * Function: hagenow_bound
  * determines the boundary flux values of the boundary using the Hagenow method
@@ -116,6 +156,31 @@ void add_bound(
  * out (n_ele, ) - psi values on the 2D grid
  */ 
 void poisson_solver(
+        double* b_vec, 
+        double* out 
+        )
+{
+    if (s_method == POISSON_SOLVER_METHOD_UNSET)
+    {
+        poisson_solver_init();
+    }
+
+    if (s_method == POISSON_SOLVER_METHOD_FAST)
+    {
+        poisson_fast_poisson_solver(b_vec, out);
+    }
+    else
+    {
+        poisson_solver_lu(b_vec, out);
+    }
+}
+
+
+/* Function: poisson_solver_lu
+ * poisson_solver() using the banded LU substitution (solve_tria) for both
+ * solves. Kept as the reference implementation and as the fallback.
+ */
+void poisson_solver_lu(
         double* b_vec, 
         double* out 
         )
