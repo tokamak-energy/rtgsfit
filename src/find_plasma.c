@@ -31,6 +31,7 @@
 #define N_R_PLS_1 (N_R + 1)
 #define N_Z_MIN_1 (N_Z - 1)
 #define N_Z_PLS_1 (N_Z + 1)
+#define CELL_EDGE_TOL 0.05 // Tolerance for accepting null points near cell boundaries
 
 // find_nulls:
 //   Finds null points of the magnetic field which correspond to points where ∇ψ
@@ -94,7 +95,7 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
       double inv_denom = 1.0 / denom;
       double dr_norm = (b * e - a * d) * inv_denom; // (dr / ΔR)
       double dz_norm = (a * e - b * c) * inv_denom; // (dz / ΔZ)
-      if (fabs(dr_norm) <= 0.5 && fabs(dz_norm) <= 0.5) {
+      if (fabs(dr_norm) <= (0.5 + CELL_EDGE_TOL) && fabs(dz_norm) <= (0.5 + CELL_EDGE_TOL)) {
         double null_r = R_VEC[i_col] + dr_norm * DR;
         double null_z = Z_VEC[i_row] + dz_norm * DZ;
         double hess_det = denom;
