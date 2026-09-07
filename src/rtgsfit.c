@@ -174,6 +174,55 @@ void make_basis(
 }
 
 /**
+ * @brief Multiplies the plasma basis functions by the weighted Green's matrix.
+ *
+ * g_coef_meas_w[i_pls][i_meas] = sum over the grid of
+ *     basis[i_pls][i_grid] * G_GRID_MEAS_WEIGHT[i_grid][i_meas]
+ * for the N_PLS plasma basis functions (the first N_PLS rows of g_coef_meas_w;
+ * the remaining rows are left untouched). This is the same product as the
+ * dgemm it replaces, but grid points where every basis function is zero, i.e.
+ * everything outside the plasma mask, are skipped, so the cost scales with the
+ * plasma area rather than with the whole grid.
+ *
+ * @param basis Basis functions on the grid (N_PLS, N_GRID).
+ * @param g_coef_meas_w Output matrix (N_COEF, N_MEAS), first N_PLS rows written.
+ */
+static void basis_times_greens(const double basis[], double g_coef_meas_w[])
+{
+    for (int32_t i = 0; i < N_PLS * N_MEAS; i++)
+    {
+        g_coef_meas_w[i] = 0.0;
+    }
+
+    for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
+    {
+        int is_zero = 1;
+        for (int32_t i_pls = 0; i_pls < N_PLS; i_pls++)
+        {
+            if (basis[i_pls * N_GRID + i_grid] != 0.0)
+            {
+                is_zero = 0;
+            }
+        }
+        if (is_zero)
+        {
+            continue;
+        }
+
+        const double* g_row = &G_GRID_MEAS_WEIGHT[(size_t)i_grid * N_MEAS];
+        for (int32_t i_pls = 0; i_pls < N_PLS; i_pls++)
+        {
+            const double b = basis[i_pls * N_GRID + i_grid];
+            double* out_row = &g_coef_meas_w[i_pls * N_MEAS];
+            for (int32_t i_meas = 0; i_meas < N_MEAS; i_meas++)
+            {
+                out_row[i_meas] += b * g_row[i_meas];
+            }
+        }
+    }
+}
+
+/**
  * @brief Calculates the flux on the limiter but excludes some of the
  * limit points based on the location of the x-points.
  *
@@ -347,11 +396,7 @@ void rtgsfit(
     // make meas-pls matrix
     // g_coef_meas_w = g_pls_grid * G_GRID_MEAS_WEIGHT
     TSTART();
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                N_PLS, N_MEAS, N_GRID,
-                1.0, g_pls_grid, N_GRID,
-                G_GRID_MEAS_WEIGHT, N_MEAS,
-                0.0, g_coef_meas_w, N_MEAS);
+    basis_times_greens(g_pls_grid, g_coef_meas_w);
     TACC(T_MEAS_MATRIX);
 
     // form meas vectors from measurements
@@ -404,11 +449,15 @@ void rtgsfit(
     double source[N_GRID];
 
     TSTART();
-    cblas_dgemv(CblasRowMajor, CblasTrans,
-                N_PLS, N_GRID,
-                1.0, g_pls_grid, N_GRID,
-                coef, 1,
-                0.0, source, 1);
+    for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
+    {
+        double s = 0.0;
+        for (int32_t i_pls = 0; i_pls < N_PLS; i_pls++)
+        {
+            s += g_pls_grid[i_pls * N_GRID + i_grid] * coef[i_pls];
+        }
+        source[i_grid] = s;
+    }
 
     // `source` is the current density in each grid cell;
     // plasma_current = sum(source) * d_area
