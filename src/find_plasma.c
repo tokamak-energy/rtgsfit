@@ -27,10 +27,8 @@
 
 #include "constants.h"
 
-#define N_R_MIN_1 (N_R - 1)
-#define N_R_PLS_1 (N_R + 1)
-#define N_Z_MIN_1 (N_Z - 1)
-#define N_Z_PLS_1 (N_Z + 1)
+#define N_R_MIN_2 (N_R - 2)
+#define N_Z_MIN_2 (N_Z - 2)
 
 // null_candidate_at_vertex:
 //   Builds the local quadratic expansion of ψ about the vertex (i_col, i_row)
@@ -113,14 +111,19 @@ static int null_candidate_at_vertex(const double *flux, int32_t i_col,
 // Parameters:
 //   flux      - ψ 2D input array explicitly stored as a contiguous block
 //               (i.e., 1D array)
-//   opt_r     - output array for the o-point R coordinates
-//   opt_z     - output array for the o-point Z coordinates
-//   opt_flux  - output array for flux at o-points
-//   opt_n     - pointer which will hold the number of o-points found
+//   opt_r     - output R coordinate of the highest-flux o-point (single value)
+//   opt_z     - output Z coordinate of the highest-flux o-point (single value)
+//   opt_flux  - output flux at the highest-flux o-point (single value)
+//   opt_n     - set to 1 if an o-point was found, 0 otherwise
 //   xpt_r     - output array for the x-point R coordinates
 //   xpt_z     - output array for the x-point Z coordinates
 //   xpt_flux  - output array for flux at the x-points
 //   xpt_n     - pointer which will hold the number of x-points found
+//
+// Only the o-point with the largest flux is retained, since that is the
+// magnetic axis and the caller discards all others. Keeping just the running
+// maximum also means the duplicate o-points produced by the overlapping cell
+// scan collapse to a single answer, and no o-point storage limit can be hit.
 int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
                int32_t *opt_n, double *xpt_r, double *xpt_z, double *xpt_flux,
                int32_t *xpt_n) {
@@ -134,8 +137,8 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
   // vertices (i_col, i_row), (i_col+1, i_row), (i_col, i_row+1) and
   // (i_col+1, i_row+1). The bounds ensure every corner has a valid 9-point
   // stencil.
-  for (int32_t i_row = 1; i_row < N_Z_MIN_1 - 1; i_row++) {
-    for (int32_t i_col = 1; i_col < N_R_MIN_1 - 1; i_col++) {
+  for (int32_t i_row = 1; i_row < N_Z_MIN_2; i_row++) {
+    for (int32_t i_col = 1; i_col < N_R_MIN_2; i_col++) {
       double best_dist_sq = 0.0;
       double best_r = 0.0;
       double best_z = 0.0;
@@ -178,14 +181,13 @@ int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
         continue;
       }
       if (best_hess_det > 0.0) {
-        // o-point
-        opt_r[*opt_n] = best_r;
-        opt_z[*opt_n] = best_z;
-        opt_flux[*opt_n] = best_flux;
-        (*opt_n)++;
-        if (*opt_n >= N_XPT_MAX) {
-          return ERR_NUM_OPTS;
+        // o-point: keep only the one with the largest flux
+        if (*opt_n == 0 || best_flux > *opt_flux) {
+          *opt_r = best_r;
+          *opt_z = best_z;
+          *opt_flux = best_flux;
         }
+        *opt_n = 1;
       } else if (best_hess_det < 0.0) {
         // x-point
         xpt_r[*xpt_n] = best_r;

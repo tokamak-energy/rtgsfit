@@ -182,9 +182,9 @@ static int test_find_nulls(void) {
     return 0;
   }
 
-  double opt_r[MAX_NUM_TEST_POINTS];
-  double opt_z[MAX_NUM_TEST_POINTS];
-  double opt_flux[MAX_NUM_TEST_POINTS];
+  double opt_r = 0.0;
+  double opt_z = 0.0;
+  double opt_flux = 0.0;
   int32_t opt_n = 0;
 
   double xpt_r[MAX_NUM_TEST_POINTS];
@@ -192,15 +192,16 @@ static int test_find_nulls(void) {
   double xpt_flux[MAX_NUM_TEST_POINTS];
   int32_t xpt_n = 0;
 
-  (void)find_nulls(flux, opt_r, opt_z, opt_flux, &opt_n, xpt_r, xpt_z, xpt_flux,
-                   &xpt_n);
+  (void)find_nulls(flux, &opt_r, &opt_z, &opt_flux, &opt_n, xpt_r, xpt_z,
+                   xpt_flux, &xpt_n);
 
   // expected
-  const int32_t expected_opt_n = 3;
-  const double expected_opt_r[3] = {0.14585184486585667, 0.5504987458865702,
-                                    0.14588535485454304};
-  const double expected_opt_z[3] = {
-      -0.3649616878952398, -0.00033762600061724556, 0.3660190742308108};
+  // find_nulls only returns the highest-flux o-point (the magnetic axis). The
+  // reference Python implementation finds three o-points; the one below is the
+  // one with the largest flux, and the other two are intentionally not checked.
+  const int32_t expected_opt_n = 1;
+  const double expected_opt_r[1] = {0.5504987458865702};
+  const double expected_opt_z[1] = {-0.00033762600061724556};
 
   const int32_t expected_xpt_n = 3;
   const double expected_xpt_r[3] = {0.3153374696769646, 0.14116510830539897,
@@ -209,9 +210,9 @@ static int test_find_nulls(void) {
                                     0.5378137974139481};
 
   // checks
-  if (!match_points_unordered("O-points", opt_r, opt_z, opt_n, expected_opt_r,
+  if (!match_points_unordered("O-points", &opt_r, &opt_z, opt_n, expected_opt_r,
                               expected_opt_z, expected_opt_n, TOL)) {
-    print_points("Found O-points", opt_r, opt_z, opt_n);
+    print_points("Found O-points", &opt_r, &opt_z, opt_n);
     return 0;
   }
 
