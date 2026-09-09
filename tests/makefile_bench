@@ -18,7 +18,7 @@ endif
 CFLAGS = -O3 -march=native -std=gnu11 -Wall -g -fno-omit-frame-pointer $(BENCH_DEFS) -I$(SRC) -I/usr/include/openblas
 
 OBJS = $(SRC)/constants.o $(SRC)/rtgsfit.o $(SRC)/gradient.o $(SRC)/find_x_point.o \
-       $(SRC)/poisson_solver.o $(SRC)/poisson_fast.o $(SRC)/solve_tria.o $(SRC)/find_plasma.o
+       $(SRC)/poisson_solver.o $(SRC)/poisson_fast.o $(SRC)/find_plasma.o
 
 rtgsfit_bench: rtgsfit_bench.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ rtgsfit_bench.c $(OBJS) -lm -lopenblas

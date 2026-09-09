@@ -1,43 +1,41 @@
 /*
  * File: poisson_fast.c
  * --------------------
- * Fast direct solver for the RT-GSFit Poisson (Grad-Shafranov) system.
+ * Direct solver for the RT-GSFit Poisson (Grad-Shafranov) system.
  *
- * The linear system A x = b that solve_tria() solves from the precomputed
- * LOWER_BAND / UPPER_BAND / PERM_IDX factors is the LIUQE eq. (45) five-point
- * stencil on the uniform (R, Z) grid, with identity rows on the grid boundary
- * (Dirichlet data is passed in the boundary entries of b):
+ * The operator is the LIUQE eq. (45) five-point stencil on the uniform (R, Z)
+ * grid, supplied in constants.c as POISSON_A, POISSON_B and POISSON_C, with
+ * identity rows on the grid boundary (Dirichlet data is passed in the boundary
+ * entries of the right-hand side b):
  *
- *   e x[i-1][j] + e x[i+1][j] + b_j x[i][j-1] + a_j x[i][j+1] + d_j x[i][j] = b[i][j]
+ *   x[i-1][j] + x[i+1][j] + POISSON_B[j] x[i][j-1] + POISSON_A[j] x[i][j+1] - POISSON_C[j] x[i][j] = b[i][j]
  *
- * for interior points (i = 1..N_Z-2, j = 1..N_R-2). The vertical coupling e is
- * the same constant on every interior row and a_j, b_j, d_j depend on the
- * column j only. The vertical direction can therefore be diagonalised with a
- * discrete sine transform (DST-I with period N = N_Z-1), after which every
- * vertical mode k is an independent tridiagonal system in the radial direction:
+ * for interior points (i = 1..N_Z-2, j = 1..N_R-2). The vertical coupling is
+ * the same on every row and the other coefficients depend on the column j
+ * only, so the vertical direction can be diagonalised with a discrete sine
+ * transform (DST-I with period N = N_Z-1), after which every vertical mode k is
+ * an independent tridiagonal system in the radial direction:
  *
- *   b_j X[k][j-1] + (d_j + 2 e cos(pi k / N)) X[k][j] + a_j X[k][j+1] = B[k][j]
+ *   b_j X[k][j-1] + (2 cos(pi k / N) - c_j) X[k][j] + a_j X[k][j+1] = B[k][j]
  *
  * This is the classic "Fourier plus tridiagonal" direct method for separable
  * elliptic problems (Hockney 1965; Jardin, Computational Methods in Plasma
- * Physics, 2010, sec. 3.3). It gives the same solution as the banded LU
- * substitution up to rounding, but costs O(N_Z^2 N_R) flops in small
- * cache-resident matrix products instead of streaming the O(N_Z N_R^2) band
- * factors through memory twice per solve.
+ * Physics, 2010, sec. 3.3). The transform is a dense matrix product (two
+ * cblas_dgemm calls per direction, split by mode parity), so any grid size
+ * works and the cost is O(N_Z^2 N_R) in small cache-resident products.
  *
- * Nothing about the operator is assumed: the stencil coefficients are recovered
- * from the supplied LU factors at initialisation, every row is checked to have
- * the structure above, and the solver is cross-checked against solve_tria() and
- * against the banded Hagenow flow on test right-hand sides. If any check fails
- * poisson_fast_init() returns a nonzero status and poisson_solver() keeps using
- * solve_tria().
+ * At initialisation the coefficients are checked to be finite, every mode's
+ * tridiagonal is checked to have safe pivots, and the solver is checked
+ * against the stencil residual and against a plain two-solve Hagenow flow on
+ * test right-hand sides. On failure poisson_fast_init() returns a nonzero
+ * status and poisson_solver() returns zero flux.
  *
  * The Hagenow boundary calculation needs the first (zero-boundary) solution only
  * on the two rows and two columns next to the grid boundary, and the second
- * solve differs from the first only through the boundary values. The fast
- * Hagenow flow therefore does one forward transform, evaluates the first
- * solution just where gradient_bound() reads it, transforms the boundary-only
- * correction analytically, and does one inverse transform for the final flux.
+ * solve differs from the first only through the boundary values. The Hagenow
+ * flow therefore does one forward transform, evaluates the first solution just
+ * where gradient_bound() reads it, transforms the boundary-only correction
+ * analytically, and does one inverse transform for the final flux.
  *
  * Storage layout: the sine transform is split into odd and even modes so that
  * the (m x m) transform matrix becomes two (m/2 x m/2) blocks (S[k][N-i] =
@@ -49,19 +47,16 @@
 #include "constants.h"
 #include "gradient.h"
 #include "poisson_solver.h"
-#include "solve_tria.h"
 #include <cblas.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* Relative tolerance for recognising the stencil structure in the LU factors. */
-#define STRUCTURE_RTOL 1.0e-9
 /* Relative tolerance for the tridiagonal pivots. */
 #define PIVOT_RTOL 1.0e-10
-/* Relative tolerance for the cross-checks against the banded LU path. */
-#define VALIDATION_RTOL 1.0e-8
+/* Relative tolerance for the residual and self-consistency checks at initialisation. */
+#define VALIDATION_RTOL 1.0e-9
 /* Rows and columns next to the boundary that gradient_bound() reads. */
 #define N_EDGE 2
 
@@ -73,10 +68,9 @@ static int s_m, s_n, s_N, s_h, s_hp, s_m_odd, s_m_even;
 static int s_n_edge_rows, s_edge_rows[2 * N_EDGE];
 static int s_n_edge_cols, s_edge_cols[2 * N_EDGE];
 
-/* Recovered operator. */
+/* Operator: vertical coupling e, and a_j, b_j, d_j = -c_j for interior columns. */
 static double s_e;
 static double *s_a, *s_b, *s_d;      /* n each, indexed by interior column */
-static double *s_bnd_scale;          /* N_GRID; 1/diagonal on boundary points */
 
 /* Sine transform blocks and per-mode tridiagonal factors (split mode order). */
 static double *s_s_odd;              /* m_odd x hp */
@@ -135,12 +129,12 @@ static int edge_indices(int count, int* idx)
 
 void poisson_fast_free(void)
 {
-    free(s_a); free(s_b); free(s_d); free(s_bnd_scale);
+    free(s_a); free(s_b); free(s_d);
     free(s_s_odd); free(s_s_even); free(s_s_edge_rows); free(s_sin_k); free(s_mult); free(s_inv_w);
     free(s_f); free(s_fe); free(s_fo); free(s_fhat); free(s_fhat2); free(s_ge); free(s_go);
     free(s_psi1); free(s_bnd); free(s_col_in); free(s_col_ge); free(s_col_go); free(s_row_out);
     free(s_vec_e); free(s_vec_o); free(s_vec_hat);
-    s_a = s_b = s_d = s_bnd_scale = NULL;
+    s_a = s_b = s_d = NULL;
     s_s_odd = s_s_even = s_s_edge_rows = s_sin_k = s_mult = s_inv_w = NULL;
     s_f = s_fe = s_fo = s_fhat = s_fhat2 = s_ge = s_go = NULL;
     s_psi1 = s_bnd = s_col_in = s_col_ge = s_col_go = s_row_out = NULL;
@@ -150,153 +144,25 @@ void poisson_fast_free(void)
 }
 
 /*
- * Function: recover_lu_row
- * Computes row r of (L U) from the banded factors. Row r of (L U) equals row
- * PERM_IDX[r] of the operator A. The output covers the columns
- * r - N_R .. r + N_R + 1, which contain every structurally nonzero entry.
- * u_diag holds the true (not inverted) diagonal of U.
+ * Function: load_operator
+ * Copies the interior stencil coefficients from constants.c and checks that
+ * they are finite. Returns a status code.
  */
-static void recover_lu_row(int r, const double* u_diag, double* row)
+static int load_operator(void)
 {
-    const int n_col_u = N_R + 2;
-
-    for (int c = 0; c < 2 * N_R + 2; c++)
+    s_e = 1.0;
+    for (int jj = 0; jj < s_n; jj++)
     {
-        row[c] = 0.0;
-    }
-
-    /* L[r][r] = 1 times row r of U. */
-    {
-        const int j_max = (N_R + 1 < N_GRID - 1 - r) ? (N_R + 1) : (N_GRID - 1 - r);
-        const double* u = &UPPER_BAND[(size_t)r * n_col_u];
-        double* rr = &row[N_R];
-        rr[0] += u_diag[r];
-        for (int jj = 1; jj <= j_max; jj++)
+        const int j = jj + 1;
+        s_a[jj] = POISSON_A[j];
+        s_b[jj] = POISSON_B[j];
+        s_d[jj] = -POISSON_C[j];
+        if (!isfinite(s_a[jj]) || !isfinite(s_b[jj]) || !isfinite(s_d[jj]))
         {
-            rr[jj] += u[jj];
+            return POISSON_FAST_ERR_COEFFICIENTS;
         }
     }
-
-    /* Sub-diagonal entries of L times the corresponding rows of U. */
-    for (int jj = (N_R - r > 0) ? (N_R - r) : 0; jj < N_R; jj++)
-    {
-        const int k = r - N_R + jj;
-        const double l = LOWER_BAND[(size_t)r * N_R + jj];
-        if (l == 0.0) continue;
-        const int j_max = (N_R + 1 < N_GRID - 1 - k) ? (N_R + 1) : (N_GRID - 1 - k);
-        const double* u = &UPPER_BAND[(size_t)k * n_col_u];
-        double* rr = &row[jj];
-        rr[0] += l * u_diag[k];
-        for (int jj2 = 1; jj2 <= j_max; jj2++)
-        {
-            rr[jj2] += l * u[jj2];
-        }
-    }
-}
-
-/*
- * Function: recover_operator
- * Recovers e, a_j, b_j, d_j and the boundary diagonal from the LU factors and
- * checks that every row has the expected structure. Returns a status code.
- */
-static int recover_operator(void)
-{
-    double* row = malloc((size_t)(2 * N_R + 2) * sizeof(double));
-    double* u_diag = malloc((size_t)N_GRID * sizeof(double));
-    int* seen = calloc((size_t)s_n, sizeof(int));
-    int have_e = 0;
-    int status = POISSON_FAST_OK;
-
-    if (row == NULL || u_diag == NULL || seen == NULL)
-    {
-        free(row); free(u_diag); free(seen);
-        return POISSON_FAST_ERR_ALLOC;
-    }
-    for (int k = 0; k < N_GRID; k++)
-    {
-        u_diag[k] = 1.0 / UPPER_BAND[(size_t)k * (N_R + 2)];
-    }
-
-    for (int r = 0; r < N_GRID && status == POISSON_FAST_OK; r++)
-    {
-        const int p = PERM_IDX[r];
-        const int i = p / N_R;
-        const int j = p - i * N_R;
-        const int c0 = r - N_R;
-        double row_max = 0.0;
-
-        recover_lu_row(r, u_diag, row);
-        for (int c = 0; c < 2 * N_R + 2; c++)
-        {
-            if (fabs(row[c]) > row_max) row_max = fabs(row[c]);
-        }
-        const double tol = STRUCTURE_RTOL * row_max;
-
-        if (p < c0 || p > r + N_R + 1 || row_max == 0.0)
-        {
-            status = is_boundary(i, j) ? POISSON_FAST_ERR_BOUNDARY_ROW : POISSON_FAST_ERR_STENCIL;
-            break;
-        }
-
-        if (is_boundary(i, j))
-        {
-            const double diag = row[p - c0];
-            for (int c = 0; c < 2 * N_R + 2; c++)
-            {
-                if (c != p - c0 && fabs(row[c]) > tol) status = POISSON_FAST_ERR_BOUNDARY_ROW;
-            }
-            if (fabs(diag) <= tol) status = POISSON_FAST_ERR_BOUNDARY_ROW;
-            if (status == POISSON_FAST_OK) s_bnd_scale[p] = 1.0 / diag;
-            continue;
-        }
-
-        /* Interior row: five stencil entries, everything else zero. */
-        const int c_dn = p - N_R - c0, c_up = p + N_R - c0;
-        const int c_l = p - 1 - c0, c_r = p + 1 - c0, c_c = p - c0;
-        for (int c = 0; c < 2 * N_R + 2; c++)
-        {
-            if (c == c_dn || c == c_up || c == c_l || c == c_r || c == c_c) continue;
-            if (fabs(row[c]) > tol) status = POISSON_FAST_ERR_STENCIL;
-        }
-        if (status != POISSON_FAST_OK) break;
-
-        const double e_dn = row[c_dn], e_up = row[c_up];
-        const double b_j = row[c_l], a_j = row[c_r], d_j = row[c_c];
-        if (!have_e)
-        {
-            s_e = e_up;
-            have_e = 1;
-        }
-        if (fabs(e_dn - s_e) > tol || fabs(e_up - s_e) > tol || fabs(s_e) <= tol)
-        {
-            status = POISSON_FAST_ERR_Z_COUPLING;
-            break;
-        }
-        const int jj = j - 1;
-        if (!seen[jj])
-        {
-            s_a[jj] = a_j; s_b[jj] = b_j; s_d[jj] = d_j;
-            seen[jj] = 1;
-        }
-        else if (fabs(s_a[jj] - a_j) > tol || fabs(s_b[jj] - b_j) > tol || fabs(s_d[jj] - d_j) > tol)
-        {
-            status = POISSON_FAST_ERR_R_COEFFICIENTS;
-            break;
-        }
-    }
-
-    if (status == POISSON_FAST_OK)
-    {
-        for (int jj = 0; jj < s_n; jj++)
-        {
-            if (!seen[jj]) status = POISSON_FAST_ERR_STENCIL;
-        }
-    }
-
-    free(row);
-    free(u_diag);
-    free(seen);
-    return status;
+    return POISSON_FAST_OK;
 }
 
 /*
@@ -581,19 +447,19 @@ static void solve_modes(double* fhat)
 
 /*
  * Function: set_boundary_values
- * out[p] = b_vec[p] / A[p][p] on the grid boundary.
+ * out[p] = b_vec[p] on the grid boundary (identity rows).
  */
 static void set_boundary_values(const double* b_vec, double* out)
 {
     for (int j = 0; j < N_R; j++)
     {
-        out[j] = b_vec[j] * s_bnd_scale[j];
-        out[(N_Z - 1) * N_R + j] = b_vec[(N_Z - 1) * N_R + j] * s_bnd_scale[(N_Z - 1) * N_R + j];
+        out[j] = b_vec[j];
+        out[(N_Z - 1) * N_R + j] = b_vec[(N_Z - 1) * N_R + j];
     }
     for (int i = 1; i < N_Z - 1; i++)
     {
-        out[i * N_R] = b_vec[i * N_R] * s_bnd_scale[i * N_R];
-        out[i * N_R + N_R - 1] = b_vec[i * N_R + N_R - 1] * s_bnd_scale[i * N_R + N_R - 1];
+        out[i * N_R] = b_vec[i * N_R];
+        out[i * N_R + N_R - 1] = b_vec[i * N_R + N_R - 1];
     }
 }
 
@@ -624,10 +490,9 @@ static void build_interior_rhs(const double* b_vec, const double* x)
 
 /*
  * Function: poisson_fast_solve
- * Solves A x = b_vec with the same convention as solve_tria(): the boundary
- * entries of b_vec are Dirichlet data (scaled by the boundary diagonal, which
- * is 1 for the operators generated so far) and the interior entries are the
- * right-hand side. All N_GRID entries of out are written.
+ * Solves A x = b_vec: the boundary entries of b_vec are Dirichlet data and the
+ * interior entries are the right-hand side. All N_GRID entries of out are
+ * written.
  */
 void poisson_fast_solve(const double* b_vec, double* out)
 {
@@ -736,10 +601,43 @@ static double relative_deviation(const double* x, const double* y)
 }
 
 /*
+ * Function: stencil_residual
+ * max |A x - b| over the grid relative to max |b| (identity rows on the
+ * boundary, the stencil in the interior).
+ */
+static double stencil_residual(const double* x, const double* b)
+{
+    double max_r = 0.0, max_b = 0.0;
+    for (int p = 0; p < N_GRID; p++)
+    {
+        if (fabs(b[p]) > max_b) max_b = fabs(b[p]);
+    }
+    for (int i = 0; i < N_Z; i++)
+    {
+        for (int j = 0; j < N_R; j++)
+        {
+            const int p = i * N_R + j;
+            double r;
+            if (is_boundary(i, j))
+            {
+                r = x[p] - b[p];
+            }
+            else
+            {
+                r = s_e * (x[p - N_R] + x[p + N_R]) + s_b[j - 1] * x[p - 1] + s_a[j - 1] * x[p + 1]
+                  + s_d[j - 1] * x[p] - b[p];
+            }
+            if (fabs(r) > max_r) max_r = fabs(r);
+        }
+    }
+    return (max_b > 0.0) ? max_r / max_b : max_r;
+}
+
+/*
  * Function: validate
- * Cross-checks the fast solver against solve_tria() on two right-hand sides
- * (zero and nonzero boundary data), and the fast Hagenow flow against the
- * banded Hagenow flow. Records the largest relative deviation.
+ * Checks the solver against the stencil residual on two right-hand sides
+ * (zero and nonzero boundary data), and the shortcut Hagenow flow against a
+ * plain two-solve Hagenow flow. Records the largest relative deviation.
  */
 static int validate(void)
 {
@@ -747,6 +645,8 @@ static int validate(void)
     double* b2 = malloc((size_t)N_GRID * sizeof(double));
     double* x_ref = malloc((size_t)N_GRID * sizeof(double));
     double* x_fast = malloc((size_t)N_GRID * sizeof(double));
+    double dpsi_ltrb[N_LTRB];
+    double psi_ltrb[N_LTRB];
     int status = POISSON_FAST_OK;
 
     if (b == NULL || b2 == NULL || x_ref == NULL || x_fast == NULL)
@@ -774,20 +674,31 @@ static int validate(void)
                 }
             }
         }
+        double dev;
         if (trial < 2)
         {
-            solve_tria(b, x_ref);
             poisson_fast_solve(b, x_fast);
+            dev = stencil_residual(x_fast, b);
         }
         else
         {
+            /* Plain Hagenow flow: two full solves. */
             memcpy(b2, b, (size_t)N_GRID * sizeof(double));
-            poisson_solver_lu(b, x_ref);
-            poisson_fast_poisson_solver(b2, x_fast);
-            const double dev_b = relative_deviation(b, b2);
-            if (dev_b > s_max_dev) s_max_dev = dev_b;
+            poisson_fast_solve(b2, x_ref);
+            gradient_bound(x_ref, dpsi_ltrb);
+            for (int ii = 0; ii < N_LTRB; ++ii)
+            {
+                dpsi_ltrb[ii] = dpsi_ltrb[ii] * INV_R_LTRB_MU0[ii];
+            }
+            cblas_dgemv(CblasRowMajor, CblasNoTrans, N_LTRB, N_LTRB, 1.0, G_LTRB,
+                        N_LTRB, dpsi_ltrb, 1, 0.0, psi_ltrb, 1);
+            add_bound(psi_ltrb, b2);
+            poisson_fast_solve(b2, x_ref);
+            poisson_fast_poisson_solver(b, x_fast);
+            dev = relative_deviation(x_ref, x_fast);
+            const double dev_b = relative_deviation(b2, b);
+            if (dev_b > dev) dev = dev_b;
         }
-        const double dev = relative_deviation(x_ref, x_fast);
         if (dev > s_max_dev) s_max_dev = dev;
     }
     if (!(s_max_dev <= VALIDATION_RTOL)) status = POISSON_FAST_ERR_VALIDATION;
@@ -798,10 +709,10 @@ static int validate(void)
 
 /*
  * Function: poisson_fast_init
- * Recovers the operator from the LU factors, builds the transform tables and
- * validates the solver. Returns POISSON_FAST_OK when the fast solver can be
- * used, otherwise a nonzero status code (the caller keeps using solve_tria).
- * Safe to call more than once; the real-time path never calls malloc.
+ * Loads the stencil from constants.c, builds the transform tables and
+ * validates the solver. Returns POISSON_FAST_OK when the solver can be used,
+ * otherwise a nonzero status code. Safe to call more than once; the real-time
+ * path never calls malloc.
  */
 int poisson_fast_init(void)
 {
@@ -828,7 +739,6 @@ int poisson_fast_init(void)
     s_a = calloc((size_t)s_n, sizeof(double));
     s_b = calloc((size_t)s_n, sizeof(double));
     s_d = calloc((size_t)s_n, sizeof(double));
-    s_bnd_scale = calloc((size_t)N_GRID, sizeof(double));
     s_s_odd = calloc((size_t)s_m_odd * (size_t)s_hp, sizeof(double));
     s_s_even = calloc(me1 * h1, sizeof(double));
     s_s_edge_rows = calloc((size_t)s_n_edge_rows * (size_t)s_m, sizeof(double));
@@ -851,7 +761,7 @@ int poisson_fast_init(void)
     s_vec_e = calloc((size_t)s_hp, sizeof(double));
     s_vec_o = calloc(h1, sizeof(double));
     s_vec_hat = calloc((size_t)s_m, sizeof(double));
-    if (s_a == NULL || s_b == NULL || s_d == NULL || s_bnd_scale == NULL || s_s_odd == NULL ||
+    if (s_a == NULL || s_b == NULL || s_d == NULL || s_s_odd == NULL ||
         s_s_even == NULL || s_s_edge_rows == NULL || s_sin_k == NULL || s_mult == NULL ||
         s_inv_w == NULL || s_f == NULL || s_fe == NULL || s_fo == NULL || s_fhat == NULL ||
         s_fhat2 == NULL || s_ge == NULL || s_go == NULL || s_psi1 == NULL || s_bnd == NULL ||
@@ -863,7 +773,7 @@ int poisson_fast_init(void)
         return s_status;
     }
 
-    s_status = recover_operator();
+    s_status = load_operator();
     if (s_status == POISSON_FAST_OK) s_status = build_tables();
     if (s_status == POISSON_FAST_OK) s_status = validate();
 
@@ -874,7 +784,7 @@ int poisson_fast_init(void)
         poisson_fast_free();
         s_status = keep_status;
         s_max_dev = keep_dev;
-        fprintf(stderr, "poisson_fast_init: fast Poisson solver disabled (status %d), using solve_tria\n",
+        fprintf(stderr, "poisson_fast_init: Poisson solver could not be initialised (status %d)\n",
                 s_status);
     }
     return s_status;
