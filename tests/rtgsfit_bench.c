@@ -88,6 +88,13 @@ static void state_alloc(state_t *s)
     s->mask = calloc(N_GRID, sizeof(int32_t));
 }
 
+static void state_free(state_t *s)
+{
+    free(s->meas_pcs); free(s->coil_curr); free(s->flux_norm); free(s->flux_total);
+    free(s->lcfs_r); free(s->lcfs_z); free(s->coef); free(s->meas_model);
+    free(s->xpt_r); free(s->xpt_z); free(s->xpt_flux); free(s->mask);
+}
+
 static void call(state_t *s)
 {
     rtgsfit(s->meas_pcs, s->coil_curr, s->flux_norm, s->mask, s->flux_total,
@@ -175,7 +182,11 @@ int main(int argc, char **argv)
            n_iter, s.lcfs_err_code, s.lapack_dgelss_info, s.chi_sq_err, s.plasma_current, s.r_mag_axis,
            s.z_mag_axis, s.mag_axis_flux, s.flux_boundary, s.xpt_n);
 
-    if (n_rep <= 0) return 0;
+    if (n_rep <= 0)
+    {
+        state_free(&s);
+        return 0;
+    }
 
     /* ---------------- Phase 2: steady-state repeated calls ---------------- */
     double *flux_norm_conv = malloc(N_GRID * sizeof(double));
@@ -244,5 +255,8 @@ int main(int argc, char **argv)
     }
     free(col);
 #endif
+    free(flux_norm_conv); free(mask_conv); free(meas_fixed); free(coil_fixed);
+    free(wall); free(sect); free(ref_flux); free(ref_coef);
+    state_free(&s);
     return 0;
 }
