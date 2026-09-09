@@ -72,7 +72,6 @@ endif
 # --------------------------------------------------
 OBJS = \
   constants.o \
-  solve_tria.o \
   gradient.o \
   poisson_fast.o \
   poisson_solver.o \
@@ -98,14 +97,11 @@ $(LIB)/libfind_x_point.so: find_x_point.o gradient.o constants.o
 $(LIB)/libfind_plasma.so: find_plasma.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
-$(LIB)/libpoisson_solver.so: poisson_solver.o poisson_fast.o gradient.o solve_tria.o constants.o
+$(LIB)/libpoisson_solver.so: poisson_solver.o poisson_fast.o gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
-$(LIB)/libpoisson_fast.so: poisson_fast.o poisson_solver.o gradient.o solve_tria.o constants.o
+$(LIB)/libpoisson_fast.so: poisson_fast.o poisson_solver.o gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
-
-$(LIB)/libsolve_tria.so: solve_tria.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/libgradient.so: gradient.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
@@ -114,7 +110,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: \
-  rtgsfit.o gradient.o constants.o poisson_solver.o poisson_fast.o find_x_point.o solve_tria.o find_plasma.o
+  rtgsfit.o gradient.o constants.o poisson_solver.o poisson_fast.o find_x_point.o find_plasma.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 # --------------------------------------------------
@@ -136,17 +132,17 @@ test_find_plasma: $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o
 	$(CC) $(CFLAGS) -o test_find_plasma \
         $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o -lm
 
-# Fast Poisson solver against the constants.c in this directory
-test_poisson_fast: $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o solve_tria.o constants.o
+# Poisson solver against the constants.c in this directory (dense LAPACK reference)
+test_poisson_fast: $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o constants.o
 	$(CC) $(CFLAGS) -I. -I/usr/include/openblas -o test_poisson_fast \
-        $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o solve_tria.o constants.o \
+        $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o constants.o \
         -lm -lopenblas
 
-# Fallback to the banded LU substitution for a non-separable operator
-test_poisson_fallback: $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o solve_tria.o
-	$(CC) $(CFLAGS) -I. -I/usr/include/openblas -DEXPECT_FALLBACK -o test_poisson_fallback \
-        $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o solve_tria.o \
-        ../test_data/constants_poisson_fallback.c -lm -lopenblas
+# Rejection of an invalid stencil (non-finite coefficient) and bounded behaviour afterwards
+test_poisson_invalid: $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o
+	$(CC) $(CFLAGS) -I. -I/usr/include/openblas -DEXPECT_INVALID -o test_poisson_invalid \
+        $(TEST_DIR)/test_poisson_fast.c poisson_fast.o poisson_solver.o gradient.o \
+        ../test_data/constants_poisson_invalid.c -lm -lopenblas
 
 # --------------------------------------------------
 # Cleanup

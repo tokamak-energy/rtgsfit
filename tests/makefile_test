@@ -16,7 +16,7 @@ MDSTOOL_SRC := $(PCS_PATH)/model/st40pcs/tools/src
 RTGSFIT := ../src
 TE_INCLUDES := $(PCS_PATH)/model/ST40PCS/include/
 TE_OBJS := $(PCS_PATH)/model/ST40PCS/bin/
-OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o
+OBJS = constants.o gradient.o poisson_solver.o poisson_fast.o find_x_point.o rtgsfit.o
 SHARED = $(patsubst %.o,%.so,$(OBJS))
 
 MDSPLUS_ROOT := /usr/local/mdsplus

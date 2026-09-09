@@ -52,9 +52,9 @@ jobs:
     - name: Build and run Poisson solver tests
       working-directory: src
       run: |
-        make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_poisson_fast test_poisson_fallback
+        make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_poisson_fast test_poisson_invalid
         OPENBLAS_NUM_THREADS=1 ./test_poisson_fast
-        OPENBLAS_NUM_THREADS=1 ./test_poisson_fallback
+        OPENBLAS_NUM_THREADS=1 ./test_poisson_invalid
 
     - name: Build the timing benchmark driver
       working-directory: tests

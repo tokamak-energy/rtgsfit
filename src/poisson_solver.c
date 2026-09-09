@@ -1,49 +1,42 @@
 #include <cblas.h>
 #include "poisson_solver.h"
 #include "poisson_fast.h"
-#include "solve_tria.h"
 #include "gradient.h"
 #include "constants.h"
 #include <stdio.h>
 
-/* Which solver poisson_solver() uses: the banded LU substitution in
- * solve_tria.c or the separable sine-transform solver in poisson_fast.c. */
-static int s_method = POISSON_SOLVER_METHOD_UNSET;
+/* Set once poisson_solver_init() has run (successfully or not). */
+static int s_init_attempted = 0;
 
 /*
  * Function: poisson_solver_init
- * Chooses the solver used by poisson_solver(). The fast solver is used only if
- * poisson_fast_init() recovers the expected operator structure from the LU
- * factors and reproduces the banded LU results on test right-hand sides;
- * otherwise the banded LU substitution is kept. Called automatically on the
- * first poisson_solver() call, but calling it explicitly at start-up keeps the
- * one-off table construction (a few milliseconds) out of the first real-time
- * cycle.
- *
- * Returns the selected method (POISSON_SOLVER_METHOD_LU or
- * POISSON_SOLVER_METHOD_FAST).
+ * Builds the tables of the separable Poisson solver (poisson_fast.c) from
+ * POISSON_A, POISSON_B and POISSON_C and validates them. Returns
+ * POISSON_FAST_OK (0) on success, otherwise a nonzero status code; the solves
+ * then return zero flux (see poisson_solver). Runs automatically on the first
+ * solve, but calling it at start-up keeps the one-off table construction (a
+ * few milliseconds) out of the first real-time cycle and lets the caller check
+ * the status.
  */
 int poisson_solver_init(void)
 {
-    if (poisson_fast_init() == POISSON_FAST_OK)
-    {
-        s_method = POISSON_SOLVER_METHOD_FAST;
-    }
-    else
-    {
-        s_method = POISSON_SOLVER_METHOD_LU;
-    }
-    return s_method;
+    s_init_attempted = 1;
+    return poisson_fast_init();
 }
 
 /*
- * Function: poisson_solver_method
- * Returns the active solver (see poisson_solver_init).
+ * Function: is_ready
+ * Lazily initialises and reports whether the solver is usable.
  */
-int poisson_solver_method(void)
+static int is_ready(void)
 {
-    return s_method;
+    if (!s_init_attempted)
+    {
+        poisson_solver_init();
+    }
+    return poisson_fast_status() == POISSON_FAST_OK;
 }
+
 /*
  * Function: hagenow_bound
  * determines the boundary flux values of the boundary using the Hagenow method
@@ -52,10 +45,7 @@ int poisson_solver_method(void)
  * N_R - number of radial grid positions
  * N_Z - number of vertical grid poisitons
  * n_ele - number of elements in the grid N_R*N_Z
- * lower (n_ele, N_R) - Non zero subdiagonals of the lower triangular matrix
- * upper (n_ele, N_R+2) - Diagonal and superdiagonals of the upper triangle matrix
  * b_vec (n_ele, ) - Current density with zero values on the boundary
- * idx_final - array of final index of the original indexes 0:n_row-1. 
  * N_LTRB - number of elements on the boundary of the grid NOT REQUIRED
  * G_LTRB (N_LTRB, N_LTRB) - Green's matrix of boundary elements
  * inv_r_mu0 (N_LTRB, ) - Inverse of the major radius multipled by mu0
@@ -74,7 +64,14 @@ void hagenow_bound(
     double dpsi_ltrb[N_LTRB];
     int ii;
 
-    solve_tria(b_vec, psi);
+    if (!is_ready())
+    {
+        for (ii = 0; ii < N_GRID; ++ii) psi[ii] = 0.0;
+        for (ii = 0; ii < N_LTRB; ++ii) psi_ltrb[ii] = 0.0;
+        return;
+    }
+
+    poisson_fast_solve(b_vec, psi);
     
     gradient_bound(psi, dpsi_ltrb);
     
@@ -144,10 +141,7 @@ void add_bound(
  * N_R - number of radial grid positions
  * N_Z - number of vertical grid poisitons
  * n_ele - number of elements in the grid N_R*N_Z
- * lower (n_ele, N_R) - Non zero subdiagonals of the lower triangular matrix
- * upper (n_ele, N_R+2) - Diagonal and superdiagonals of the upper triangle matrix
  * b_vec (n_ele, ) - Current density with zero values on the boundary
- * idx_final (n_ele, ) - array of final index of the original indexes 0:n_ele-1. 
  * N_LTRB - number of elements on the boundary of the grid NOT REQUIRED
  * G_LTRB (N_LTRB, N_LTRB) - Green's matrix of boundary elements
  * inv_r_mu0 (N_LTRB, ) - Inverse of the major radius x mu0 along boundary
@@ -160,39 +154,24 @@ void poisson_solver(
         double* out 
         )
 {
-    if (s_method == POISSON_SOLVER_METHOD_UNSET)
+    static int reported = 0;
+
+    if (!is_ready())
     {
-        poisson_solver_init();
+        /* The Poisson tables could not be built from the constants: return a
+         * zero plasma flux (finite, and rtgsfit() then reports ERR_NO_AXIS)
+         * rather than an undefined one. poisson_solver_init() gives the status. */
+        if (!reported)
+        {
+            fprintf(stderr, "poisson_solver: solver not initialised (status %d), returning zero flux\n",
+                    poisson_fast_status());
+            reported = 1;
+        }
+        for (int ii = 0; ii < N_GRID; ++ii) out[ii] = 0.0;
+        return;
     }
 
-    if (s_method == POISSON_SOLVER_METHOD_FAST)
-    {
-        poisson_fast_poisson_solver(b_vec, out);
-    }
-    else
-    {
-        poisson_solver_lu(b_vec, out);
-    }
-}
-
-
-/* Function: poisson_solver_lu
- * poisson_solver() using the banded LU substitution (solve_tria) for both
- * solves. Kept as the reference implementation and as the fallback.
- */
-void poisson_solver_lu(
-        double* b_vec, 
-        double* out 
-        )
-{
-
-    double psi_bound[N_LTRB];
-
-    hagenow_bound(b_vec, out, psi_bound);
-            
-    add_bound(psi_bound, b_vec);
-    
-    solve_tria(b_vec, out);
+    poisson_fast_poisson_solver(b_vec, out);
 }  
     
     
