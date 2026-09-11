@@ -12,6 +12,18 @@
 #define ERR_NUM_OPTS        ((int32_t)8)
 #define ERR_AXIS_OUT_CORE   ((int32_t)16)
 #define ERR_BDRY_GT_AX      ((int32_t)32)
+#define ERR_LOW_PLASMA_CURRENT ((int32_t)64)
+
+/* PLASMA_CURRENT_CUTOFF : minimum plasma current (Amps) for the equilibrium to
+   be considered a genuine plasma. Below this cutoff:
+   - the current centroid (r_cur_centroid, z_cur_centroid) is not computed,
+     since dividing by a near-zero (or negative) source_sum is numerically
+     meaningless.
+   - the Poisson solve for the plasma flux is skipped entirely, since a
+     near-zero plasma current density source term drives the solver into
+     subnormal floating point arithmetic, which is much slower than normal
+     arithmetic on most platforms. */
+#define PLASMA_CURRENT_CUTOFF ((double)1e3)
 
 /* N_ROW : number of rows */
 extern const int N_Z;
