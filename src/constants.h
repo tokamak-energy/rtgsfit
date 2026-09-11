@@ -141,14 +141,19 @@ extern const double G_GRID_COIL[];
 /* G_GRID_VESSEL : Greens matrix between grid and vessel degrees of freedom (N_GRID, N_VESS) */
 extern const double G_GRID_VESSEL[];
 
-/* LOWER_BAND : lower triangular matrix (N_GRID, N_COL) CHECK!*/
-extern const double LOWER_BAND[];
+/* Poisson (Grad-Shafranov) operator on the grid, eq. (45) of Moret et al. (2015):
+   psi[i+1][j] + psi[i-1][j] + POISSON_A[j] psi[i][j+1] + POISSON_B[j] psi[i][j-1] - POISSON_C[j] psi[i][j]
+   for interior points, with Dirichlet (identity) rows on the grid boundary.
+   The three arrays have length N_R and are indexed by grid column j. */
 
-/* UPPER_BAND : upper traingular matrix (N_GRID, N_COL+2) CHECK!*/
-extern const double UPPER_BAND[];
+/* POISSON_A : coefficient of psi[i][j+1] (length N_R) */
+extern const double POISSON_A[];
 
-/* PERM_IDX : idx that are to be swapped (N_GRID, ) */
-extern const int PERM_IDX[];
+/* POISSON_B : coefficient of psi[i][j-1] (length N_R) */
+extern const double POISSON_B[];
+
+/* POISSON_C : minus the coefficient of psi[i][j] (length N_R) */
+extern const double POISSON_C[];
     
 #endif
 
