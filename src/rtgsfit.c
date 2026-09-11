@@ -504,9 +504,9 @@ void rtgsfit(
     }
 
     // find x point & opt
-    double opt_r[N_XPT_MAX];
-    double opt_z[N_XPT_MAX];
-    double opt_flux[N_XPT_MAX];
+    double opt_r;
+    double opt_z;
+    double opt_flux;
 
     *xpt_n = 0;
     int32_t opt_n = 0;
@@ -514,7 +514,7 @@ void rtgsfit(
     TSTART();
     *lcfs_err_code = 0;
     *lcfs_err_code |= find_nulls(flux_total,
-               opt_r, opt_z, opt_flux, &opt_n,
+               &opt_r, &opt_z, &opt_flux, &opt_n,
                xpt_r, xpt_z, xpt_flux, xpt_n);
     if (*lcfs_err_code != 0) {
         return;
@@ -527,10 +527,9 @@ void rtgsfit(
         return;
     }
 
-    int32_t i_opt = max_idx(opt_n, opt_flux);
-    *mag_axis_flux = opt_flux[i_opt];
-    *r_mag_axis = opt_r[i_opt];
-    *z_mag_axis = opt_z[i_opt];
+    *mag_axis_flux = opt_flux;
+    *r_mag_axis = opt_r;
+    *z_mag_axis = opt_z;
 
     // Filter x-points
     filter_xpts(xpt_r, xpt_z, xpt_flux, xpt_n, *r_mag_axis, *z_mag_axis);

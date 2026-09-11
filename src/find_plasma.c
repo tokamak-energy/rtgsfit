@@ -27,10 +27,59 @@
 
 #include "constants.h"
 
-#define N_R_MIN_1 (N_R - 1)
-#define N_R_PLS_1 (N_R + 1)
-#define N_Z_MIN_1 (N_Z - 1)
-#define N_Z_PLS_1 (N_Z + 1)
+#define N_R_MIN_2 (N_R - 2)
+#define N_Z_MIN_2 (N_Z - 2)
+
+// null_candidate_at_vertex:
+//   Builds the local quadratic expansion of ψ about the vertex (i_col, i_row)
+//   using the 9-point stencil centred on that vertex and solves ∇ψ = 0.
+//
+//   The returned offsets are normalised by the cell size, i.e. the stationary
+//   point is at (R_VEC[i_col] + dr_norm * DR, Z_VEC[i_row] + dz_norm * DZ).
+//
+//   Returns 1 if a candidate could be computed, 0 if the Hessian is singular.
+static int null_candidate_at_vertex(const double *flux, int32_t i_col,
+                                    int32_t i_row, double *dr_norm,
+                                    double *dz_norm, double *hess_det,
+                                    double *flux_at_null) {
+  int32_t idx = i_row * N_R + i_col;
+  int32_t idx_rp = idx + 1;
+  int32_t idx_rm = idx - 1;
+  int32_t idx_zp = idx + N_R;
+  int32_t idx_zm = idx - N_R;
+  int32_t idx_rp_zp = idx_rp + N_R;
+  int32_t idx_rp_zm = idx_rp - N_R;
+  int32_t idx_rm_zp = idx_rm + N_R;
+  int32_t idx_rm_zm = idx_rm - N_R;
+  // a ≈ ∂ψ/∂R * ΔR, finite difference approximation of the R-derivative
+  double a = 0.5 * (flux[idx_rp] - flux[idx_rm]);
+  // b ≈ ∂ψ/∂Z * ΔZ, finite difference approximation of the Z-derivative
+  double b = 0.5 * (flux[idx_zp] - flux[idx_zm]);
+  // c ≈ ∂²ψ/∂R² * (ΔR)², finite difference approximation of the second
+  // R-derivative
+  double c = flux[idx_rp] - 2.0 * flux[idx] + flux[idx_rm];
+  // d ≈ ∂²ψ/∂Z² * (ΔZ)², finite difference approximation of the second
+  // Z-derivative
+  double d = flux[idx_zp] - 2.0 * flux[idx] + flux[idx_zm];
+  // e ≈ ∂²ψ/∂R∂Z * ΔR * ΔZ, finite difference approximation of the mixed
+  // second derivative
+  double e =
+      0.25 * (flux[idx_rp_zp] - flux[idx_rm_zp] - flux[idx_rp_zm] +
+              flux[idx_rm_zm]);
+
+  double denom = c * d - e * e;
+  if (fabs(denom) < THRESH) {
+    return 0;
+  }
+  double inv_denom = 1.0 / denom;
+  *dr_norm = (b * e - a * d) * inv_denom; // (dr / ΔR)
+  *dz_norm = (a * e - b * c) * inv_denom; // (dz / ΔZ)
+  *hess_det = denom;
+  *flux_at_null = flux[idx] + a * *dr_norm + b * *dz_norm +
+                  0.5 * c * *dr_norm * *dr_norm +
+                  0.5 * d * *dz_norm * *dz_norm + e * *dr_norm * *dz_norm;
+  return 1;
+}
 
 // find_nulls:
 //   Finds null points of the magnetic field which correspond to points where ∇ψ
@@ -42,87 +91,111 @@
 //   However, whereas the LIUQE implementation uses a 6-point interpolation
 //   stencil, we employ a 9-point interpolation scheme.
 //
+//   As in Moret et al. we scan the mesh cell by cell rather than vertex by
+//   vertex. A cell is the rectangle spanned by four neighbouring vertices, and
+//   the local quadratic expansion of ψ is not unique: it depends on which of
+//   the four corners is used as the expansion centre. Each corner therefore
+//   yields its own candidate stationary point, and each corner's search region
+//   covers the whole cell. These regions deliberately overlap: with a
+//   non-overlapping (half-cell) region a null sitting just outside a border
+//   can be disowned by both neighbours, so each vertex places it in the other's
+//   territory and the null is missed entirely. With overlap that cannot happen.
+//
+//   The cost of the overlap is that a single physical null may be reported more
+//   than once, from neighbouring cells. This is accepted deliberately: it is far
+//   better to report a duplicate x-point (which downstream filtering handles)
+//   than to miss one. Within a single cell we assume at most one stationary
+//   point and keep the candidate whose null is closest to its own expansion
+//   centre, as that is where the quadratic expansion is most accurate.
+//
 // Parameters:
 //   flux      - ψ 2D input array explicitly stored as a contiguous block
 //               (i.e., 1D array)
-//   opt_r     - output array for the o-point R coordinates
-//   opt_z     - output array for the o-point Z coordinates
-//   opt_flux  - output array for flux at o-points
-//   opt_n     - pointer which will hold the number of o-points found
+//   opt_r     - output R coordinate of the highest-flux o-point (single value)
+//   opt_z     - output Z coordinate of the highest-flux o-point (single value)
+//   opt_flux  - output flux at the highest-flux o-point (single value)
+//   opt_n     - set to 1 if an o-point was found, 0 otherwise
 //   xpt_r     - output array for the x-point R coordinates
 //   xpt_z     - output array for the x-point Z coordinates
 //   xpt_flux  - output array for flux at the x-points
 //   xpt_n     - pointer which will hold the number of x-points found
+//
+// Only the o-point with the largest flux is retained, since that is the
+// magnetic axis and the caller discards all others. Keeping just the running
+// maximum also means the duplicate o-points produced by the overlapping cell
+// scan collapse to a single answer, and no o-point storage limit can be hit.
 int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
                int32_t *opt_n, double *xpt_r, double *xpt_z, double *xpt_flux,
                int32_t *xpt_n) {
+  // Corner offsets of a cell, ordered (ΔR index, ΔZ index).
+  const int32_t corner_d_col[4] = {0, 1, 0, 1};
+  const int32_t corner_d_row[4] = {0, 0, 1, 1};
+
   *opt_n = 0;
   *xpt_n = 0;
-  for (int32_t i_row = 1; i_row < N_Z_MIN_1; i_row++) {
-    int32_t i_row_n_r = i_row * N_R;
-    for (int32_t i_col = 1; i_col < N_R_MIN_1; i_col++) {
-      int32_t idx = i_row_n_r + i_col;
-      if (!MASK_LIM[idx]) {
+  // Loop over cells. The cell with index (i_row, i_col) is spanned by the
+  // vertices (i_col, i_row), (i_col+1, i_row), (i_col, i_row+1) and
+  // (i_col+1, i_row+1). The bounds ensure every corner has a valid 9-point
+  // stencil.
+  for (int32_t i_row = 1; i_row < N_Z_MIN_2; i_row++) {
+    for (int32_t i_col = 1; i_col < N_R_MIN_2; i_col++) {
+      double best_dist_sq = 0.0;
+      double best_r = 0.0;
+      double best_z = 0.0;
+      double best_flux = 0.0;
+      double best_hess_det = 0.0;
+      int found = 0;
+
+      for (int32_t i_corner = 0; i_corner < 4; i_corner++) {
+        int32_t c_col = i_col + corner_d_col[i_corner];
+        int32_t c_row = i_row + corner_d_row[i_corner];
+        if (!MASK_LIM[c_row * N_R + c_col]) {
+          continue;
+        }
+        double dr_norm, dz_norm, hess_det, flux_at_null;
+        if (!null_candidate_at_vertex(flux, c_col, c_row, &dr_norm, &dz_norm,
+                                      &hess_det, &flux_at_null)) {
+          continue;
+        }
+        // Position of the candidate in cell coordinates, where the cell spans
+        // [0, 1] x [0, 1]. Reject candidates which fall outside the cell.
+        double u = (double)corner_d_col[i_corner] + dr_norm;
+        double v = (double)corner_d_row[i_corner] + dz_norm;
+        if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) {
+          continue;
+        }
+        // Keep the candidate closest to its own expansion centre, as this is
+        // where the local quadratic expansion is most accurate.
+        double dist_sq = dr_norm * dr_norm + dz_norm * dz_norm;
+        if (!found || dist_sq < best_dist_sq) {
+          found = 1;
+          best_dist_sq = dist_sq;
+          best_r = R_VEC[c_col] + dr_norm * DR;
+          best_z = Z_VEC[c_row] + dz_norm * DZ;
+          best_flux = flux_at_null;
+          best_hess_det = hess_det;
+        }
+      }
+
+      if (!found) {
         continue;
       }
-      int32_t idx_rp = idx + 1;
-      int32_t idx_rm = idx - 1;
-      int32_t idx_zp = idx + N_R;
-      int32_t idx_zm = idx - N_R;
-      int32_t idx_rp_zp = idx_rp + N_R;
-      int32_t idx_rp_zm = idx_rp - N_R;
-      int32_t idx_rm_zp = idx_rm + N_R;
-      int32_t idx_rm_zm = idx_rm - N_R;
-      // a ≈ ∂ψ/∂R * ΔR, finite difference approximation of the R-derivative
-      double a = 0.5 * (flux[idx_rp] - flux[idx_rm]);
-      // b ≈ ∂ψ/∂Z * ΔZ, finite difference approximation of the Z-derivative
-      double b = 0.5 * (flux[idx_zp] - flux[idx_zm]);
-      // c ≈ ∂²ψ/∂R² * (ΔR)², finite difference approximation of the second
-      // R-derivative
-      double c = flux[idx_rp] - 2.0 * flux[idx] + flux[idx_rm];
-      // d ≈ ∂²ψ/∂Z² * (ΔZ)², finite difference approximation of the second
-      // Z-derivative
-      double d = flux[idx_zp] - 2.0 * flux[idx] + flux[idx_zm];
-      // e ≈ ∂²ψ/∂R∂Z * ΔR * ΔZ, finite difference approximation of the mixed
-      // second derivative
-      double e = 0.25 * (flux[idx_rp_zp] - flux[idx_rm_zp] - flux[idx_rp_zm] +
-                         flux[idx_rm_zm]);
-
-      double denom = c * d - e * e;
-      if (fabs(denom) < THRESH)
-        continue;
-      double inv_denom = 1.0 / denom;
-      double dr_norm = (b * e - a * d) * inv_denom; // (dr / ΔR)
-      double dz_norm = (a * e - b * c) * inv_denom; // (dz / ΔZ)
-      if (fabs(dr_norm) <= 0.5 && fabs(dz_norm) <= 0.5) {
-        double null_r = R_VEC[i_col] + dr_norm * DR;
-        double null_z = Z_VEC[i_row] + dz_norm * DZ;
-        double hess_det = denom;
-        double flux_at_null = flux[idx] + a * dr_norm + b * dz_norm +
-                              0.5 * c * dr_norm * dr_norm +
-                              0.5 * d * dz_norm * dz_norm +
-                              e * dr_norm * dz_norm;
-        // Redundant check (already handled by fabs(denom) above)
-        // if (fabs(hess_det) < THRESH)
-        //     continue;
-        if (hess_det > 0.0) {
-          // o-point
-          opt_r[*opt_n] = null_r;
-          opt_z[*opt_n] = null_z;
-          opt_flux[*opt_n] = flux_at_null;
-          (*opt_n)++;
-          if (*opt_n >= N_XPT_MAX) {
-            return ERR_NUM_OPTS;
-          }
-        } else if (hess_det < 0.0) {
-          // x-point
-          xpt_r[*xpt_n] = null_r;
-          xpt_z[*xpt_n] = null_z;
-          xpt_flux[*xpt_n] = flux_at_null;
-          (*xpt_n)++;
-          if (*xpt_n >= N_XPT_MAX) {
-            return ERR_NUM_XPTS;
-          }
+      if (best_hess_det > 0.0) {
+        // o-point: keep only the one with the largest flux
+        if (*opt_n == 0 || best_flux > *opt_flux) {
+          *opt_r = best_r;
+          *opt_z = best_z;
+          *opt_flux = best_flux;
+        }
+        *opt_n = 1;
+      } else if (best_hess_det < 0.0) {
+        // x-point
+        xpt_r[*xpt_n] = best_r;
+        xpt_z[*xpt_n] = best_z;
+        xpt_flux[*xpt_n] = best_flux;
+        (*xpt_n)++;
+        if (*xpt_n >= N_XPT_MAX) {
+          return ERR_NUM_XPTS;
         }
       }
     }

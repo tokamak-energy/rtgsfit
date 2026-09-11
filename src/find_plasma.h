@@ -4,7 +4,9 @@
 
 #include <stdint.h>
 
-// Finds null points (o-points and x-points).
+// Finds null points: the highest-flux o-point (the magnetic axis) and all
+// x-points. opt_r/opt_z/opt_flux are single values, and opt_n is set to 1 if an
+// o-point was found and 0 otherwise.
 // Returns 0 on success, nonzero on error.
 int find_nulls(double *flux, double *opt_r, double *opt_z, double *opt_flux,
                int32_t *opt_n, double *xpt_r, double *xpt_z, double *xpt_flux,
