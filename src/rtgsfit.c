@@ -423,7 +423,7 @@ void rtgsfit(
     *plasma_current = source_sum * DR * DZ;
     // Divide r_cur_centroid, z_cur_centroid by source_sum to get centroid position
     // provided the source_sum is not too close to zero or negative.
-    if (*plasma_current > 1e3) {
+    if (*plasma_current >= PLASMA_CURRENT_CUTOFF) {
         *r_cur_centroid /= source_sum;
         *z_cur_centroid /= source_sum;
     } else {
@@ -453,6 +453,18 @@ void rtgsfit(
         *chi_sq_err += diff * diff;
     }
     TACC(T_CHI2);
+
+    // If the plasma current is below the cutoff, there is effectively no
+    // plasma present. In that case `source` (the plasma current density on
+    // the grid) is made up of values very close to zero, which drives the
+    // Poisson solver into subnormal floating point arithmetic. Subnormal
+    // arithmetic is significantly slower than normal arithmetic on most
+    // platforms, so we exit early here and skip the Poisson solve (and all
+    // subsequent flux/LCFS/x-point processing that depends on it).
+    if (*plasma_current < PLASMA_CURRENT_CUTOFF) {
+        *lcfs_err_code = ERR_LOW_PLASMA_CURRENT;
+        return;
+    }
 
     // convert current to RHS of eq
     for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++)
