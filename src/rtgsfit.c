@@ -445,14 +445,8 @@ void rtgsfit(
         *r_cur_centroid /= source_sum;
         *z_cur_centroid /= source_sum;
     } else {
-        // Keep the full pipeline running, but prevent low-current source
-        // values from entering denormal arithmetic in later stages.
-        *plasma_current = 0.0;
         *r_cur_centroid = 0.0;
         *z_cur_centroid = 0.0;
-        for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++) {
-            source[i_grid] = 0.0;
-        }
     }
     TACC(T_SOURCE);
 
