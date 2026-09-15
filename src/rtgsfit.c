@@ -13,8 +13,23 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#if defined(__SSE3__) && (defined(__x86_64__) || defined(__i386__))
+#include <pmmintrin.h>
+#endif
 
 #define N_MEAS_NO_REG (N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS)
+
+#if defined(__SSE3__) && (defined(__x86_64__) || defined(__i386__))
+static inline void enable_flush_to_zero(void)
+{
+    _mm_setcsr(_mm_getcsr() | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
+}
+#else
+static inline void enable_flush_to_zero(void)
+{
+    // FTZ/DAZ are x86 MXCSR controls and are unavailable on other targets.
+}
+#endif
 
 #ifdef ENABLE_RT_TIMING
 
@@ -294,6 +309,9 @@ void rtgsfit(
         int32_t* xpt_diverted // output integer
         )
 {
+    // Keep denormal inputs and results from slowing any numerical stage.
+    enable_flush_to_zero();
+
 #ifdef ENABLE_RT_TIMING
     uint64_t t_total_0 = thread_cpu_ns();
 #endif // ENABLE_RT_TIMING
@@ -423,12 +441,18 @@ void rtgsfit(
     *plasma_current = source_sum * DR * DZ;
     // Divide r_cur_centroid, z_cur_centroid by source_sum to get centroid position
     // provided the source_sum is not too close to zero or negative.
-    if (*plasma_current > 1e3) {
+    if (*plasma_current > PLASMA_CURRENT_CUTOFF) {
         *r_cur_centroid /= source_sum;
         *z_cur_centroid /= source_sum;
     } else {
+        // Keep the full pipeline running, but prevent low-current source
+        // values from entering denormal arithmetic in later stages.
+        *plasma_current = 0.0;
         *r_cur_centroid = 0.0;
         *z_cur_centroid = 0.0;
+        for (int32_t i_grid = 0; i_grid < N_GRID; i_grid++) {
+            source[i_grid] = 0.0;
+        }
     }
     TACC(T_SOURCE);
 
