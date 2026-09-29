@@ -13,6 +13,11 @@
 #define ERR_AXIS_OUT_CORE   ((int32_t)16)
 #define ERR_BDRY_GT_AX      ((int32_t)32)
 
+/* PLASMA_CURRENT_CUTOFF : minimum plasma current (Amps) for the equilibrium to
+   be considered a genuine plasma. Below this cutoff, the source is flushed to
+   zero while the remaining stages still run to keep their code paths hot. */
+#define PLASMA_CURRENT_CUTOFF ((double)1e3)
+
 /* N_ROW : number of rows */
 extern const int N_Z;
 
@@ -151,4 +156,3 @@ extern const double UPPER_BAND[];
 extern const int PERM_IDX[];
     
 #endif
-

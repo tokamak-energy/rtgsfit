@@ -13,8 +13,23 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#if defined(__SSE3__) && (defined(__x86_64__) || defined(__i386__))
+#include <pmmintrin.h>
+#endif
 
 #define N_MEAS_NO_REG (N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS)
+
+#if defined(__SSE3__) && (defined(__x86_64__) || defined(__i386__))
+static inline void enable_flush_to_zero(void)
+{
+    _mm_setcsr(_mm_getcsr() | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
+}
+#else
+static inline void enable_flush_to_zero(void)
+{
+    // FTZ/DAZ are x86 MXCSR controls and are unavailable on other targets.
+}
+#endif
 
 #ifdef ENABLE_RT_TIMING
 
@@ -126,6 +141,24 @@ int32_t max_idx(int32_t n_arr, double* arr)
     return i_max;
 }
 
+/**
+ * Remove the PF coil contributions from the measurements and append the
+ * regularisation elements.
+ *
+ * Note that the input and output have different lengths:
+ *   meas         : length N_MEAS_NO_REG (real, post-processed sensor measurements only)
+ *   meas_no_coil : length N_MEAS = N_MEAS_NO_REG + number of regularisations
+ *
+ * For the sensor rows (i < N_MEAS_NO_REG):
+ *   meas_no_coil[i] = meas[i] - (G_MEAS_COIL @ coil_curr)[i]
+ * For the regularisation rows (i >= N_MEAS_NO_REG), which can be thought of as
+ * fake measurements whose target value is zero:
+ *   meas_no_coil[i] = 0
+ *
+ * @param coil_curr     PF coil currents, length N_COIL.
+ * @param meas          Post-processed measurements, length N_MEAS_NO_REG.
+ * @param meas_no_coil  Output, length N_MEAS.
+ */
 void rm_coil_from_meas(
         const double* coil_curr,
         double* meas,
@@ -134,12 +167,17 @@ void rm_coil_from_meas(
 {
     int i_meas;
     // subtract PF (vessel) contributions from measurements
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS, N_COIL, 1.0, G_MEAS_COIL,
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, N_MEAS_NO_REG, N_COIL, 1.0, G_MEAS_COIL,
             N_COIL, coil_curr, 1, 0.0, meas_no_coil, 1);
 
-    for (i_meas=0; i_meas<N_MEAS; i_meas++)
+    for (i_meas=0; i_meas<N_MEAS_NO_REG; i_meas++)
     {
         meas_no_coil[i_meas] = meas[i_meas] - meas_no_coil[i_meas];
+    }
+    // meas only has N_MEAS_NO_REG elements, so the regularisation targets must be set explicitly
+    for (i_meas=N_MEAS_NO_REG; i_meas<N_MEAS; i_meas++)
+    {
+        meas_no_coil[i_meas] = 0.0;
     }
 }
 
@@ -294,6 +332,9 @@ void rtgsfit(
         int32_t* xpt_diverted // output integer
         )
 {
+    // Keep denormal inputs and results from slowing any numerical stage.
+    enable_flush_to_zero();
+
 #ifdef ENABLE_RT_TIMING
     uint64_t t_total_0 = thread_cpu_ns();
 #endif // ENABLE_RT_TIMING
@@ -423,7 +464,7 @@ void rtgsfit(
     *plasma_current = source_sum * DR * DZ;
     // Divide r_cur_centroid, z_cur_centroid by source_sum to get centroid position
     // provided the source_sum is not too close to zero or negative.
-    if (*plasma_current > 1e3) {
+    if (*plasma_current > PLASMA_CURRENT_CUTOFF) {
         *r_cur_centroid /= source_sum;
         *z_cur_centroid /= source_sum;
     } else {
