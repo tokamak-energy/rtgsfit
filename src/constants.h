@@ -120,7 +120,9 @@ extern const double INV_R_MU0[];
 /* INV_R_LTRB_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
 extern const double INV_R_LTRB_MU0[];
 
-/* R_MU0_DZ2 : 2pi * mu0 * R_GRID * D_ROW * D_ROW */
+/* R_MU0_DZ2 : 2pi * mu0 * R_GRID * DZ * DZ
+   Grad-Shafranov RHS multiplier: the 2pi gives total poloidal flux (Wb),
+   rather than poloidal flux per radian (Wb/rad). */
 extern const double R_MU0_DZ2[];
 
 /* G_GRID_MEAS_WEIGHT : greens matrix (N_GRID, N_MEAS)
