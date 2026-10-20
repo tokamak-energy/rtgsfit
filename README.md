@@ -59,6 +59,12 @@ make SHOT=0 RUN_NAME=no_mds DEBUG=1
 
 Here, the `SHOT` and `RUN_NAME` parameters may be set to any integer or string, respectively—these values are not required for compilation at this stage and will be explained later. The `DEBUG=1` option enables additional compiler flags that improve diagnostics and debugging support, at the cost of slower runtime performance. This configuration is used in the example provided in the [RT-GSFit vs. Analytic Solution Test](#rtgsfit_vs_analytic_solution).
 
+On x86-64, RT-GSFit enables flush-to-zero (FTZ) and denormals-are-zero (DAZ)
+using MXCSR, including in baseline SSE2 builds without SSE3. This treats
+subnormal floating-point inputs and results as zero on the calling thread.
+Other targets, including 32-bit x86, leave the floating-point environment
+unchanged.
+
 In the ST40 PCS workflow, the `constants.c` file is not manually generated. Instead, it is produced automatically during compilation via the `Makefile`, which calls the script `utility/mdsplus_const_to_file.py`. This script retrieves the input data stored during the [initialisation](#initialisation) step and generates the `constants.c` prior to compilation.
 
 To run this script, a Python environment with MDSplus installed is required. On `newmsmaug2` (Tokamak Energy’s internal server), the environment is currently set up as follows:

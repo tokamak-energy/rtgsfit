@@ -13,23 +13,21 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
-#if defined(__SSE3__) && (defined(__x86_64__) || defined(__i386__))
-#include <pmmintrin.h>
+#if defined(__x86_64__)
+#define TARGET_HAS_FTZ_DAZ
+#include <immintrin.h>
 #endif
 
 #define N_MEAS_NO_REG (N_BP_PROBES + N_FLUX_LOOPS + N_ROGOWSKI_COILS)
 
-#if defined(__SSE3__) && (defined(__x86_64__) || defined(__i386__))
 static inline void enable_flush_to_zero(void)
 {
-    _mm_setcsr(_mm_getcsr() | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
-}
-#else
-static inline void enable_flush_to_zero(void)
-{
-    // FTZ/DAZ are x86 MXCSR controls and are unavailable on other targets.
-}
+#ifdef TARGET_HAS_FTZ_DAZ
+    // DAZ is MXCSR bit 6; older headers may omit its named constant without SSE3.
+    const unsigned int daz_on = 1u << 6;
+    _mm_setcsr(_mm_getcsr() | _MM_FLUSH_ZERO_ON | daz_on);
 #endif
+}
 
 #ifdef ENABLE_RT_TIMING
 
