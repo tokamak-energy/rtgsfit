@@ -13,6 +13,11 @@
 #define ERR_AXIS_OUT_CORE   ((int32_t)16)
 #define ERR_BDRY_GT_AX      ((int32_t)32)
 
+/* PLASMA_CURRENT_CUTOFF : minimum plasma current (Amps) for the equilibrium to
+   be considered a genuine plasma. Below this cutoff, the source is flushed to
+   zero while the remaining stages still run to keep their code paths hot. */
+#define PLASMA_CURRENT_CUTOFF ((double)1e3)
+
 /* N_ROW : number of rows */
 extern const int N_Z;
 
@@ -115,7 +120,9 @@ extern const double INV_R_MU0[];
 /* INV_R_LTRB_MU0 : 1/(mu0 * R_GRID) for boundary (LTRB)*/
 extern const double INV_R_LTRB_MU0[];
 
-/* R_MU0_DZ2 : 2pi * mu0 * R_GRID * D_ROW * D_ROW */
+/* R_MU0_DZ2 : 2pi * mu0 * R_GRID * DZ * DZ
+   Grad-Shafranov RHS multiplier: the 2pi gives total poloidal flux (Wb),
+   rather than poloidal flux per radian (Wb/rad). */
 extern const double R_MU0_DZ2[];
 
 /* G_GRID_MEAS_WEIGHT : greens matrix (N_GRID, N_MEAS)
@@ -151,4 +158,3 @@ extern const double UPPER_BAND[];
 extern const int PERM_IDX[];
     
 #endif
-
