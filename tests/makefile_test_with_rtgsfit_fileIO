@@ -16,7 +16,7 @@ MDSTOOL_SRC := $(PCS_PATH)/model/st40pcs/tools/src
 RTGSFIT := ../src
 TE_INCLUDES := $(PCS_PATH)/model/ST40PCS/include/
 TE_OBJS := $(PCS_PATH)/model/ST40PCS/bin/
-OBJS = constants.o solve_tria.o gradient.o poisson_solver.o find_x_point.o rtgsfit.o
+OBJS = constants.o gradient.o poisson_solver.o poisson_fast.o find_x_point.o rtgsfit.o
 SHARED = $(patsubst %.o,%.so,$(OBJS))
 
 MDSPLUS_ROOT := /usr/local/mdsplus
@@ -31,7 +31,7 @@ all: replay_rtgsfit rtgsfit_fileIO
 replay_rtgsfit: replay_rtgsfit.o $(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o
 	$(CC) -o $@ $< $(CFLAGS) $(RTGSFIT)/rtgsfit.o $(RTGSFIT)/gradient.o \
 		$(RTGSFIT)/constants.o $(RTGSFIT)/poisson_solver.o $(RTGSFIT)/find_x_point.o \
-		$(RTGSFIT)/solve_tria.o -L$(MDSPLUS_LDFLAG) $(MDSPLUS_SYSLIB) \
+		$(RTGSFIT)/poisson_fast.o -L$(MDSPLUS_LDFLAG) $(MDSPLUS_SYSLIB) \
 		$(TE_OBJS)/mds_tools.o  $(TE_OBJS)/utils.o  -lopenblas -lnetcdf -lm
 
 replay_rtgsfit.o: replay_rtgsfit.c

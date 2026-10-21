@@ -65,3 +65,5 @@ venv_rtgsfit/
 
 # Test binary
 src/test_*
+# Benchmark driver binary
+tests/rtgsfit_bench

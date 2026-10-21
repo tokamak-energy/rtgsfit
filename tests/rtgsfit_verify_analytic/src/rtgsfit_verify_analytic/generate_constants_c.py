@@ -152,7 +152,7 @@ def generate_data_dictionary():
     mask_lim = mask_lim_2d.flatten()
     
     # Calculate poisson matrix quantities
-    lower_band, upper_band, perm_idx = poisson_matrix.compute_lup_bands(r_vec, z_vec)
+    poisson_a, poisson_b, poisson_c = poisson_matrix.poisson_stencil(r_vec, z_vec)
 
     # Generate the flux loop locations
     r_fl_vec = np.linspace(cnst.R_FL_MIN, cnst.R_FL_MAX, cnst.N_FL_R)
@@ -306,7 +306,6 @@ def generate_data_dictionary():
     data_dictionary["limit_weight"] = limit_weight
     data_dictionary["limit_r"] = r_lim
     data_dictionary["limit_z"] = z_lim
-    data_dictionary["lower_band"] = lower_band
     # convert mask lim from bool to int
     data_dictionary["mask_lim"] = mask_lim.astype(int)
     data_dictionary["n_bp_probes"] = n_bp_probes
@@ -325,12 +324,13 @@ def generate_data_dictionary():
     data_dictionary["n_vess"] = cnst.N_VESSEL
     data_dictionary["n_xpt_max"] = cnst.N_XPT_MAX
     data_dictionary["n_z"] = cnst.N_Z
-    data_dictionary["perm_idx"] = perm_idx
+    data_dictionary["poisson_a"] = poisson_a
+    data_dictionary["poisson_b"] = poisson_b
+    data_dictionary["poisson_c"] = poisson_c
     data_dictionary["r_grid"] = r_grid
     data_dictionary["r_mu0_dz2"] = r_flat * cnst.MU_0 * cnst.D_Z**2
     data_dictionary["r_vec"] = r_vec
     data_dictionary["thresh"] = cnst.THRESH
-    data_dictionary["upper_band"] = upper_band
     data_dictionary["weight"] = weights
     data_dictionary["z_grid"] = z_grid
     data_dictionary["z_vec"] = z_vec
