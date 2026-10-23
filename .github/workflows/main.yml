@@ -1,50 +1,43 @@
-name: Run Tests
+name: Tests
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
   workflow_dispatch:
 
 jobs:
   test:
+    # Rocky Linux 8, as used on the ST40 PCS and the TE analysis servers.
     runs-on: ubuntu-latest
     container:
-      image: rockylinux:8.5
+      image: rockylinux:8
 
     steps:
-    - name: Checkout current repository
-      uses: actions/checkout@v5
-    
-    - name: Setup Rocky 8 environment
-      run: |
-        dnf -y update
-        dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
-        dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
-        dnf -y install git gcc gcc-c++ make openblas openblas-devel
-        dnf -y groupinstall "Development Tools"
-        dnf -y install gcc-toolset-14
-        dnf -y install python3.12 python3.12-pip
+      - uses: actions/checkout@v5
 
-    - name: Install uv
-      run: python3.12 -m pip install uv
+      - name: Install system packages
+        run: |
+          dnf -y install dnf-plugins-core epel-release
+          dnf config-manager --set-enabled powertools
+          dnf -y install gcc make openblas-devel clang-tools-extra python3.12 python3.12-pip
 
-    - name: Install and run tests in venv
-      run: |
-        scl enable gcc-toolset-14 bash
-        gcc --version
-        cd tests/rtgsfit_verify_analytic
-        pwd
-        uv venv --python 3.13
-        source .venv/bin/activate
-        uv pip install -e "."
-        pytest
+      - name: Check C formatting
+        run: clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch]
 
-    - name: Build and run null points test
-      working-directory: src
-      run: |
-        make clean
-        cp ../test_data/constants.c .
-        make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_find_plasma
-        ./test_find_plasma
+      - name: Build and run the C unit tests
+        run: make -C c test ARCH_FLAGS=
+
+      - name: Install the Python package
+        run: |
+          python3.12 -m venv .venv
+          .venv/bin/pip install -e ".[dev]"
+
+      - name: Check Python formatting and lint
+        run: |
+          .venv/bin/ruff format --check python tests
+          .venv/bin/ruff check python tests
+
+      - name: Run the off-network tests (analytic replay, data dictionary, settings, I/O, CLI)
+        run: .venv/bin/pytest

@@ -1,67 +1,23 @@
-# Prerequisites
-*.d
-
-# Object files
+# Build products
 *.o
-*.ko
-*.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
+*.d
 *.so
 *.so.*
-*.dylib
+*.a
+gmon.out
+c/build/
+c/tests/build/
 
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-tests/replay_rtgsfit
+# Generated from a preshot (python -m rtgsfit write-c-preshot)
+c/preshot/
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# Replay and preshot outputs; tests/data holds the committed reference files
+*.npz
+!tests/data/*.npz
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-
-# Created files
-src/constants.c
-tests/c_*.py
-**/__pycache__
-
-# Binary data files
-*.nc
-
-# Virtual environment
-venv_rtgsfit/
-
-# Test binary
-src/test_*
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/

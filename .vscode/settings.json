@@ -1,12 +1,13 @@
 {
   "[c]": {
-    "editor.tabSize": 2,
+    "editor.tabSize": 4,
     "editor.insertSpaces": true,
-    "editor.detectIndentation": false
+    "editor.detectIndentation": false,
+    "editor.rulers": [100],
+    "editor.defaultFormatter": "xaver.clang-format"
   },
-  "[cpp]": {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": true,
-    "editor.detectIndentation": false
+  "[python]": {
+    "editor.rulers": [120],
+    "editor.defaultFormatter": "charliermarsh.ruff"
   }
 }

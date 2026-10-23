@@ -1,0 +1,23 @@
+# RT-GSFit C style; see documentation/style_guide.md. Run: clang-format -i c/src/*.[ch] c/tests/*.[ch]
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AlignAfterOpenBracket: Align
+BinPackParameters: OnePerLine
+BinPackArguments: true
+AlignTrailingComments: true
+AlignEscapedNewlines: Right
+AlignConsecutiveMacros: Consecutive
+PointerAlignment: Right
+SortIncludes: Never
+IncludeBlocks: Preserve
+SpaceAfterCStyleCast: false
+IndentCaseLabels: true
+ReflowComments: false
+InsertBraces: true
+PenaltyReturnTypeOnItsOwnLine: 1000

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rtgsfit"
+version = "2.0.0"
+description = "RT-GSFit: real-time Grad-Shafranov equilibrium reconstruction"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "contourpy>=1.2",
+]
+
+[project.optional-dependencies]
+# Tokamak Energy internal packages. They are not on PyPI; install them from TE's GitLab.
+te = ["gsfit", "mdsthin", "standard_utility", "st40_database"]
+# FreeGSNKE synthetic data. GSFit computes the preshot (Green's functions) for the FreeGSNKE machine.
+freegsnke = ["gsfit", "freegsnke"]
+dev = ["pytest>=8", "ruff>=0.5", "matplotlib"]
+
+[project.scripts]
+rtgsfit = "rtgsfit.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.setuptools.package-data]
+rtgsfit = ["settings/*/*.xml", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "te_network: needs the Tokamak Energy network (MDSplus); run with --te-network",
+    "freegsnke: needs FreeGSNKE and GSFit installed",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # Greek letters are used deliberately in docstrings
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.mypy]
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["gsfit.*", "gsfit_rs.*", "freegsnke.*", "mdsthin.*", "standard_utility.*", "st40_database.*", "shapely.*"]
+ignore_missing_imports = true

@@ -1,6 +1,0 @@
-# Ignore everything in this directory
-*
-# Except these files
-!.gitignore
-!reference_output_dict.npy
-!reference_output_dict_zero_test.npy
