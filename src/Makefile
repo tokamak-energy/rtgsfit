@@ -75,7 +75,6 @@ OBJS = \
   solve_tria.o \
   gradient.o \
   poisson_solver.o \
-  find_x_point.o \
   rtgsfit.o \
   find_plasma.o
 
@@ -91,9 +90,6 @@ all: constants.c $(SHARED)
 # --------------------------------------------------
 # Shared libraries
 # --------------------------------------------------
-$(LIB)/libfind_x_point.so: find_x_point.o gradient.o constants.o
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm
-
 $(LIB)/libfind_plasma.so: find_plasma.o constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
@@ -110,7 +106,7 @@ $(LIB)/libconstants.so: constants.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^
 
 $(LIB)/librtgsfit.so: \
-  rtgsfit.o gradient.o constants.o poisson_solver.o find_x_point.o solve_tria.o find_plasma.o
+  rtgsfit.o gradient.o constants.o poisson_solver.o solve_tria.o find_plasma.o
 	$(CC) $(LDFLAGS) -Wl,-soname,$@ -Wl,--no-undefined -o $@ $^ -lm -lopenblas
 
 # --------------------------------------------------

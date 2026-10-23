@@ -2,7 +2,6 @@
 #include "gradient.h"
 #include "rtgsfit.h"
 #include "poisson_solver.h"
-#include "find_x_point.h"
 #include "find_plasma.h"
 #include <stdio.h>
 #include <float.h>
