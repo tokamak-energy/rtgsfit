@@ -1,0 +1,27 @@
+# Build the timing benchmark driver against the objects in ../src
+# (build those first with the constants.c of the case you want to time, e.g.
+#  cd ../src && make SHOT=0 RUN_NAME=no_mds DEBUG=0 TIMING=1).
+# Usage: make -f makefile_bench [TIMING=1]
+
+CC = gcc
+SRC = ../src
+
+ifndef TIMING
+  TIMING = 0
+endif
+ifeq ($(TIMING), 1)
+  BENCH_DEFS = -DENABLE_RT_TIMING
+else
+  BENCH_DEFS =
+endif
+
+CFLAGS = -O3 -march=native -std=gnu11 -Wall -g -fno-omit-frame-pointer $(BENCH_DEFS) -I$(SRC) -I/usr/include/openblas
+
+OBJS = $(SRC)/constants.o $(SRC)/rtgsfit.o $(SRC)/gradient.o $(SRC)/find_x_point.o \
+       $(SRC)/poisson_solver.o $(SRC)/poisson_fast.o $(SRC)/solve_tria.o $(SRC)/find_plasma.o
+
+rtgsfit_bench: rtgsfit_bench.c $(OBJS)
+	$(CC) $(CFLAGS) -o $@ rtgsfit_bench.c $(OBJS) -lm -lopenblas
+
+clean:
+	rm -f rtgsfit_bench
