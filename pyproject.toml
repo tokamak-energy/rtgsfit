@@ -13,14 +13,15 @@ dependencies = [
     "numpy>=1.26",
     "scipy>=1.11",
     "contourpy>=1.2",
+    "jsonschema>=4.18",
 ]
 
 [project.optional-dependencies]
 # Tokamak Energy internal packages. They are not on PyPI; install them from TE's GitLab.
-te = ["gsfit", "mdsthin", "standard_utility", "st40_database"]
+te = ["gsfit", "mdsthin", "standard_utility"]
 # FreeGSNKE synthetic data. GSFit computes the preshot (Green's functions) for the FreeGSNKE machine.
 freegsnke = ["gsfit", "freegsnke"]
-dev = ["pytest>=8", "ruff>=0.5", "matplotlib"]
+dev = ["pytest>=8", "ruff>=0.5", "clang-format==21.1.8", "matplotlib"]
 
 [project.scripts]
 rtgsfit = "rtgsfit.__main__:main"
@@ -29,7 +30,7 @@ rtgsfit = "rtgsfit.__main__:main"
 where = ["python"]
 
 [tool.setuptools.package-data]
-rtgsfit = ["settings/*/*.xml", "py.typed"]
+rtgsfit = ["settings/*/*.json", "settings/settings.schema.json", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -56,5 +57,5 @@ warn_unused_ignores = true
 no_implicit_optional = true
 
 [[tool.mypy.overrides]]
-module = ["gsfit.*", "gsfit_rs.*", "freegsnke.*", "mdsthin.*", "standard_utility.*", "st40_database.*", "shapely.*"]
+module = ["gsfit.*", "gsfit_rs.*", "freegsnke.*", "mdsthin.*", "standard_utility.*", "shapely.*"]
 ignore_missing_imports = true

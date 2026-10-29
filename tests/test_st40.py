@@ -47,6 +47,13 @@ def test_default_replay() -> None:
     flat_top = results["TIME"] > 0.03
     assert_array_equal(results["GLOBAL.STATUS"][flat_top], 0)
     assert np.all(np.abs(results["GLOBAL.IP"][flat_top]) > 1e5)
+    assert_allclose(
+        results["FIT.CHI_SQ"][flat_top].sum(axis=1),
+        results["CONSTRAINTS.CHI_SQ_TOTAL"][flat_top],
+        rtol=1e-8,
+        atol=1e-8,
+    )
+    assert np.any(results["CONSTRAINTS.CHI_SQ_REG"][flat_top] > 0)
 
 
 @pytest.fixture(scope="module", params=CASES, ids=[f"{pulse}@{time}" for pulse, time in CASES])
@@ -114,11 +121,11 @@ def test_sensors_match_gsfit(case, kind: str) -> None:  # type: ignore[no-untype
 
 def test_ivc_eigenmode_currents_match_gsfit(case) -> None:  # type: ignore[no-untyped-def]
     _, results, controller = case
-    names = list(results["FIT.X_VEC_NAMES"])
-    x_vec = results["FIT.X_VEC"][-1]
+    names = list(results["FIT.DOF_NAMES"])
+    fit_dof = results["FIT.DOF_VALUES"][-1]
     eigenmodes = [(index, name) for index, name in enumerate(names) if name.startswith("IVC_EIG")]
     assert eigenmodes
-    rtgsfit = np.array([x_vec[index] for index, _ in eigenmodes])
+    rtgsfit = np.array([fit_dof[index] for index, _ in eigenmodes])
     gsfit = np.array([
         controller.passives.get_array1(["IVC", "dof", name.removeprefix("IVC_").lower(), "calculated"])[0]
         for _, name in eigenmodes
@@ -130,5 +137,5 @@ def test_results_are_complete(case) -> None:  # type: ignore[no-untyped-def]
     """Everything is stored: the settings, the preshot and the raw PCS inputs, as in MDSplus."""
     settings, results, _ = case
     assert isinstance(results, Results)
-    assert results["INPUT.SETTINGS"] == settings.xml_text
+    assert results["INPUT.SETTINGS"] == settings.json_text
     assert results["INPUT.MEAS"].shape[1] == results["PRESHOT.SIZES.N_MEAS"]

@@ -22,15 +22,24 @@ RT-GSFit has two parts:
     compiles them into the C library.
   * After a pulse, it **replays** the C library on the recorded measurements, exactly as the PCS
     ran it, and stores the results.
+  * Offline post-processing adds fields, geometry and fit diagnostics after replay, or from a
+    complete captured sequence of inputs/outputs. Exported flux is Wb, including the analytic case.
 
 It has the same layout as its post-shot counterpart [GSFit](https://github.com/tokamak-energy/gsfit):
-* XML settings
+* Hierarchical settings (JSON with a shared JSON Schema)
 * `database_readers/` and `database_writers/`
 * results stored with GSFit's IMAS-style node names.
 
 The method follows [J.-M. Moret et al., "Tokamak equilibrium reconstruction code LIUQE and its real
 time implementation", Fusion Eng. Des. 91 (2015)](https://doi.org/10.1016/j.fusengdes.2014.09.019).
 Coordinates are [COCOS 13](https://doi.org/10.1016/j.cpc.2012.09.010).
+For every bundled case, including the analytic test, `psi` is **total poloidal flux in Wb**:
+`Delta* psi = -2 pi mu0 R j_phi`, with
+`B_R = -d(psi)/dZ / (2 pi R)` and `B_Z = d(psi)/dR / (2 pi R)`.
+The analytic reference, synthetic flux-loop signals, preshot and C solver all use this same
+normalisation. `PRESHOT.INFO:PSI_TO_WB` is 1 for every newly built preshot; the conversion factor
+is retained only for reading older per-radian analytic archives.
+See the [flux conventions](documentation/manual.md#2-conventions).
 
 ## Documentation
 
@@ -39,12 +48,17 @@ Coordinates are [COCOS 13](https://doi.org/10.1016/j.cpc.2012.09.010).
 * [Data dictionary](documentation/data_dictionary.md): every quantity stored in MDSplus and in local
   files. This file is generated.
 * [Style guide](documentation/style_guide.md): naming and coding rules for C and Python.
+* [Source and variable reference](documentation/code_reference.md): what each module does and what
+  the working variables mean, including the `local` NPZ readers/writers.
+* [Negative-current assessment](documentation/negative_current.md): proposed work and acceptance
+  tests; negative-current topology support is not implemented yet.
 
 ## What works where
 
 Some data and packages are only available inside the Tokamak Energy (TE) network. In particular, the
-MDSplus server and the TE packages `st40_database` and `standard_utility` need it. Everything else
-works anywhere.
+MDSplus server and TE data need it. Database access uses the pure-Python `mdsthin` client, not the
+native `MDSplus` Python package or its shared libraries. `standard_utility` is needed for tree
+creation and writing, with its `mdsthin` transport explicitly selected.
 
 | Feature | Off the TE network | Needs |
 |---|---|---|
@@ -53,7 +67,7 @@ works anywhere.
 | Local preshot and results files (`.npz`), C preshot from a local file | ✅ | |
 | FreeGSNKE MAST-U-like replay (`rtgsfit replay freegsnke`) | ✅ | [GSFit](https://github.com/tokamak-energy/gsfit) and [FreeGSNKE](https://github.com/FusionComputingLab/freegsnke), with FreeGSNKE's example machine files |
 | ST40 preshot (`rtgsfit preshot st40`) | ❌ | GSFit and ST40 data in MDSplus |
-| ST40 replay (`rtgsfit replay st40`) | ❌ | MDSplus (`mdsthin`), `st40_database` |
+| ST40 replay (`rtgsfit replay st40`) | ❌ | `mdsthin` and access to the MAG/ST40 and RTGSFIT trees |
 | Build the PCS library from MDSplus (`make -C c SHOT=... RUN_NAME=...`) | ❌ | MDSplus |
 | Write to the `RTGSFIT` MDSplus tree | ❌ | MDSplus, `standard_utility`, write access |
 | ST40 tests and RT-GSFit vs GSFit (`pytest --te-network`) | ❌ | all of the above |
@@ -70,6 +84,11 @@ On the TE network:
 
     rtgsfit replay st40 --set replay/pulse=13343 --set replay/time_end=0.2
     pytest --te-network
+
+Configurations are in `python/rtgsfit/settings/<name>/rtgsfit.json`; a path to a custom JSON
+file also works. VS Code provides completion, descriptions and validation through the shared
+schema. CLI overrides use JSON values, for example `--set build/timing=true` or
+`--set 'writers/names=["local"]'`; string values such as paths can remain unquoted.
 
 Read the results:
 
@@ -91,9 +110,50 @@ results["GLOBAL.IP"], results["PROFILES_2D.R_Z.PSI"]   # [N_TIME], [N_TIME, N_Z,
 Private analysis notebooks and one-off replays live in a separate repository,
 `rtgsfit_workbench`, so that this repository contains only the code and its tests.
 
+## What a fresh clone contains
+
+The repository includes the C/Python sources, JSON configurations and schema, documentation,
+and test fixtures. It does **not** include a machine's generated C constants or a compiled solver.
+
+| File or directory | In Git? | How it is obtained |
+|---|---|---|
+| `c/src/preshot.h` | Yes | Hand-maintained declarations and compile-time checks |
+| `c/preshot/preshot_sizes.h` | No | Generated compile-time size enums |
+| `c/preshot/preshot_data.c` | No | Generated numerical arrays; replaces the old large constants source |
+| `c/build/` | No | C compiler outputs |
+| Replay/preshot `.npz` files | No, except committed test references | Generated by local writers |
+| `~/.cache/rtgsfit/` | Outside the repository | Automatically generated per-preshot replay builds |
+
+The whole `c/preshot/` directory is ignored, just as the old generated constants source was.
+It may not exist immediately after cloning. Do not edit its generated files.
+
+For an off-network first run:
+
+```sh
+pip install -e ".[dev]"
+make -C c test
+rtgsfit replay analytic
+```
+
+The replay generates and compiles its preshot automatically in the cache. C unit tests need
+no generated machine preshot.
+
+For a manual C build, first generate a preshot, then compile:
+
+```sh
+rtgsfit write-c-preshot analytic --output-dir c/preshot
+make -C c
+```
+
+Replace `analytic` with `st40` on the TE network to read the configured stored ST40 preshot.
+To calculate a new ST40 preshot using GSFit instead, add `--set preshot/reader=gsfit`.
+These commands generate local files; they do not write to the shared database.
+The resulting source files can be compiled without Python once generated, using the required
+C compiler and BLAS/LAPACK libraries. They are machine/preshot-specific, not universal constants.
+
 ## Status
 
-RT-GSFit v2 is a rewrite of the code that ran on ST40. The algorithm and its results are unchanged:
+RT-GSFit v2 is a rewrite of the code that ran on ST40. The reconstructed equilibria are preserved:
 the tests compare v2 with v1, with GSFit, with FreeGSNKE and with an analytic solution. All names
 and the PCS interface have changed. The [manual](documentation/manual.md#11-migrating-from-v1) lists
 every change.

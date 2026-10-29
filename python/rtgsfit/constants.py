@@ -8,8 +8,8 @@ MU_0 = 4.0e-7 * np.pi
 N_PLASMA = 3
 """Plasma degrees of freedom; fixed by the current basis in `c/src/current_basis.c`."""
 
-PLASMA_DOF_NAMES = ("P_PRIME", "FF_PRIME", "DELTA_Z")
-"""Names of the plasma degrees of freedom, the first `N_PLASMA` entries of `x_vec`."""
+PLASMA_DOF_NAMES = ("P_PRIME", "FF_PRIME_MU0", "DELTA_Z")
+"""Names of the plasma degrees of freedom, the first `N_PLASMA` entries of `fit_dof`."""
 
 N_INTERP = 4
 """Grid points in the bilinear interpolation stencil of each limiter point; `PLASMA_BOUNDARY_N_INTERP` in C."""

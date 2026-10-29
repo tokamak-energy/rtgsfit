@@ -42,7 +42,7 @@ def test_preshot_round_trip(analytic_preshot: Preshot, tmp_path: Path) -> None:
     path = write_npz(tmp_path / "preshot.npz", analytic_preshot.to_nested())
     again = read_preshot(path)
     assert again.content_hash() == analytic_preshot.content_hash()
-    assert again["FIT:B_VEC_NAMES"] == analytic_preshot["FIT:B_VEC_NAMES"]
+    assert again["FIT:TARGET_NAMES"] == analytic_preshot["FIT:TARGET_NAMES"]
 
 
 def _modified(preshot: Preshot, key: str, value: object) -> dict:

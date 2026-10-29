@@ -89,7 +89,7 @@ def gsfit_controller(settings: Settings, **gsfit_kwargs: Any) -> Any:
     section = settings["gsfit"]
     pulse = int(section.get("pulse", settings["replay"]["pulse"]))
     time = replay_times(settings)
-    key = (settings.xml_text, id(gsfit_kwargs.get("freegsnke_eqs")))
+    key = (settings.json_text, id(gsfit_kwargs.get("freegsnke_eqs")))
     if key in _CONTROLLERS:
         return _CONTROLLERS[key]
 
@@ -368,8 +368,9 @@ def preshot_inputs(controller: Any, settings: Settings, source: str) -> PreshotI
         tolerance=boundary["tolerance"],
         ip_min=boundary["ip_min"],
         n_xpt_max=boundary["n_xpt_max"],
-        settings_xml=settings.xml_text,
+        settings_json=settings.json_text,
         source=source,
+        psi_to_weber=1.0,
     )
 
 

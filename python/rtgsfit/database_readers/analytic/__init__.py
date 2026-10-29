@@ -6,7 +6,7 @@ filaments and one PF coil carrying no current. The measurements are those of a f
 `ip` at the plasma centre, which is what the exact solution looks like from outside the plasma, so
 the reconstruction should converge to `solution.AnalyticPlasma`. Needs nothing but numpy and scipy.
 
-All Greens functions are in the large aspect ratio limit (see `greens`), so psi is in Wb/rad here.
+All Greens functions use the large aspect ratio limit (see `greens`), with total poloidal flux in Wb.
 The derivations are in `documentation/analytic_solution` and `documentation/mutual_inductance`.
 """
 
@@ -95,6 +95,8 @@ class AnalyticReader(PreshotReader, SignalsReader):
         with np.errstate(divide="ignore"):  # the diagonal is replaced by the self term
             g_edge_edge = greens.psi(edge_r[:, None], edge_z[:, None], edge_r[None, :], edge_z[None, :])
         np.fill_diagonal(g_edge_edge, greens.psi_self(edge_r, edge_z, segment))
+        # Hagenow's surface-current conversion uses 1/(mu0 R); put 1/(2 pi) here, as in GSFit.
+        g_edge_edge /= 2.0 * np.pi
 
         passive = analytic["passives"]
         passive_r, passive_z = np.asarray(passive["r"], dtype=float), np.asarray(passive["z"], dtype=float)
@@ -116,7 +118,7 @@ class AnalyticReader(PreshotReader, SignalsReader):
             grid_r=grid_r,
             grid_z=grid_z,
             poisson_operator="laplacian",
-            poisson_rhs_scale=r_flat * MU_0 * d_z**2,
+            poisson_rhs_scale=2.0 * np.pi * r_flat * MU_0 * d_z**2,
             mask_limiter=mask_limiter,
             limiter_r=limiter_r,
             limiter_z=limiter_z,
@@ -132,7 +134,8 @@ class AnalyticReader(PreshotReader, SignalsReader):
             g_constraint_grid=g_constraint_grid,
             g_constraint_coil=np.zeros((n_constraint, 1)),
             g_constraint_passive=g_constraint_passive,
-            constraint_weight=np.ones(n_constraint),
+            # Preserve the physical uncertainties of the original per-radian reference.
+            constraint_weight=np.concatenate([np.full(n_loop, 1.0 / (2.0 * np.pi)), np.ones(n_constraint - n_loop)]),
             regularisation_names=[],
             regularisation=np.zeros((0, n_passive)),
             regularisation_weight=np.zeros(0),
@@ -145,8 +148,9 @@ class AnalyticReader(PreshotReader, SignalsReader):
             tolerance=boundary["tolerance"],
             ip_min=boundary["ip_min"],
             n_xpt_max=boundary["n_xpt_max"],
-            settings_xml=settings.xml_text,
+            settings_json=settings.json_text,
             source="analytic",
+            psi_to_weber=1.0,
         )
         return assemble_preshot(inputs)
 

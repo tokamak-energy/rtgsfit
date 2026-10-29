@@ -21,10 +21,7 @@ jobs:
         run: |
           dnf -y install dnf-plugins-core epel-release
           dnf config-manager --set-enabled powertools
-          dnf -y install gcc make openblas-devel clang-tools-extra python3.12 python3.12-pip
-
-      - name: Check C formatting
-        run: clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch]
+          dnf -y install gcc make openblas-devel python3.12 python3.12-pip
 
       - name: Build and run the C unit tests
         run: make -C c test ARCH_FLAGS=
@@ -38,6 +35,9 @@ jobs:
         run: |
           .venv/bin/ruff format --check python tests
           .venv/bin/ruff check python tests
+
+      - name: Check C formatting
+        run: .venv/bin/clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch]
 
       - name: Run the off-network tests (analytic replay, data dictionary, settings, I/O, CLI)
         run: .venv/bin/pytest

@@ -2,8 +2,11 @@
 
 The rules below are followed everywhere in `c/` and `python/`; new code must follow them too.
 Formatting is automatic: run the formatters before committing, and CI checks it.
+Install `.[dev]` for the pinned clang-format 21.1.8 used by CI.
+The VS Code workspace enables format-on-save for C and Python; install the configured clang-format
+and Ruff extensions. C formatting uses the executable installed into `.venv`.
 
-    clang-format -i c/src/*.[ch] c/tests/*.[ch]
+    .venv/bin/clang-format -i c/src/*.[ch] c/tests/*.[ch]
     ruff format python tests && ruff check python tests
 
 ## 1. Names (C and Python)
@@ -26,17 +29,24 @@ sort together and the shared prefix says they belong together:
 `i_<thing>`, then `j_<thing>`, `k_<thing>` for nested loops over the same thing:
 
 ```c
-for (int32_t i_z = 0; i_z < N_Z; i_z++) {
-    for (int32_t i_r = 0; i_r < N_R; i_r++) {
+for (int32_t i_z = 0; i_z < N_Z; i_z++)
+{
+    for (int32_t i_r = 0; i_r < N_R; i_r++)
+    {
         const int32_t i_grid = i_z * N_R + i_r;
+        /* ... */
+    }
+}
 ```
 
 Never loop to a literal or to a size of something else. A variable whose name is a quantity has the
-length of that quantity: `meas` has `N_MEAS` entries, `b_vec` has `N_B_VEC`. This is why v1's `meas`
-(which had `N_B_VEC` entries) became `b_vec`.
+length of that quantity: `meas` has `N_MEAS` entries, `fit_target` has `N_FIT_TARGET`. This is why v1's `meas`
+(which had `N_FIT_TARGET` entries) became `fit_target`.
 
-**Least squares.** `a_matrix x_vec ≈ b_vec`, with prediction `b_pred` (issue #68). `x` alone always
-means the unknowns. X-points are always `xpt`.
+**Least squares.** `fit_matrix fit_dof ≈ fit_target`, with prediction `fit_prediction`.
+Only `fit_dof` contains degrees of freedom; the target contains constraints, not a
+magnetic field or unknown coefficients. These descriptive names supersede issue #68's `a/x/b`
+notation. X-points are always `xpt`.
 
 **Flux.** `psi`, never `flux`: `psi`, `psi_norm`, `psi_plasma`, `axis_psi`.
 
@@ -52,10 +62,10 @@ means the unknowns. X-points are always `xpt`.
 **Standard.** C11, compiled with
 `-Wall -Wextra -Wpedantic -Wshadow -Wvla -Wstrict-prototypes -Warray-bounds` and no warnings.
 
-**Formatting** is `.clang-format`: Linux braces (a function's opening brace on its own line, others
-on the same line), 4-space indent, 100 columns, braces on every `if`/`for`/`while`, one parameter per
-line when a signature does not fit on one line. (v1 used Allman braces; v2 changed because
-clang-format applies Linux braces consistently and they are more compact.)
+**Formatting** is `.clang-format`: Allman braces (opening braces on their own lines), 4-space
+indent, 100 columns, braces on every `if`/`for`/`while`, one parameter per line when a signature
+does not fit on one line. This follows the ST40 PCS style guide. Hierarchical names follow GSFit.
+Python retains its existing Ruff 120-column limit; PCS's C whitespace rules do not apply to Python.
 
 **Arrays and sizes.**
 
@@ -64,7 +74,7 @@ clang-format applies Linux braces consistently and they are more compact.)
   ```c
   int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
                               const double psi[],
-                              int32_t n_psi,
+                              const int32_t n_psi,
                               ...)
   {
       RTGSFIT_CHECK_SIZE(n_psi, grid->n_grid);
@@ -73,6 +83,8 @@ clang-format applies Linux braces consistently and they are more compact.)
   `RTGSFIT_CHECK_SIZE` and `RTGSFIT_CHECK_MIN_SIZE` (`argument_check.h`) return
   `RTGSFIT_ERR_ARGUMENT_SIZE`. Array parameters are written `double x[]`, not `double *x`;
   `double *x` is for a pointer to a single output value.
+  This applies to private helpers too. Use `RTGSFIT_CHECK_ARRAY` to reject nonempty null buffers
+  and negative lengths. Buffer lengths inside operator structures must also be checked.
 * Compile-time sizes are `enum` constants (issue #97), never `const int` or `#define`:
   `const int` is not a constant expression in C, so arrays sized by it would be variable-length.
 * No variable-length arrays (`-Wvla`) and no `malloc` in the real-time path. Workspaces are
@@ -88,6 +100,9 @@ clang-format applies Linux braces consistently and they are more compact.)
   pointer arguments. Outputs come after inputs.
 * Inputs are `const`. Local variables that do not change are `const`. Declare variables where they
   are first used, and loop indices in the `for`.
+  A value parameter such as `const int32_t n_meas` cannot be reassigned inside the function.
+  This top-level `const` does not change the caller's ABI; `const double meas[]` additionally
+  prevents modification of the pointed-to values through that parameter.
 * Integers that are stored or cross the API are `int32_t` (MDSplus and Simulink use 32 bits);
   `double` for every real number.
 
@@ -112,14 +127,16 @@ Reference equations by paper and number (e.g. Moret et al. 2015, eq. 61).
 
 **Structure.**
 
-* Follow the GSFit layout: `settings/<name>/rtgsfit.xml`, `database_readers/<name>/__init__.py`,
+* Follow the GSFit layout: `settings/<name>/rtgsfit.json`, `database_readers/<name>/__init__.py`,
   `database_writers/<name>/__init__.py`. A reader or writer is found by the name of its directory.
-* Readers and writers that need Tokamak Energy or optional packages (`mdsthin`, `st40_database`,
+* Readers and writers that need Tokamak Energy or optional packages (`mdsthin`,
   `gsfit`, `freegsnke`) import them inside the function that uses them, so that
   `import rtgsfit` works anywhere.
 * A stored quantity is defined once, in `data_dictionary.py`. Do not write node names as strings
   elsewhere unless they are read from the data dictionary or are keys of `Results`.
-* Settings are read from the XML (`Settings`); do not hard-code a machine's numbers in code.
+* Settings are ordinary JSON, validated against `settings/settings.schema.json`; put units,
+  descriptions and allowed values in that shared schema, not in repeated per-setting wrappers.
+  Do not hard-code a machine's numbers in code. Archive effective settings through `Settings.json_text`.
 * Errors are exceptions with a message that says what to do; do not `print` and continue.
 
 **Docstrings.** A module docstring that says what the module is for. A one-line docstring for each

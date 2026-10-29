@@ -45,8 +45,8 @@ _EQUILIBRIA: dict[str, Any] = {}
 
 def freegsnke_equilibrium(settings: Settings) -> Any:
     """Solve the FreeGSNKE equilibrium described by `settings["freegsnke"]` (cached)."""
-    if settings.xml_text in _EQUILIBRIA:
-        return _EQUILIBRIA[settings.xml_text]
+    if settings.json_text in _EQUILIBRIA:
+        return _EQUILIBRIA[settings.json_text]
 
     from freegsnke import GSstaticsolver
     from freegsnke import build_machine
@@ -81,7 +81,7 @@ def freegsnke_equilibrium(settings: Settings) -> Any:
     tokamak.probes.initialise_setup(equilibrium)
 
     _EQUILIBRIA.clear()
-    _EQUILIBRIA[settings.xml_text] = equilibrium
+    _EQUILIBRIA[settings.json_text] = equilibrium
     return equilibrium
 
 
@@ -96,11 +96,11 @@ def _controller(settings: Settings) -> Any:
 
     The list is kept so that GSFit's controller cache (keyed on its identity) is hit.
     """
-    equilibria = _EQUILIBRIUM_LISTS.get(settings.xml_text)
+    equilibria = _EQUILIBRIUM_LISTS.get(settings.json_text)
     if equilibria is None:
         equilibria = [freegsnke_equilibrium(settings)] * len(STATIC_TIME)
         _EQUILIBRIUM_LISTS.clear()
-        _EQUILIBRIUM_LISTS[settings.xml_text] = equilibria
+        _EQUILIBRIUM_LISTS[settings.json_text] = equilibria
     return gsfit_controller(settings, time=STATIC_TIME, freegsnke_eqs=equilibria)
 
 

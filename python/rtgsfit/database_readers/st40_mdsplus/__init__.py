@@ -9,7 +9,7 @@ The signal names come from the preshot: `PRESHOT.MEAS:NAMES` are PCS names such 
 `PSI_FLOOP_007`, `B_BPPROBE_101` or `I_ROG_INIVC000`, and `PRESHOT.COIL:SIGNALS` are PCS names such as
 `I_SOL_PSU` or `I_ROG_MCWIRE`. Every signal is linearly interpolated onto the replay times.
 
-`st40_database` and `mdsthin` are imported lazily because they are specific to Tokamak Energy.
+All reads use `mdsthin`; neither the native MDSplus bindings nor `st40_database` are needed.
 """
 
 from __future__ import annotations
@@ -47,24 +47,27 @@ def psu_node(pcs_name: str) -> str:
 class St40MdsplusReader(SignalsReader):
     def read_signals(self, settings: Settings, preshot: Preshot) -> Signals:
         import mdsthin
-        import st40_database
 
         section = settings.get("signals", {}).get("st40_mdsplus", {})
         server = section.get("server", DEFAULT_SERVER)
         pulse = int(settings["replay"]["pulse"])
         time = replay_times(settings)
 
-        mag = st40_database.GetData(pulse, f"MAG#{section.get('mag_run', 'BEST')}")
-        mag_time = np.asarray(mag.get("TIME"), dtype=np.float64)
-
-        def from_mag(pcs_name: str) -> np.ndarray:
-            return np.interp(time, mag_time, np.asarray(mag.get(mag_node(pcs_name)), dtype=np.float64))
-
-        meas = np.column_stack([from_mag(name) for name in preshot["MEAS:NAMES"]])
-
-        coil_signal = np.zeros((len(time), len(preshot["COIL:SIGNALS"])))
         with mdsthin.Connection(server) as connection:
+            # MAG links refer to RAW_MAG in the ST40 tree. Its shared time base is the
+            # dimension of BPPROBE.P101:B (the same reference as st40_database's MAG template).
             connection.openTree("ST40", pulse)
+            root = f"\\MAG::TOP.{section.get('mag_run', 'BEST')}"
+            mag_time = np.asarray(connection.get(f"dim_of({root}.BPPROBE.P101:B)").data(), dtype=np.float64)
+
+            def from_mag(pcs_name: str) -> np.ndarray:
+                structure, _, quantity = mag_node(pcs_name).rpartition(".")
+                path = f"{root}.{structure}:{quantity}"
+                values = np.asarray(connection.get(path).data(), dtype=np.float64)
+                return np.interp(time, mag_time, values)
+
+            meas = np.column_stack([from_mag(name) for name in preshot["MEAS:NAMES"]])
+            coil_signal = np.zeros((len(time), len(preshot["COIL:SIGNALS"])))
             for i, name in enumerate(preshot["COIL:SIGNALS"]):
                 if "_ROG_" in name:
                     coil_signal[:, i] = from_mag(name)

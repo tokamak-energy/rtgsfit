@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from numpy.testing import assert_array_equal
+from rtgsfit.constants import MU_0
 from rtgsfit.database_readers import analytic
 from rtgsfit.database_readers.analytic import analytic_plasma
 from rtgsfit.database_readers.analytic.solution import b_theta_from_psi
@@ -35,7 +36,7 @@ def _grid(results: Results) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _constraints(results: Results, signal: str) -> np.ndarray:
-    """`b_vec` (MEASURED) or `b_pred` (RECONSTRUCT) of the last slice, in the order of the fit."""
+    """`fit_target` (MEASURED) or `fit_prediction` (RECONSTRUCT) of the last slice, in the order of the fit."""
     return np.concatenate([results[f"CONSTRAINTS.{group}.ALL.{signal}"][-1] for group in CONSTRAINT_GROUPS])
 
 
@@ -66,7 +67,6 @@ def test_b_theta_matches_exact_solution(analytic_results: Results, plasma) -> No
         plasma.r_0,
         plasma.z_0,
     )
-    # psi is in Wb/rad for this case; the peak |B_theta| is about 0.5 T
     assert_allclose(b_theta, plasma.b_theta(r_2d, z_2d), atol=1e-2)
 
 
@@ -111,7 +111,7 @@ def test_replay_is_deterministic(analytic_results: Results, analytic_preshot: Pr
     """A second replay with the same inputs must give bit-identical results."""
     again = replay(load_settings("analytic"), preshot=analytic_preshot, verbose=False)
     assert_array_equal(again["PROFILES_2D.R_Z.PSI"], analytic_results["PROFILES_2D.R_Z.PSI"])
-    assert_array_equal(again["FIT.X_VEC"], analytic_results["FIT.X_VEC"])
+    assert_array_equal(again["FIT.DOF_VALUES"], analytic_results["FIT.DOF_VALUES"])
 
 
 # ----------------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ V1_KEYS = (
     "PROFILES_2D.R_Z.PSI",
     "PROFILES_2D.R_Z.PSI_NORM",
     "PROFILES_2D.R_Z.MASK",
-    "FIT.X_VEC",
+    "FIT.DOF_VALUES",
     "BOUNDARY.PSI",
     "GLOBAL.PSI_MAG_AXIS",
     "GLOBAL.MAG_AXIS.R",
@@ -141,7 +141,7 @@ def _v1_results(preshot: Preshot, ip: float | None) -> Results:
     """Replay v1's exact inputs: v1 read the sensor positions back from text files written with
     six decimals and computed the measurements from those rounded positions (its Green's tables
     used the exact positions). The fit is ill-conditioned along the P_PRIME / DELTA_Z directions,
-    so the ~1e-7 change in the measurements moves X_VEC by up to 1 % while psi moves by only 1e-7."""
+    so the ~1e-7 change in the measurements moves DOF_VALUES by up to 1 % while psi moves by only 1e-7."""
     settings = load_settings("analytic")
     if ip is not None:
         settings = settings.copy_with({"analytic/plasma/ip": ip})
@@ -162,7 +162,14 @@ def _assert_matches_v1(results: Results, case: str) -> None:
     actual["B_PRED"] = _constraints(results, "RECONSTRUCT")
     actual["B_VEC_MEAS"] = _constraints(results, "MEASURED")
     for key, value in actual.items():
-        expected = np.ravel(reference[f"{case}/{key}"])
+        old_key = "FIT.X_VEC" if key == "FIT.DOF_VALUES" else key
+        expected = np.ravel(reference[f"{case}/{old_key}"]).copy()
+        if key == "FIT.DOF_VALUES":
+            expected[1] /= MU_0
+        if key in ("PROFILES_2D.R_Z.PSI", "BOUNDARY.PSI", "GLOBAL.PSI_MAG_AXIS"):
+            expected *= 2 * np.pi
+        if key in ("B_PRED", "B_VEC_MEAS"):
+            expected[: results["PRESHOT.SIZES.N_FLUX_LOOP"]] *= 2 * np.pi
         rtol = 1e-4
         atol = rtol * float(np.max(np.abs(expected))) if expected.size else 0.0
         assert_allclose(value, expected, rtol=rtol, atol=atol, err_msg=key)

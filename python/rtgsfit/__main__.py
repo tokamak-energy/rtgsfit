@@ -90,7 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     def with_settings(command: argparse.ArgumentParser, default: str | None = None) -> None:
         command.add_argument("settings", nargs="?" if default else None, default=default,
-                             help="settings name (see list-settings) or path to an XML file")  # fmt: skip
+                             help="settings name (see list-settings) or path to a JSON file")  # fmt: skip
         command.add_argument("--set", action="append", metavar="PATH=VALUE",
                              help="override a setting, e.g. replay/pulse=13343; repeatable")  # fmt: skip
 

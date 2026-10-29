@@ -28,7 +28,7 @@ FloatArray = npt.NDArray[np.float64]
 IntArray = npt.NDArray[np.int32]
 
 TIMING_SECTIONS = (
-    "CONSTRAINTS", "BASIS", "A_MATRIX", "LEAST_SQUARES", "CURRENT", "RESIDUAL", "POISSON",
+    "CONSTRAINTS", "BASIS", "FIT_MATRIX", "LEAST_SQUARES", "CURRENT", "RESIDUAL", "POISSON",
     "EXTERNAL_PSI", "NULLS", "BOUNDARY", "FLOOD_FILL", "NORMALISE", "TOTAL",
 )  # fmt: skip
 """Order of `enum rtgsfit_timer` in c/src/rtgsfit.h."""
@@ -42,6 +42,10 @@ STATUS_FLAGS = {
     32: "BOUNDARY_ABOVE_AXIS",
     64: "ARGUMENT_SIZE",
     128: "LAPACK",
+    256: "FIT_INVALID_ARGUMENT",
+    512: "FIT_NO_CONVERGENCE",
+    1024: "FIT_NONFINITE_INPUT",
+    2048: "FIT_RESOURCE_FAILURE",
 }
 """`enum rtgsfit_status` in c/src/rtgsfit.h."""
 
@@ -49,7 +53,11 @@ STATUS_FLAGS = {
 def describe_status(status: int) -> str:
     if status == 0:
         return "OK"
-    return " | ".join(name for bit, name in STATUS_FLAGS.items() if status & bit)
+    names = [name for bit, name in STATUS_FLAGS.items() if status & bit]
+    unknown = status & ~sum(STATUS_FLAGS)
+    if unknown:
+        names.append(f"UNKNOWN_BITS({unknown:#x})")
+    return " | ".join(names)
 
 
 def c_directory() -> Path:
@@ -139,7 +147,7 @@ class SliceResult:
     psi_norm: FloatArray
     mask: IntArray
     j_phi: FloatArray
-    x_vec: FloatArray
+    fit_dof: FloatArray
     constraint_measured: FloatArray
     constraint_reconstructed: FloatArray
     xpt_r: FloatArray
@@ -222,7 +230,7 @@ class Rtgsfit:
                 f"({sizes['N_COIL']},); got {meas.shape} and {coil_current.shape}"
             )
         arrays = {
-            "psi": sizes["N_GRID"], "j_phi": sizes["N_GRID"], "x_vec": sizes["N_X_VEC"],
+            "psi": sizes["N_GRID"], "j_phi": sizes["N_GRID"], "fit_dof": sizes["N_FIT_DOF"],
             "constraint_measured": sizes["N_CONSTRAINT"], "constraint_reconstructed": sizes["N_CONSTRAINT"],
             "xpt_r": sizes["N_XPT_MAX"], "xpt_z": sizes["N_XPT_MAX"], "xpt_psi": sizes["N_XPT_MAX"],
         }  # fmt: skip

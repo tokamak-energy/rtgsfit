@@ -3,21 +3,31 @@
 #include <math.h>
 
 /* Stationary point of the second-order Taylor expansion of psi about one grid point. */
-struct null_candidate {
+struct null_candidate
+{
     double d_i_r; /* offset from the grid point, in units of d_r */
     double d_i_z; /* offset from the grid point, in units of d_z */
     double hessian_determinant;
     double psi;
 };
 
-/* Returns 1 and fills `candidate` unless the Hessian is (nearly) singular. */
+/* Set *found and fill candidate unless the Hessian is (nearly) singular. */
 static int32_t null_candidate_at(const struct rtgsfit_grid *grid,
                                  const double psi[],
+                                 const int32_t n_psi,
                                  int32_t i_r,
                                  int32_t i_z,
                                  double tolerance,
-                                 struct null_candidate *candidate)
+                                 struct null_candidate *candidate,
+                                 int32_t *found)
 {
+    RTGSFIT_CHECK_SIZE(n_psi, grid_n_grid(grid));
+    RTGSFIT_CHECK_ARRAY(psi, n_psi);
+    if (i_r < 1 || i_r >= grid->n_r - 1 || i_z < 1 || i_z >= grid->n_z - 1)
+    {
+        return RTGSFIT_ERR_ARGUMENT_SIZE;
+    }
+    *found = 0;
     const int32_t n_r = grid->n_r;
     const int32_t i = grid_index(grid, i_r, i_z);
 
@@ -30,8 +40,9 @@ static int32_t null_candidate_at(const struct rtgsfit_grid *grid,
         0.25 * (psi[i + 1 + n_r] - psi[i - 1 + n_r] - psi[i + 1 - n_r] + psi[i - 1 - n_r]);
 
     const double determinant = psi_rr * psi_zz - psi_rz * psi_rz;
-    if (fabs(determinant) < tolerance) {
-        return 0;
+    if (fabs(determinant) < tolerance)
+    {
+        return RTGSFIT_OK;
     }
     const double inv_determinant = 1.0 / determinant;
     const double d_r = (psi_z * psi_rz - psi_r * psi_zz) * inv_determinant;
@@ -42,29 +53,31 @@ static int32_t null_candidate_at(const struct rtgsfit_grid *grid,
     candidate->hessian_determinant = determinant;
     candidate->psi = psi[i] + psi_r * d_r + psi_z * d_z + 0.5 * psi_rr * d_r * d_r +
                      0.5 * psi_zz * d_z * d_z + psi_rz * d_r * d_z;
-    return 1;
+    *found = 1;
+    return RTGSFIT_OK;
 }
 
 int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
                             const double psi[],
-                            int32_t n_psi,
+                            const int32_t n_psi,
                             const int32_t mask_limiter[],
-                            int32_t n_mask_limiter,
+                            const int32_t n_mask_limiter,
                             double tolerance,
                             int32_t *axis_found,
                             double *axis_r,
                             double *axis_z,
                             double *axis_psi,
                             double xpt_r[],
-                            int32_t n_xpt_r,
+                            const int32_t n_xpt_r,
                             double xpt_z[],
-                            int32_t n_xpt_z,
+                            const int32_t n_xpt_z,
                             double xpt_psi[],
-                            int32_t n_xpt_psi,
+                            const int32_t n_xpt_psi,
                             int32_t *xpt_n)
 {
     const int32_t status = grid_check(grid);
-    if (status != RTGSFIT_OK) {
+    if (status != RTGSFIT_OK)
+    {
         return status;
     }
     RTGSFIT_CHECK_SIZE(n_psi, grid_n_grid(grid));
@@ -72,6 +85,15 @@ int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
     RTGSFIT_CHECK_MIN_SIZE(n_xpt_r, 1);
     RTGSFIT_CHECK_SIZE(n_xpt_z, n_xpt_r);
     RTGSFIT_CHECK_SIZE(n_xpt_psi, n_xpt_r);
+    RTGSFIT_CHECK_ARRAY(psi, n_psi);
+    RTGSFIT_CHECK_ARRAY(mask_limiter, n_mask_limiter);
+    RTGSFIT_CHECK_ARRAY(xpt_r, n_xpt_r);
+    RTGSFIT_CHECK_ARRAY(xpt_z, n_xpt_z);
+    RTGSFIT_CHECK_ARRAY(xpt_psi, n_xpt_psi);
+    if (!axis_found || !axis_r || !axis_z || !axis_psi || !xpt_n)
+    {
+        return RTGSFIT_ERR_ARGUMENT_SIZE;
+    }
 
     static const int32_t corner_d_i_r[4] = {0, 1, 0, 1};
     static const int32_t corner_d_i_z[4] = {0, 0, 1, 1};
@@ -80,23 +102,36 @@ int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
     *xpt_n = 0;
 
     /* Cell (i_r, i_z) has corners i_r..i_r+1 and i_z..i_z+1, all of which need four neighbours. */
-    for (int32_t i_z = 1; i_z < grid->n_z - 2; i_z++) {
-        for (int32_t i_r = 1; i_r < grid->n_r - 2; i_r++) {
+    for (int32_t i_z = 1; i_z < grid->n_z - 2; i_z++)
+    {
+        for (int32_t i_r = 1; i_r < grid->n_r - 2; i_r++)
+        {
             int32_t found = 0;
             double best_distance_sq = 0.0;
             double best_r = 0.0;
             double best_z = 0.0;
             struct null_candidate best = {0.0, 0.0, 0.0, 0.0};
 
-            for (int32_t k = 0; k < 4; k++) {
+            for (int32_t k = 0; k < 4; k++)
+            {
                 const int32_t corner_i_r = i_r + corner_d_i_r[k];
                 const int32_t corner_i_z = i_z + corner_d_i_z[k];
                 struct null_candidate candidate;
 
-                if (!mask_limiter[grid_index(grid, corner_i_r, corner_i_z)]) {
+                if (!mask_limiter[grid_index(grid, corner_i_r, corner_i_z)])
+                {
                     continue;
                 }
-                if (!null_candidate_at(grid, psi, corner_i_r, corner_i_z, tolerance, &candidate)) {
+                int32_t candidate_found = 0;
+                const int32_t candidate_status =
+                    null_candidate_at(grid, psi, n_psi, corner_i_r, corner_i_z, tolerance,
+                                      &candidate, &candidate_found);
+                if (candidate_status != RTGSFIT_OK)
+                {
+                    return candidate_status;
+                }
+                if (!candidate_found)
+                {
                     continue;
                 }
                 /*
@@ -105,12 +140,14 @@ int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
                  */
                 const double u = (double)corner_d_i_r[k] + candidate.d_i_r;
                 const double v = (double)corner_d_i_z[k] + candidate.d_i_z;
-                if (u < 0.0 || u >= 1.0 || v < 0.0 || v >= 1.0) {
+                if (u < 0.0 || u >= 1.0 || v < 0.0 || v >= 1.0)
+                {
                     continue;
                 }
                 const double distance_sq =
                     candidate.d_i_r * candidate.d_i_r + candidate.d_i_z * candidate.d_i_z;
-                if (!found || distance_sq < best_distance_sq) {
+                if (!found || distance_sq < best_distance_sq)
+                {
                     found = 1;
                     best_distance_sq = distance_sq;
                     best = candidate;
@@ -118,23 +155,29 @@ int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
                     best_z = grid->z[corner_i_z] + candidate.d_i_z * grid->d_z;
                 }
             }
-            if (!found) {
+            if (!found)
+            {
                 continue;
             }
 
-            if (best.hessian_determinant > 0.0) {
-                if (!*axis_found || best.psi > *axis_psi) {
+            if (best.hessian_determinant > 0.0)
+            {
+                if (!*axis_found || best.psi > *axis_psi)
+                {
                     *axis_found = 1;
                     *axis_r = best_r;
                     *axis_z = best_z;
                     *axis_psi = best.psi;
                 }
-            } else if (best.hessian_determinant < 0.0) {
+            }
+            else if (best.hessian_determinant < 0.0)
+            {
                 xpt_r[*xpt_n] = best_r;
                 xpt_z[*xpt_n] = best_z;
                 xpt_psi[*xpt_n] = best.psi;
                 (*xpt_n)++;
-                if (*xpt_n >= n_xpt_r) {
+                if (*xpt_n >= n_xpt_r)
+                {
                     return RTGSFIT_ERR_TOO_MANY_XPTS;
                 }
             }
@@ -148,58 +191,88 @@ int32_t magnetic_nulls_is_core_side(double r,
                                     double axis_r,
                                     double axis_z,
                                     const double xpt_r[],
+                                    const int32_t n_xpt_r,
                                     const double xpt_z[],
-                                    int32_t xpt_n)
+                                    const int32_t n_xpt_z,
+                                    int32_t xpt_n,
+                                    int32_t *is_core_side)
 {
-    for (int32_t i = 0; i < xpt_n; i++) {
+    RTGSFIT_CHECK_SIZE(n_xpt_z, n_xpt_r);
+    RTGSFIT_CHECK_ARRAY(xpt_r, n_xpt_r);
+    RTGSFIT_CHECK_ARRAY(xpt_z, n_xpt_z);
+    if (!is_core_side || xpt_n < 0 || xpt_n > n_xpt_r)
+    {
+        return RTGSFIT_ERR_ARGUMENT_SIZE;
+    }
+    *is_core_side = 0;
+    for (int32_t i = 0; i < xpt_n; i++)
+    {
         const double dot =
             (r - xpt_r[i]) * (axis_r - xpt_r[i]) + (z - xpt_z[i]) * (axis_z - xpt_z[i]);
-        if (dot < 0.0) {
-            return 0;
+        if (dot < 0.0)
+        {
+            return RTGSFIT_OK;
         }
     }
-    return 1;
+    *is_core_side = 1;
+    return RTGSFIT_OK;
 }
 
 int32_t magnetic_nulls_filter_xpts(double axis_r,
                                    double axis_z,
                                    double xpt_r[],
-                                   int32_t n_xpt_r,
+                                   const int32_t n_xpt_r,
                                    double xpt_z[],
-                                   int32_t n_xpt_z,
+                                   const int32_t n_xpt_z,
                                    double xpt_psi[],
-                                   int32_t n_xpt_psi,
+                                   const int32_t n_xpt_psi,
                                    int32_t *xpt_n,
                                    int32_t keep[],
-                                   int32_t n_keep)
+                                   const int32_t n_keep)
 {
+    if (!xpt_n)
+    {
+        return RTGSFIT_ERR_ARGUMENT_SIZE;
+    }
     RTGSFIT_CHECK_SIZE(n_xpt_z, n_xpt_r);
     RTGSFIT_CHECK_SIZE(n_xpt_psi, n_xpt_r);
-    if (*xpt_n < 0 || *xpt_n > n_xpt_r) {
+    RTGSFIT_CHECK_ARRAY(xpt_r, n_xpt_r);
+    RTGSFIT_CHECK_ARRAY(xpt_z, n_xpt_z);
+    RTGSFIT_CHECK_ARRAY(xpt_psi, n_xpt_psi);
+    RTGSFIT_CHECK_ARRAY(keep, n_keep);
+    if (*xpt_n < 0 || *xpt_n > n_xpt_r)
+    {
         return RTGSFIT_ERR_ARGUMENT_SIZE;
     }
     RTGSFIT_CHECK_MIN_SIZE(n_keep, *xpt_n);
 
     const int32_t n = *xpt_n;
-    for (int32_t i = 0; i < n; i++) {
+    for (int32_t i = 0; i < n; i++)
+    {
         keep[i] = 1;
     }
     /* Every x-point, including ones already removed, can hide the others. */
-    for (int32_t i = 0; i < n; i++) {
-        for (int32_t j = 0; j < n; j++) {
-            if (j == i) {
+    for (int32_t i = 0; i < n; i++)
+    {
+        for (int32_t j = 0; j < n; j++)
+        {
+            if (j == i)
+            {
                 continue;
             }
             const double dot = (xpt_r[j] - xpt_r[i]) * (axis_r - xpt_r[i]) +
                                (xpt_z[j] - xpt_z[i]) * (axis_z - xpt_z[i]);
-            if (dot < 0.0) {
+            if (dot < 0.0)
+            {
                 keep[j] = 0;
             }
         }
     }
     int32_t n_kept = 0;
-    for (int32_t i = 0; i < n; i++) {
-        if (keep[i]) {
+    for (int32_t i = 0; i < n; i++)
+    {
+        if (keep[i])
+        {
             xpt_r[n_kept] = xpt_r[i];
             xpt_z[n_kept] = xpt_z[i];
             xpt_psi[n_kept] = xpt_psi[i];
@@ -218,27 +291,35 @@ static inline void swap(double *a, double *b)
 }
 
 int32_t magnetic_nulls_sort_xpts(double xpt_r[],
-                                 int32_t n_xpt_r,
+                                 const int32_t n_xpt_r,
                                  double xpt_z[],
-                                 int32_t n_xpt_z,
+                                 const int32_t n_xpt_z,
                                  double xpt_psi[],
-                                 int32_t n_xpt_psi,
+                                 const int32_t n_xpt_psi,
                                  int32_t xpt_n)
 {
     RTGSFIT_CHECK_SIZE(n_xpt_z, n_xpt_r);
     RTGSFIT_CHECK_SIZE(n_xpt_psi, n_xpt_r);
-    if (xpt_n < 0 || xpt_n > n_xpt_r) {
+    RTGSFIT_CHECK_ARRAY(xpt_r, n_xpt_r);
+    RTGSFIT_CHECK_ARRAY(xpt_z, n_xpt_z);
+    RTGSFIT_CHECK_ARRAY(xpt_psi, n_xpt_psi);
+    if (xpt_n < 0 || xpt_n > n_xpt_r)
+    {
         return RTGSFIT_ERR_ARGUMENT_SIZE;
     }
     /* Selection sort: n is small and the order of equal values is then reproducible. */
-    for (int32_t i = 0; i < xpt_n - 1; i++) {
+    for (int32_t i = 0; i < xpt_n - 1; i++)
+    {
         int32_t i_max = i;
-        for (int32_t j = i + 1; j < xpt_n; j++) {
-            if (xpt_psi[j] > xpt_psi[i_max]) {
+        for (int32_t j = i + 1; j < xpt_n; j++)
+        {
+            if (xpt_psi[j] > xpt_psi[i_max])
+            {
                 i_max = j;
             }
         }
-        if (i_max != i) {
+        if (i_max != i)
+        {
             swap(&xpt_r[i], &xpt_r[i_max]);
             swap(&xpt_z[i], &xpt_z[i_max]);
             swap(&xpt_psi[i], &xpt_psi[i_max]);

@@ -16,9 +16,9 @@
  */
 int32_t finite_difference_d_dz(const struct rtgsfit_grid *grid,
                                const double f[],
-                               int32_t n_f,
+                               const int32_t n_f,
                                double df_dz[],
-                               int32_t n_df_dz);
+                               const int32_t n_df_dz);
 
 /*
  * The scaled inward normal derivative of f on the edge of the grid. It is used by the
@@ -37,8 +37,8 @@ int32_t finite_difference_d_dz(const struct rtgsfit_grid *grid,
  */
 int32_t finite_difference_edge_d_dn(const struct rtgsfit_grid *grid,
                                     const double f[],
-                                    int32_t n_f,
+                                    const int32_t n_f,
                                     double df_dn[],
-                                    int32_t n_df_dn);
+                                    const int32_t n_df_dn);
 
 #endif /* RTGSFIT_FINITE_DIFFERENCE_H */

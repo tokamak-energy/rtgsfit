@@ -82,6 +82,7 @@ def write_to_mdsplus(data: dict[str, Any], settings: Settings) -> None:
         run_name=run_name,
         run_info=run_description,
         link_best=bool(section.get("link_best", False)),
+        use_mdsthin=True,
     )
     util.write_script_data(
         script_name=dd.TREE_NAME,
@@ -90,6 +91,7 @@ def write_to_mdsplus(data: dict[str, Any], settings: Settings) -> None:
         run_name=run_name,
         run_description=run_description,
         force_write=True,
+        use_mdsthin=True,
     )
     print(f"Wrote to MDSplus {dd.TREE_NAME} pulse {pulse} {run_name}")
 

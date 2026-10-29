@@ -10,7 +10,10 @@
 #include "grid.h"
 
 /* Number of grid points used to interpolate psi onto a limiter point (bilinear). */
-enum { PLASMA_BOUNDARY_N_INTERP = 4 };
+enum
+{
+    PLASMA_BOUNDARY_N_INTERP = 4
+};
 
 /*
  * The largest psi over the limiter points that are on the core side of every x-point.
@@ -21,21 +24,21 @@ enum { PLASMA_BOUNDARY_N_INTERP = 4 };
  * If no limiter point qualifies, *limiter_psi = -DBL_MAX.
  */
 int32_t plasma_boundary_limiter_psi(const double psi[],
-                                    int32_t n_psi,
+                                    const int32_t n_psi,
                                     const double limiter_r[],
-                                    int32_t n_limiter_r,
+                                    const int32_t n_limiter_r,
                                     const double limiter_z[],
-                                    int32_t n_limiter_z,
+                                    const int32_t n_limiter_z,
                                     const int32_t limiter_grid_index[],
-                                    int32_t n_index,
+                                    const int32_t n_index,
                                     const double limiter_grid_weight[],
-                                    int32_t n_weight,
+                                    const int32_t n_weight,
                                     double axis_r,
                                     double axis_z,
                                     const double xpt_r[],
-                                    int32_t n_xpt_r,
+                                    const int32_t n_xpt_r,
                                     const double xpt_z[],
-                                    int32_t n_xpt_z,
+                                    const int32_t n_xpt_z,
                                     int32_t xpt_n,
                                     double *limiter_psi);
 
@@ -52,7 +55,7 @@ int32_t plasma_boundary_limiter_psi(const double psi[],
 int32_t plasma_boundary_select(double axis_psi,
                                double limiter_psi,
                                const double xpt_psi[],
-                               int32_t n_xpt_psi,
+                               const int32_t n_xpt_psi,
                                int32_t xpt_n,
                                double xpt_fraction,
                                double tolerance,
@@ -69,35 +72,35 @@ int32_t plasma_boundary_select(double axis_psi,
  */
 int32_t plasma_boundary_flood_fill(const struct rtgsfit_grid *grid,
                                    const double psi[],
-                                   int32_t n_psi,
+                                   const int32_t n_psi,
                                    const int32_t mask_limiter[],
-                                   int32_t n_mask_limiter,
+                                   const int32_t n_mask_limiter,
                                    double boundary_psi,
                                    double axis_r,
                                    double axis_z,
                                    const double xpt_r[],
-                                   int32_t n_xpt_r,
+                                   const int32_t n_xpt_r,
                                    const double xpt_z[],
-                                   int32_t n_xpt_z,
+                                   const int32_t n_xpt_z,
                                    int32_t xpt_n,
                                    int32_t mask[],
-                                   int32_t n_mask,
+                                   const int32_t n_mask,
                                    int32_t queue[],
-                                   int32_t n_queue);
+                                   const int32_t n_queue);
 
 /*
  * psi_norm = (psi - axis_psi) / (boundary_psi - axis_psi) inside the plasma core
  * (mask && mask_limiter), and 1 elsewhere. All arrays are grid arrays of length n.
  */
 int32_t plasma_boundary_normalise(const double psi[],
-                                  int32_t n_psi,
+                                  const int32_t n_psi,
                                   const int32_t mask[],
-                                  int32_t n_mask,
+                                  const int32_t n_mask,
                                   const int32_t mask_limiter[],
-                                  int32_t n_mask_limiter,
+                                  const int32_t n_mask_limiter,
                                   double axis_psi,
                                   double boundary_psi,
                                   double psi_norm[],
-                                  int32_t n_psi_norm);
+                                  const int32_t n_psi_norm);
 
 #endif /* RTGSFIT_PLASMA_BOUNDARY_H */

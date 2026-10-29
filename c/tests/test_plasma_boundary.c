@@ -11,7 +11,13 @@
 #include "plasma_boundary.h"
 #include "test_utilities.h"
 
-enum { N_R = 33, N_Z = 65, N_GRID = N_R * N_Z, N_XPT_MAX = 6 };
+enum
+{
+    N_R = 33,
+    N_Z = 65,
+    N_GRID = N_R * N_Z,
+    N_XPT_MAX = 6
+};
 
 static double grid_r[N_R];
 static double grid_z[N_Z];
@@ -42,21 +48,33 @@ static int32_t load_data(void)
            read_csv_int("data/mask_65x33.csv", expected_mask, N_GRID);
 }
 
-/* 1 if (r, z) matches one of the expected points that has not been matched yet. */
+/* Set *found if (r, z) matches an expected point that has not been matched yet. */
 static int32_t match_point(double r,
                            double z,
                            const double r_expected[],
+                           const int32_t n_r_expected,
                            const double z_expected[],
+                           const int32_t n_z_expected,
                            int32_t matched[],
-                           int32_t n)
+                           int32_t n,
+                           int32_t *found)
 {
-    for (int32_t i = 0; i < n; i++) {
-        if (!matched[i] && fabs(r - r_expected[i]) < 1e-6 && fabs(z - z_expected[i]) < 1e-6) {
+    RTGSFIT_CHECK_SIZE(n_r_expected, n);
+    RTGSFIT_CHECK_SIZE(n_z_expected, n);
+    RTGSFIT_CHECK_ARRAY(r_expected, n_r_expected);
+    RTGSFIT_CHECK_ARRAY(z_expected, n_z_expected);
+    RTGSFIT_CHECK_ARRAY(matched, n);
+    *found = 0;
+    for (int32_t i = 0; i < n; i++)
+    {
+        if (!matched[i] && fabs(r - r_expected[i]) < 1e-6 && fabs(z - z_expected[i]) < 1e-6)
+        {
             matched[i] = 1;
-            return 1;
+            *found = 1;
+            return RTGSFIT_OK;
         }
     }
-    return 0;
+    return RTGSFIT_OK;
 }
 
 static void test_find_nulls(void)
@@ -75,8 +93,12 @@ static void test_find_nulls(void)
     CHECK_CLOSE(axis_z, expected_axis_z, 1e-6);
     CHECK(xpt_n == 3);
     int32_t matched[3] = {0, 0, 0};
-    for (int32_t i = 0; i < xpt_n && i < 3; i++) {
-        CHECK(match_point(xpt_r[i], xpt_z[i], expected_xpt_r, expected_xpt_z, matched, 3));
+    for (int32_t i = 0; i < xpt_n && i < 3; i++)
+    {
+        int32_t found = 0;
+        CHECK(match_point(xpt_r[i], xpt_z[i], expected_xpt_r, 3, expected_xpt_z, 3, matched, 3,
+                          &found) == RTGSFIT_OK);
+        CHECK(found == 1);
     }
 }
 
@@ -97,15 +119,21 @@ static void test_find_nulls_too_many_xpts(void)
 /* A saddle exactly on a grid vertex is shared by four cells, but must be found once. */
 static void test_find_nulls_on_vertex(void)
 {
-    enum { N = 7 };
+    enum
+    {
+        N = 7
+    };
     double r[N], z[N], saddle_psi[N * N];
     int32_t saddle_mask[N * N];
-    for (int32_t i = 0; i < N; i++) {
+    for (int32_t i = 0; i < N; i++)
+    {
         r[i] = (double)i;
         z[i] = (double)i;
     }
-    for (int32_t i_z = 0; i_z < N; i_z++) {
-        for (int32_t i_r = 0; i_r < N; i_r++) {
+    for (int32_t i_z = 0; i_z < N; i_z++)
+    {
+        for (int32_t i_r = 0; i_r < N; i_r++)
+        {
             saddle_psi[i_z * N + i_r] =
                 (r[i_r] - 3.0) * (r[i_r] - 3.0) - (z[i_z] - 3.0) * (z[i_z] - 3.0);
             saddle_mask[i_z * N + i_r] = 1;
@@ -146,10 +174,23 @@ static void test_is_core_side(void)
     const double xpt_r[4] = {-1.0, 1.0, 0.0, 0.0};
     const double xpt_z[4] = {0.0, 0.0, 1.0, -1.0};
 
-    CHECK(magnetic_nulls_is_core_side(0.5, 0.5, 0.0, 0.0, xpt_r, xpt_z, 4) == 1);
-    CHECK(magnetic_nulls_is_core_side(0.99, 0.0, 0.0, 0.0, xpt_r, xpt_z, 4) == 1);
-    CHECK(magnetic_nulls_is_core_side(-1.5, 0.0, 0.0, 0.0, xpt_r, xpt_z, 4) == 0);
-    CHECK(magnetic_nulls_is_core_side(1.5, 1.5, 0.0, 0.0, xpt_r, xpt_z, 4) == 0);
+    int32_t inside = -1;
+    CHECK(magnetic_nulls_is_core_side(0.5, 0.5, 0.0, 0.0, xpt_r, 4, xpt_z, 4, 4, &inside) ==
+          RTGSFIT_OK);
+    CHECK(inside == 1);
+    CHECK(magnetic_nulls_is_core_side(0.99, 0.0, 0.0, 0.0, xpt_r, 4, xpt_z, 4, 4, &inside) ==
+          RTGSFIT_OK);
+    CHECK(inside == 1);
+    CHECK(magnetic_nulls_is_core_side(-1.5, 0.0, 0.0, 0.0, xpt_r, 4, xpt_z, 4, 4, &inside) ==
+          RTGSFIT_OK);
+    CHECK(inside == 0);
+    CHECK(magnetic_nulls_is_core_side(1.5, 1.5, 0.0, 0.0, xpt_r, 4, xpt_z, 4, 4, &inside) ==
+          RTGSFIT_OK);
+    CHECK(inside == 0);
+    CHECK(magnetic_nulls_is_core_side(0.0, 0.0, 0.0, 0.0, xpt_r, 4, xpt_z, 3, 4, &inside) ==
+          RTGSFIT_ERR_ARGUMENT_SIZE);
+    CHECK(magnetic_nulls_is_core_side(0.0, 0.0, 0.0, 0.0, xpt_r, 4, xpt_z, 4, 5, &inside) ==
+          RTGSFIT_ERR_ARGUMENT_SIZE);
 }
 
 static void test_filter_xpts(void)
@@ -167,7 +208,8 @@ static void test_filter_xpts(void)
     const double expected_z[4] = {0.0, 0.0, -0.5, 0.5};
     const double expected_psi[4] = {-1.0, 0.0, 2.0, 3.0};
     CHECK(xpt_n == 4);
-    for (int32_t i = 0; i < 4; i++) {
+    for (int32_t i = 0; i < 4; i++)
+    {
         CHECK_CLOSE(xpt_r[i], expected_r[i], 0.0);
         CHECK_CLOSE(xpt_z[i], expected_z[i], 0.0);
         CHECK_CLOSE(xpt_psi[i], expected_psi[i], 0.0);
@@ -193,7 +235,8 @@ static void test_sort_xpts(void)
     CHECK(magnetic_nulls_sort_xpts(xpt_r, 4, xpt_z, 4, xpt_psi, 4, 4) == RTGSFIT_OK);
     const double expected_psi[4] = {0.4, 0.3, 0.1, -0.2};
     const double expected_r[4] = {2.0, 4.0, 1.0, 3.0};
-    for (int32_t i = 0; i < 4; i++) {
+    for (int32_t i = 0; i < 4; i++)
+    {
         CHECK_CLOSE(xpt_psi[i], expected_psi[i], 0.0);
         CHECK_CLOSE(xpt_r[i], expected_r[i], 0.0);
         CHECK_CLOSE(xpt_z[i], -expected_r[i], 0.0);
@@ -211,7 +254,8 @@ static void test_flood_fill(void)
         expected_xpt_r, 3, expected_xpt_z, 3, 3, mask, N_GRID, queue, N_GRID);
     CHECK(status == RTGSFIT_OK);
     int32_t n_different = 0;
-    for (int32_t i = 0; i < N_GRID; i++) {
+    for (int32_t i = 0; i < N_GRID; i++)
+    {
         n_different += mask[i] != expected_mask[i];
     }
     CHECK(n_different == 0);
@@ -222,7 +266,8 @@ static void test_flood_fill_axis_outside_core(void)
     const struct rtgsfit_grid grid = test_grid();
     static int32_t mask[N_GRID];
     static int32_t queue[N_GRID];
-    for (int32_t i = 0; i < N_GRID; i++) {
+    for (int32_t i = 0; i < N_GRID; i++)
+    {
         mask[i] = 7;
     }
     /* With the boundary above every psi value, no point is in the core. */
@@ -300,7 +345,8 @@ static void test_normalise(void)
 
 int main(void)
 {
-    if (load_data() != 0) {
+    if (load_data() != 0)
+    {
         return 1;
     }
     RUN_TEST(test_find_nulls);

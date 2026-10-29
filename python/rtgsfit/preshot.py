@@ -24,6 +24,7 @@ import numpy.typing as npt
 import scipy.linalg
 
 from rtgsfit import data_dictionary as dd
+from rtgsfit.constants import MU_0
 from rtgsfit.constants import N_INTERP
 from rtgsfit.constants import N_PLASMA
 from rtgsfit.constants import PLASMA_DOF_NAMES
@@ -34,6 +35,45 @@ IntArray = npt.NDArray[np.int32]
 
 class PreshotError(ValueError):
     """The preshot is inconsistent."""
+
+
+LEGACY_PRESHOT_NAMES = {
+    ("SIZES", "N_FIT_TARGET"): "N_B_VEC",
+    ("SIZES", "N_FIT_DOF"): "N_X_VEC",
+    ("FIT", "DOF_NAMES"): "X_VEC_NAMES",
+    ("FIT", "TARGET_NAMES"): "B_VEC_NAMES",
+    ("GRID", "INV_R"): "INV_MU0_R",
+}
+
+
+def migrate_legacy_preshot(groups: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Convert earlier preshot names/basis contracts without changing the original mapping."""
+    if "N_FIT_COEF" in groups["SIZES"]:
+        groups = {group: dict(nodes) for group, nodes in groups.items()}
+        for group, old_name, name in (
+            ("SIZES", "N_FIT_COEF", "N_FIT_DOF"),
+            ("FIT", "COEF_NAMES", "DOF_NAMES"),
+        ):
+            if old_name not in groups[group] or name in groups[group]:
+                raise PreshotError(f"ambiguous or incomplete coefficient-name preshot at {group}:{old_name}")
+            groups[group][name] = groups[group].pop(old_name)
+        return groups
+    if "N_X_VEC" not in groups["SIZES"]:
+        return groups
+    groups = {group: dict(nodes) for group, nodes in groups.items()}
+    for (group, name), old_name in LEGACY_PRESHOT_NAMES.items():
+        groups[group][name] = groups[group].pop(old_name)
+    r_flat = np.asarray(groups["GRID"]["R_FLAT"])
+    if not np.allclose(groups["GRID"]["INV_R"], 1.0 / (r_flat * MU_0), rtol=1e-12, atol=0):
+        raise PreshotError("legacy GRID:INV_MU0_R does not match the supported mu0 convention")
+    groups["GRID"]["INV_R"] = 1.0 / r_flat
+    groups["FIT"]["DOF_NAMES"] = ["FF_PRIME_MU0" if name == "FF_PRIME" else name for name in groups["FIT"]["DOF_NAMES"]]
+    source = groups["INFO"]["SOURCE"]
+    if source != "analytic" and not source.startswith(("gsfit ", "freegsnke ")):
+        raise PreshotError(f"unknown legacy flux convention for source {source!r}")
+    groups["INFO"]["MU0"] = MU_0
+    groups["INFO"]["PSI_TO_WB"] = 2.0 * np.pi if source == "analytic" else 1.0
+    return groups
 
 
 class Preshot:
@@ -60,6 +100,7 @@ class Preshot:
     @classmethod
     def from_nested(cls, nested: dict[str, Any]) -> Preshot:
         groups = nested["PRESHOT"] if "PRESHOT" in nested else nested
+        groups = migrate_legacy_preshot(groups)
         converted: dict[str, dict[str, Any]] = {}
         for node in dd.PRESHOT_NODES:
             _, group, name = node.path
@@ -122,6 +163,9 @@ class Preshot:
             if node.dtype == "float64" and not np.all(np.isfinite(array)):
                 raise PreshotError(f"{node.mds_path} is not finite")
 
+        for name in ("MU0", "PSI_TO_WB"):
+            if float(self["INFO:" + name]) <= 0:
+                raise PreshotError(f"INFO:{name} must be positive")
         grid_r, grid_z = self.groups["GRID"]["R"], self.groups["GRID"]["Z"]
         d_r, d_z = float(self.groups["GRID"]["D_R"]), float(self.groups["GRID"]["D_Z"])
         if not (np.allclose(np.diff(grid_r), d_r, rtol=1e-9) and np.allclose(np.diff(grid_z), d_z, rtol=1e-9)):
@@ -139,11 +183,11 @@ class Preshot:
         permutation = self.groups["POISSON"]["PERMUTATION"]
         if not np.array_equal(np.sort(permutation), np.arange(sizes["N_GRID"])):
             raise PreshotError("PRESHOT.POISSON:PERMUTATION is not a permutation")
-        b_vec_names = self.groups["FIT"]["B_VEC_NAMES"]
-        if b_vec_names[: sizes["N_CONSTRAINT"]] != self.groups["CONSTRAINT"]["NAMES"]:
-            raise PreshotError("the first N_CONSTRAINT PRESHOT.FIT:B_VEC_NAMES must be PRESHOT.CONSTRAINT:NAMES")
+        fit_target_names = self.groups["FIT"]["TARGET_NAMES"]
+        if fit_target_names[: sizes["N_CONSTRAINT"]] != self.groups["CONSTRAINT"]["NAMES"]:
+            raise PreshotError("the first N_CONSTRAINT PRESHOT.FIT:TARGET_NAMES must be PRESHOT.CONSTRAINT:NAMES")
         if np.any(self.groups["FIT"]["WEIGHT"][: sizes["N_CONSTRAINT"]] == 0.0):
-            raise PreshotError("constraint weights must be non-zero (b_pred is divided by them)")
+            raise PreshotError("constraint weights must be non-zero (fit_prediction is divided by them)")
 
 
 def _convert(value: Any, node: dd.Node) -> Any:
@@ -165,10 +209,10 @@ def _check_size_relations(sizes: dict[str, int]) -> None:
         "N_CONSTRAINT == N_FLUX_LOOP + N_BP_PROBE + N_ROGOWSKI": (
             sizes["N_CONSTRAINT"] == sizes["N_FLUX_LOOP"] + sizes["N_BP_PROBE"] + sizes["N_ROGOWSKI"]
         ),
-        "N_B_VEC == N_CONSTRAINT + N_REG": sizes["N_B_VEC"] == sizes["N_CONSTRAINT"] + sizes["N_REG"],
+        "N_FIT_TARGET == N_CONSTRAINT + N_REG": sizes["N_FIT_TARGET"] == sizes["N_CONSTRAINT"] + sizes["N_REG"],
         f"N_PLASMA == {N_PLASMA}": sizes["N_PLASMA"] == N_PLASMA,
-        "N_X_VEC == N_PLASMA + N_PASSIVE": sizes["N_X_VEC"] == sizes["N_PLASMA"] + sizes["N_PASSIVE"],
-        "N_B_VEC >= N_X_VEC": sizes["N_B_VEC"] >= sizes["N_X_VEC"],
+        "N_FIT_DOF == N_PLASMA + N_PASSIVE": sizes["N_FIT_DOF"] == sizes["N_PLASMA"] + sizes["N_PASSIVE"],
+        "N_FIT_TARGET >= N_FIT_DOF": sizes["N_FIT_TARGET"] >= sizes["N_FIT_DOF"],
         "N_LIMITER, N_COIL, N_MEAS, N_XPT_MAX >= 1": min(
             sizes["N_LIMITER"], sizes["N_COIL"], sizes["N_MEAS"], sizes["N_XPT_MAX"]
         )
@@ -375,7 +419,7 @@ class PreshotInputs:
     grid_r: FloatArray
     grid_z: FloatArray
     poisson_operator: PoissonOperator
-    poisson_rhs_scale: FloatArray  # [N_GRID]
+    poisson_rhs_scale: FloatArray  # [N_GRID] (2 pi / psi_to_weber) mu0 R d_z^2; rhs = -scale * j_phi
     mask_limiter: npt.NDArray[np.bool_]  # [N_GRID]
     limiter_r: FloatArray
     limiter_z: FloatArray
@@ -404,8 +448,9 @@ class PreshotInputs:
     tolerance: float
     ip_min: float
     n_xpt_max: int
-    settings_xml: str
+    settings_json: str
     source: str
+    psi_to_weber: float
 
 
 def assemble_preshot(inputs: PreshotInputs) -> Preshot:
@@ -428,29 +473,33 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
     if n_constraint != inputs.n_flux_loop + inputs.n_bp_probe + inputs.n_rogowski:
         raise PreshotError("constraint names do not match the number of flux loops, Bp probes and Rogowski coils")
     weight = np.concatenate([inputs.constraint_weight, inputs.regularisation_weight]).astype(np.float64)
-    n_b_vec = n_constraint + n_reg
+    n_fit_target = n_constraint + n_reg
 
-    # Rows of b_vec are weighted; the regularisation rows only act on the passive dofs.
-    fit_a_grid = np.zeros((n_grid, n_b_vec))
-    fit_a_grid[:, :n_constraint] = (inputs.g_constraint_grid * inputs.constraint_weight[:, np.newaxis]).T * d_r * d_z
-    g_b_vec_passive = np.vstack([inputs.g_constraint_passive, inputs.regularisation]).reshape(n_b_vec, n_passive)
-    fit_a_passive = (g_b_vec_passive * weight[:, np.newaxis]).T
+    # Rows of fit_target are weighted; the regularisation rows only act on the passive dofs.
+    fit_matrix_grid = np.zeros((n_grid, n_fit_target))
+    fit_matrix_grid[:, :n_constraint] = (
+        (inputs.g_constraint_grid * inputs.constraint_weight[:, np.newaxis]).T * d_r * d_z
+    )
+    g_fit_target_passive = np.vstack([inputs.g_constraint_passive, inputs.regularisation]).reshape(
+        n_fit_target, n_passive
+    )
+    fit_matrix_passive = (g_fit_target_passive * weight[:, np.newaxis]).T
 
     replacement, meas_names = replacement_matrix(inputs.constraint_names, inputs.sensor_replacements)
-    x_vec_names = [*PLASMA_DOF_NAMES, *inputs.passive_names]
+    fit_coefficient_names = [*PLASMA_DOF_NAMES, *inputs.passive_names]
     sizes = {
         "N_R": n_r, "N_Z": n_z, "N_GRID": n_grid, "N_EDGE": len(edge_r), "N_LIMITER": len(inputs.limiter_r),
         "N_COIL": len(inputs.coil_names), "N_MEAS": len(meas_names), "N_FLUX_LOOP": inputs.n_flux_loop,
         "N_BP_PROBE": inputs.n_bp_probe, "N_ROGOWSKI": inputs.n_rogowski, "N_CONSTRAINT": n_constraint,
-        "N_REG": n_reg, "N_B_VEC": n_b_vec, "N_PLASMA": N_PLASMA, "N_PASSIVE": n_passive,
-        "N_X_VEC": N_PLASMA + n_passive, "N_XPT_MAX": inputs.n_xpt_max,
+        "N_REG": n_reg, "N_FIT_TARGET": n_fit_target, "N_PLASMA": N_PLASMA, "N_PASSIVE": n_passive,
+        "N_FIT_DOF": N_PLASMA + n_passive, "N_XPT_MAX": inputs.n_xpt_max,
     }  # fmt: skip
     f64 = np.float64
     groups: dict[str, dict[str, Any]] = {
         "SIZES": {name: np.int32(sizes[name]) for name in dd.SIZE_NAMES},
         "GRID": {
             "R": grid_r, "Z": grid_z, "D_R": f64(d_r), "D_Z": f64(d_z), "R_FLAT": r_flat, "Z_FLAT": z_flat,
-            "INV_MU0_R": 1.0 / (r_flat * inputs.mu_0),
+            "INV_R": 1.0 / r_flat,
             "MASK_LIMITER": np.asarray(inputs.mask_limiter).astype(np.int32),
             "G_COIL": np.asarray(inputs.g_grid_coil, dtype=f64).reshape(n_grid, -1),
             "G_PASSIVE": np.asarray(inputs.g_grid_passive, dtype=f64).reshape(n_grid, n_passive),
@@ -473,8 +522,9 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
             "REPLACEMENT": replacement,
         },
         "FIT": {
-            "B_VEC_NAMES": [*inputs.constraint_names, *inputs.regularisation_names], "X_VEC_NAMES": x_vec_names,
-            "WEIGHT": weight, "A_GRID": fit_a_grid, "A_PASSIVE": fit_a_passive,
+            "TARGET_NAMES": [*inputs.constraint_names, *inputs.regularisation_names],
+            "DOF_NAMES": fit_coefficient_names,
+            "WEIGHT": weight, "A_GRID": fit_matrix_grid, "A_PASSIVE": fit_matrix_passive,
         },
         "SETTINGS": {
             "XPT_FRACTION": f64(inputs.xpt_fraction), "TOLERANCE": f64(inputs.tolerance), "IP_MIN": f64(inputs.ip_min),
@@ -488,7 +538,8 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
             "PSI_NORM": np.asarray(inputs.initial_psi_norm, dtype=f64).ravel(),
             "MASK": np.asarray(inputs.initial_mask).astype(np.int32).ravel(),
         },
-        "INFO": {"SETTINGS": inputs.settings_xml, "SOURCE": inputs.source},
+        "INFO": {"SETTINGS": inputs.settings_json, "SOURCE": inputs.source,
+                 "MU0": f64(inputs.mu_0), "PSI_TO_WB": f64(inputs.psi_to_weber)},
     }  # fmt: skip
     return Preshot(groups)
 

@@ -34,7 +34,7 @@ def test_replay_from_a_local_preshot(
     main([
         "replay", "analytic", "--quiet",
         "--set", "preshot/reader=local",
-        "--set", f"preshot/local/path:str={preshot_path}",
+        "--set", f"preshot/local/path={preshot_path}",
         "--set", f"writers/local/path={results_path}",
     ])  # fmt: skip
     assert str(results_path) in capsys.readouterr().out

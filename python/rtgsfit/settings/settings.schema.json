@@ -1,0 +1,267 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "RT-GSFit settings",
+    "description": "Preshot, replay and offline-output settings. Machine-specific fields are optional unless that reader is selected.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["preshot", "signals", "replay"],
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "description": "Editor schema hint. Runtime validation always uses the schema packaged with RT-GSFit."
+        },
+        "preshot": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reader"],
+            "properties": {
+                "reader": {"$ref": "#/$defs/preshot_reader"},
+                "builder": {"$ref": "#/$defs/preshot_reader"},
+                "boundary": {"$ref": "#/$defs/boundary"},
+                "local": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {"path": {"type": "string", "minLength": 1}}
+                },
+                "rtgsfit_mdsplus": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "pulse": {"type": "integer", "minimum": 0},
+                        "run_name": {"type": "string", "minLength": 1},
+                        "server": {"type": "string", "minLength": 1},
+                        "legacy_schema": {
+                            "type": "boolean",
+                            "description": "Read original-v2 preshot names and convert the basis metadata without changing the database."
+                        }
+                    }
+                }
+            }
+        },
+        "signals": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reader"],
+            "properties": {
+                "reader": {"enum": ["analytic", "gsfit", "freegsnke", "st40_mdsplus"]},
+                "st40_mdsplus": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "mag_run": {"type": "string", "minLength": 1},
+                        "server": {"type": "string", "minLength": 1}
+                    }
+                }
+            }
+        },
+        "replay": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pulse", "time_start", "time_end", "time_step"],
+            "properties": {
+                "pulse": {"type": "integer", "minimum": 0},
+                "time_start": {"type": "number", "description": "First replay time [s]."},
+                "time_end": {"type": "number", "description": "Last replay time [s], not before time_start."},
+                "time_step": {"type": "number", "exclusiveMinimum": 0, "description": "Time step [s]."},
+                "repeat": {"type": "integer", "minimum": 1, "description": "Picard calls per input slice."},
+                "stop_on_status": {"type": "boolean", "description": "Stop at the first nonzero C status."},
+                "stop_below_ip": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Stop when abs(ip) falls below this current [A]; zero disables the threshold."
+                }
+            }
+        },
+        "build": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "timing": {"type": "boolean", "description": "Compile per-section timers."},
+                "debug": {"type": "boolean"},
+                "arch_flags": {"type": "string", "description": "Compiler architecture flags; empty for a portable build."}
+            }
+        },
+        "writers": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "names": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {"enum": ["local", "c_source", "rtgsfit_mdsplus"]},
+                    "description": "Writers run after offline post-processing."
+                },
+                "local": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "path": {"type": "string", "minLength": 1, "description": "Results NPZ path."},
+                        "preshot_path": {"type": "string", "minLength": 1, "description": "Preshot NPZ path."}
+                    }
+                },
+                "c_source": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {"output_dir": {"type": "string", "description": "Generated C preshot directory."}}
+                },
+                "rtgsfit_mdsplus": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {"type": "boolean", "description": "Must be true to write to the shared tree."},
+                        "pulse": {"type": "integer", "minimum": 0},
+                        "run_name": {"type": "string", "minLength": 1},
+                        "run_description": {"type": "string"},
+                        "link_best": {"type": "boolean"}
+                    }
+                }
+            }
+        },
+        "analytic": {
+            "type": "object",
+            "description": "Large-aspect-ratio analytic reference; total poloidal flux in Wb throughout.",
+            "additionalProperties": false,
+            "properties": {
+                "plasma": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "r_0": {"type": "number", "exclusiveMinimum": 0, "description": "Plasma centre R [m]."},
+                        "z_0": {"type": "number", "description": "Plasma centre Z [m]."},
+                        "rho_b": {"type": "number", "exclusiveMinimum": 0, "description": "Plasma minor radius [m]."},
+                        "ip": {"type": "number", "description": "Plasma current [A]. Negative-current topology is not supported yet."}
+                    }
+                },
+                "grid": {"$ref": "#/$defs/grid"},
+                "limiter": {"$ref": "#/$defs/rectangle"},
+                "flux_loops": {"$ref": "#/$defs/rectangle"},
+                "bp_probes": {"$ref": "#/$defs/rectangle"},
+                "passives": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "r": {"$ref": "#/$defs/number_array"},
+                        "z": {"$ref": "#/$defs/number_array"}
+                    },
+                    "description": "Passive filament positions R and Z [m], with matching lengths."
+                },
+                "initial": {"$ref": "#/$defs/initial"}
+            }
+        },
+        "gsfit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "settings_path": {"type": "string", "minLength": 1, "description": "GSFit's own settings name or directory; not an RT-GSFit configuration."},
+                "pulse": {"type": "integer", "minimum": 0},
+                "grid": {"$ref": "#/$defs/grid"},
+                "sensor_names": {"enum": ["st40_pcs", "gsfit"]},
+                "rogowski_names": {"$ref": "#/$defs/string_array"},
+                "initial": {"$ref": "#/$defs/initial"},
+                "coils": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "groups": {
+                            "type": "object",
+                            "additionalProperties": {"$ref": "#/$defs/string_array"},
+                            "description": "Map each RT-GSFit circuit name to GSFit coils connected in series."
+                        },
+                        "signals": {"$ref": "#/$defs/string_array"},
+                        "matrix": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/number_array"},
+                            "description": "Rows are coil circuits, columns are signals; coil_current = matrix @ coil_signal."
+                        }
+                    }
+                },
+                "sensor_replacements": {
+                    "type": "object",
+                    "description": "Replace each named faulty sensor by a weighted sum of replacement signals.",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["replacements", "coefficients"],
+                        "properties": {
+                            "replacements": {"$ref": "#/$defs/string_array"},
+                            "coefficients": {"$ref": "#/$defs/number_array"}
+                        }
+                    }
+                }
+            }
+        },
+        "freegsnke": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "machine_dir": {"type": "string", "minLength": 1},
+                "machine_prefix": {"type": "string"},
+                "currents_path": {"type": "string", "minLength": 1},
+                "grid": {"$ref": "#/$defs/grid"},
+                "tolerance": {"type": "number", "exclusiveMinimum": 0},
+                "profile": {
+                    "type": "object",
+                    "description": "FreeGSNKE ConstrainPaxisIp parameters.",
+                    "additionalProperties": false,
+                    "properties": {
+                        "p_axis": {"type": "number", "minimum": 0, "description": "Axis pressure [Pa]."},
+                        "ip": {"type": "number", "description": "Plasma current [A]."},
+                        "f_vacuum": {"type": "number", "description": "Vacuum R B_phi [T m]."},
+                        "alpha_m": {"type": "number", "exclusiveMinimum": 0},
+                        "alpha_n": {"type": "number", "exclusiveMinimum": 0}
+                    }
+                }
+            }
+        }
+    },
+    "$defs": {
+        "preshot_reader": {"enum": ["analytic", "local", "gsfit", "freegsnke", "rtgsfit_mdsplus"]},
+        "number_array": {"type": "array", "items": {"type": "number"}},
+        "string_array": {"type": "array", "items": {"type": "string"}},
+        "boundary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "xpt_fraction": {
+                    "type": "number", "exclusiveMinimum": 0, "maximum": 1,
+                    "description": "Diverted boundary: fraction * xpt_psi + (1 - fraction) * axis_psi, just inside the separatrix."
+                },
+                "tolerance": {
+                    "type": "number", "exclusiveMinimum": 0,
+                    "description": "Boundary-separation and null-determinant tolerance; all newly built cases use total poloidal flux in Wb."
+                },
+                "ip_min": {"type": "number", "minimum": 0, "description": "Current centroid threshold [A]."},
+                "n_xpt_max": {"type": "integer", "minimum": 1}
+            }
+        },
+        "rectangle": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "r_min": {"type": "number", "exclusiveMinimum": 0, "description": "Minimum R [m]."},
+                "r_max": {"type": "number", "exclusiveMinimum": 0, "description": "Maximum R [m]."},
+                "z_min": {"type": "number", "description": "Minimum Z [m]."},
+                "z_max": {"type": "number", "description": "Maximum Z [m]."},
+                "n_r": {"type": "integer", "minimum": 2},
+                "n_z": {"type": "integer", "minimum": 2}
+            }
+        },
+        "grid": {
+            "allOf": [{"$ref": "#/$defs/rectangle"}],
+            "properties": {
+                "n_r": {"type": "integer", "minimum": 4},
+                "n_z": {"type": "integer", "minimum": 4}
+            }
+        },
+        "initial": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "source": {"enum": ["gsfit_settings", "cosine_bump"]},
+                "r": {"type": "number", "exclusiveMinimum": 0, "description": "Initial bump centre R [m]."},
+                "z": {"type": "number", "description": "Initial bump centre Z [m]."},
+                "radius": {"type": "number", "exclusiveMinimum": 0, "description": "Initial bump radius [m]."}
+            }
+        }
+    }
+}

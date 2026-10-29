@@ -22,13 +22,19 @@
 
 #include "grid.h"
 
-struct poisson_operator {
+struct poisson_operator
+{
     struct rtgsfit_grid grid;
-    const double *lower_band;     /* [n_grid * n_r] */
-    const double *upper_band;     /* [n_grid * (n_r + 2)] */
-    const int32_t *permutation;   /* [n_grid] */
+    const double *lower_band; /* [n_grid * n_r] */
+    int32_t n_lower_band;
+    const double *upper_band; /* [n_grid * (n_r + 2)] */
+    int32_t n_upper_band;
+    const int32_t *permutation; /* [n_grid] */
+    int32_t n_permutation;
     const double *edge_inv_mu0_r; /* [n_edge] 1 / (mu0 R) on the edge */
-    const double *edge_g_edge;    /* [n_edge * n_edge] psi on the edge per unit edge current */
+    int32_t n_edge_inv_mu0_r;
+    const double *edge_g_edge; /* [n_edge * n_edge] psi on the edge per unit edge current */
+    int32_t n_edge_g_edge;
 };
 
 /* Number of doubles of workspace needed by `poisson_solve_free_boundary()`. */
@@ -45,11 +51,11 @@ static inline int32_t poisson_work_size(const struct rtgsfit_grid *grid)
  */
 int32_t poisson_solve_fixed_boundary(const struct poisson_operator *op,
                                      const double rhs[],
-                                     int32_t n_rhs,
+                                     const int32_t n_rhs,
                                      double psi[],
-                                     int32_t n_psi,
+                                     const int32_t n_psi,
                                      double work[],
-                                     int32_t n_work);
+                                     const int32_t n_work);
 
 /*
  * Solve the free-boundary problem.
@@ -60,10 +66,10 @@ int32_t poisson_solve_fixed_boundary(const struct poisson_operator *op,
  */
 int32_t poisson_solve_free_boundary(const struct poisson_operator *op,
                                     const double rhs[],
-                                    int32_t n_rhs,
+                                    const int32_t n_rhs,
                                     double psi[],
-                                    int32_t n_psi,
+                                    const int32_t n_psi,
                                     double work[],
-                                    int32_t n_work);
+                                    const int32_t n_work);
 
 #endif /* RTGSFIT_POISSON_SOLVER_H */

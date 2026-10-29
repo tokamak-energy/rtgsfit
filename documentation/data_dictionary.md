@@ -22,10 +22,10 @@ of time slices. See [manual.md](manual.md) for the definitions of the symbols.
 | `N_ROGOWSKI` | Number of Rogowski coil constraints |
 | `N_CONSTRAINT` | Number of constraints, N_FLUX_LOOP + N_BP_PROBE + N_ROGOWSKI |
 | `N_REG` | Number of regularisation rows of the least-squares problem |
-| `N_B_VEC` | Number of rows of the least-squares problem, N_CONSTRAINT + N_REG |
+| `N_FIT_TARGET` | Number of rows of the least-squares problem, N_CONSTRAINT + N_REG |
 | `N_PLASMA` | Number of plasma degrees of freedom |
 | `N_PASSIVE` | Number of passive-structure degrees of freedom |
-| `N_X_VEC` | Number of unknowns of the least-squares problem, N_PLASMA + N_PASSIVE |
+| `N_FIT_DOF` | Number of unknowns of the least-squares problem, N_PLASMA + N_PASSIVE |
 | `N_XPT_MAX` | Maximum number of x-points that are stored |
 | `N_COIL_SIGNAL` | Number of PCS coil signals (Python only) |
 | `N_INTERP` | 4, the points of a bilinear interpolation stencil |
@@ -47,7 +47,7 @@ The computational grid.
 | `PRESHOT.GRID:D_Z` | `GRID_D_Z` | scalar | float64 | metre | Grid spacing in Z |
 | `PRESHOT.GRID:R_FLAT` | `GRID_R_FLAT` | [N_GRID] | float64 | metre | R of every grid point; index i_z * N_R + i_r |
 | `PRESHOT.GRID:Z_FLAT` | `GRID_Z_FLAT` | [N_GRID] | float64 | metre | Z of every grid point; index i_z * N_R + i_r |
-| `PRESHOT.GRID:INV_MU0_R` | `GRID_INV_MU0_R` | [N_GRID] | float64 | 1 / henry | 1 / (mu0 R) at every grid point |
+| `PRESHOT.GRID:INV_R` | `GRID_INV_R` | [N_GRID] | float64 | 1 / metre | 1 / R; FF_PRIME_MU0 fits FF-prime / mu0 |
 | `PRESHOT.GRID:MASK_LIMITER` | `GRID_MASK_LIMITER` | [N_GRID] | int32 | dimensionless | 1 where plasma current is allowed (inside the limiter); 0 elsewhere |
 | `PRESHOT.GRID:G_COIL` | `GRID_G_COIL` | [N_GRID, N_COIL] | float64 | weber / ampere | Greens function: psi on the grid per unit coil current |
 | `PRESHOT.GRID:G_PASSIVE` | `GRID_G_PASSIVE` | [N_GRID, N_PASSIVE] | float64 | weber / ampere | Greens function: psi on the grid per unit passive degree of freedom |
@@ -80,7 +80,7 @@ The discrete Grad-Shafranov operator.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `PRESHOT.POISSON:RHS_SCALE` | `POISSON_RHS_SCALE` | [N_GRID] | float64 | henry * metre ** 2 | Factor that turns j_phi into the right-hand side of the discrete Grad-Shafranov equation |
+| `PRESHOT.POISSON:RHS_SCALE` | `POISSON_RHS_SCALE` | [N_GRID] | float64 | henry * metre ** 2 | (2 pi / INFO:PSI_TO_WB) mu0 R d_z^2; discrete rhs = -RHS_SCALE j_phi |
 | `PRESHOT.POISSON:LOWER_BAND` | `POISSON_LOWER_BAND` | [N_GRID, N_R] | float64 | dimensionless | Lower band of the LU factors of the discrete Grad-Shafranov operator |
 | `PRESHOT.POISSON:UPPER_BAND` | `POISSON_UPPER_BAND` | [N_GRID, N_R_PLUS_2] | float64 | dimensionless | Upper band of the LU factors; the diagonal (column 0) is stored inverted |
 | `PRESHOT.POISSON:PERMUTATION` | `POISSON_PERMUTATION` | [N_GRID] | int32 | dimensionless | Row permutation of the LU factorisation |
@@ -97,15 +97,15 @@ From the PCS measurements to the constraints.
 
 ### `PRESHOT.FIT`
 
-The weighted least-squares problem a_matrix x_vec = b_vec.
+The weighted least-squares problem fit_matrix fit_dof = fit_target.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `PRESHOT.FIT:B_VEC_NAMES` |  | [N_B_VEC] | str | dimensionless | Names of the rows of b_vec: constraints, then regularisations |
-| `PRESHOT.FIT:X_VEC_NAMES` |  | [N_X_VEC] | str | dimensionless | Names of the entries of x_vec: plasma, then passive degrees of freedom |
-| `PRESHOT.FIT:WEIGHT` | `FIT_WEIGHT` | [N_B_VEC] | float64 | dimensionless | Weight of each row of b_vec; 1 / uncertainty |
-| `PRESHOT.FIT:A_GRID` | `FIT_A_GRID` | [N_GRID, N_B_VEC] | float64 | dimensionless | Weighted response of b_vec to the current in each grid cell, including d_r d_z |
-| `PRESHOT.FIT:A_PASSIVE` | `FIT_A_PASSIVE` | [N_PASSIVE, N_B_VEC] | float64 | dimensionless | Weighted response of b_vec to each passive degree of freedom; rows of the transposed a_matrix |
+| `PRESHOT.FIT:TARGET_NAMES` |  | [N_FIT_TARGET] | str | dimensionless | Names of the rows of fit_target: constraints, then regularisations |
+| `PRESHOT.FIT:DOF_NAMES` |  | [N_FIT_DOF] | str | dimensionless | Names of the entries of fit_dof: plasma, then passive degrees of freedom |
+| `PRESHOT.FIT:WEIGHT` | `FIT_WEIGHT` | [N_FIT_TARGET] | float64 | dimensionless | Weight of each row of fit_target; 1 / uncertainty |
+| `PRESHOT.FIT:A_GRID` | `FIT_A_GRID` | [N_GRID, N_FIT_TARGET] | float64 | dimensionless | Weighted response of fit_target to the current in each grid cell, including d_r d_z |
+| `PRESHOT.FIT:A_PASSIVE` | `FIT_A_PASSIVE` | [N_PASSIVE, N_FIT_TARGET] | float64 | dimensionless | Weighted response of fit_target to each passive degree of freedom; rows of the transposed fit_matrix |
 
 ### `PRESHOT.SETTINGS`
 
@@ -150,7 +150,9 @@ Provenance.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `PRESHOT.INFO:SETTINGS` |  | scalar | str | dimensionless | XML settings that produced the preshot |
+| `PRESHOT.INFO:SETTINGS` |  | scalar | str | dimensionless | Archived settings that produced the preshot; JSON for new builds, legacy XML retained |
+| `PRESHOT.INFO:MU0` |  | scalar | float64 | henry / metre | Permeability used for the current basis |
+| `PRESHOT.INFO:PSI_TO_WB` |  | scalar | float64 | dimensionless | Native-to-weber factor; 1 for all new preshots, 2 pi only for legacy analytic Wb/rad archives |
 | `PRESHOT.INFO:SOURCE` |  | scalar | str | dimensionless | Database reader and code version that produced the preshot |
 
 ## Results
@@ -168,6 +170,9 @@ Provenance.
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
 | `GLOBAL:IP` |  | [N_TIME] | float64 | ampere | Plasma current |
+| `GLOBAL:AREA` |  | [N_TIME] | float64 | metre ** 2 | Poloidal cross-sectional area from the boundary polygon |
+| `GLOBAL:VOLUME` |  | [N_TIME] | float64 | metre ** 3 | Axisymmetric volume enclosed by the boundary polygon |
+| `GLOBAL:LENGTH_POL` |  | [N_TIME] | float64 | metre | Poloidal boundary perimeter |
 | `GLOBAL:PSI_MAG_AXIS` |  | [N_TIME] | float64 | weber | Poloidal flux at the magnetic axis |
 | `GLOBAL:XPT_DIVERTED` |  | [N_TIME] | int32 | dimensionless | Flag for x-point diverted; 1=diverted; 0=limited |
 | `GLOBAL:STATUS` |  | [N_TIME] | int32 | dimensionless | rtgsfit() status bits; 0 is success; see the manual |
@@ -237,6 +242,7 @@ Measurements used to constrain the equilibrium and their reconstructed values.
 |---|---|---|---|---|---|
 | `CONSTRAINTS:CHI_SQ_MAG` |  | [N_TIME] | float64 | dimensionless | Weighted squared residual of the magnetic constraints |
 | `CONSTRAINTS:CHI_SQ_TOTAL` |  | [N_TIME] | float64 | dimensionless | Weighted squared residual including regularisation |
+| `CONSTRAINTS:CHI_SQ_REG` |  | [N_TIME] | float64 | dimensionless | Regularisation contribution; not a reduced chi-square |
 
 ### `CONSTRAINTS.FLUX_LOOP.ALL`
 
@@ -245,7 +251,18 @@ Measurements used to constrain the equilibrium and their reconstructed values.
 | `CONSTRAINTS.FLUX_LOOP.ALL:NAMES` |  | [N_FLUX_LOOP] | str | dimensionless | Sensor names |
 | `CONSTRAINTS.FLUX_LOOP.ALL:MEASURED` |  | [N_TIME, N_FLUX_LOOP] | float64 | weber | Measured value, after sensor replacement |
 | `CONSTRAINTS.FLUX_LOOP.ALL:RECONSTRUCT` |  | [N_TIME, N_FLUX_LOOP] | float64 | weber | Value calculated from the reconstructed equilibrium |
-| `CONSTRAINTS.FLUX_LOOP.ALL:WEIGHT` |  | [N_TIME, N_FLUX_LOOP] | float64 | dimensionless | Weight given to the measurement; 1 / uncertainty |
+| `CONSTRAINTS.FLUX_LOOP.ALL:WEIGHT` |  | [N_TIME, N_FLUX_LOOP] | float64 | 1 / weber | Weight given to the measurement; 1 / uncertainty |
+| `CONSTRAINTS.FLUX_LOOP.ALL:RESIDUAL` |  | [N_TIME, N_FLUX_LOOP] | float64 | weber | Reconstructed minus measured; NaN on failed slices |
+| `CONSTRAINTS.FLUX_LOOP.ALL:RESIDUAL_W` |  | [N_TIME, N_FLUX_LOOP] | float64 | dimensionless | Residual times inverse uncertainty |
+| `CONSTRAINTS.FLUX_LOOP.ALL:CHI_SQ` |  | [N_TIME, N_FLUX_LOOP] | float64 | dimensionless | Per-sensor squared weighted residual |
+
+### `CONSTRAINTS.FLUX_LOOP`
+
+Flux loops.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `CONSTRAINTS.FLUX_LOOP:CHI_SQ` |  | [N_TIME] | float64 | dimensionless | Sum over this sensor family |
 
 ### `CONSTRAINTS.BP_PROBE.ALL`
 
@@ -254,7 +271,18 @@ Measurements used to constrain the equilibrium and their reconstructed values.
 | `CONSTRAINTS.BP_PROBE.ALL:NAMES` |  | [N_BP_PROBE] | str | dimensionless | Sensor names |
 | `CONSTRAINTS.BP_PROBE.ALL:MEASURED` |  | [N_TIME, N_BP_PROBE] | float64 | tesla | Measured value, after sensor replacement |
 | `CONSTRAINTS.BP_PROBE.ALL:RECONSTRUCT` |  | [N_TIME, N_BP_PROBE] | float64 | tesla | Value calculated from the reconstructed equilibrium |
-| `CONSTRAINTS.BP_PROBE.ALL:WEIGHT` |  | [N_TIME, N_BP_PROBE] | float64 | dimensionless | Weight given to the measurement; 1 / uncertainty |
+| `CONSTRAINTS.BP_PROBE.ALL:WEIGHT` |  | [N_TIME, N_BP_PROBE] | float64 | 1 / tesla | Weight given to the measurement; 1 / uncertainty |
+| `CONSTRAINTS.BP_PROBE.ALL:RESIDUAL` |  | [N_TIME, N_BP_PROBE] | float64 | tesla | Reconstructed minus measured; NaN on failed slices |
+| `CONSTRAINTS.BP_PROBE.ALL:RESIDUAL_W` |  | [N_TIME, N_BP_PROBE] | float64 | dimensionless | Residual times inverse uncertainty |
+| `CONSTRAINTS.BP_PROBE.ALL:CHI_SQ` |  | [N_TIME, N_BP_PROBE] | float64 | dimensionless | Per-sensor squared weighted residual |
+
+### `CONSTRAINTS.BP_PROBE`
+
+Poloidal field probes.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `CONSTRAINTS.BP_PROBE:CHI_SQ` |  | [N_TIME] | float64 | dimensionless | Sum over this sensor family |
 
 ### `CONSTRAINTS.ROGOWSKI.ALL`
 
@@ -263,7 +291,18 @@ Measurements used to constrain the equilibrium and their reconstructed values.
 | `CONSTRAINTS.ROGOWSKI.ALL:NAMES` |  | [N_ROGOWSKI] | str | dimensionless | Sensor names |
 | `CONSTRAINTS.ROGOWSKI.ALL:MEASURED` |  | [N_TIME, N_ROGOWSKI] | float64 | ampere | Measured value, after sensor replacement |
 | `CONSTRAINTS.ROGOWSKI.ALL:RECONSTRUCT` |  | [N_TIME, N_ROGOWSKI] | float64 | ampere | Value calculated from the reconstructed equilibrium |
-| `CONSTRAINTS.ROGOWSKI.ALL:WEIGHT` |  | [N_TIME, N_ROGOWSKI] | float64 | dimensionless | Weight given to the measurement; 1 / uncertainty |
+| `CONSTRAINTS.ROGOWSKI.ALL:WEIGHT` |  | [N_TIME, N_ROGOWSKI] | float64 | 1 / ampere | Weight given to the measurement; 1 / uncertainty |
+| `CONSTRAINTS.ROGOWSKI.ALL:RESIDUAL` |  | [N_TIME, N_ROGOWSKI] | float64 | ampere | Reconstructed minus measured; NaN on failed slices |
+| `CONSTRAINTS.ROGOWSKI.ALL:RESIDUAL_W` |  | [N_TIME, N_ROGOWSKI] | float64 | dimensionless | Residual times inverse uncertainty |
+| `CONSTRAINTS.ROGOWSKI.ALL:CHI_SQ` |  | [N_TIME, N_ROGOWSKI] | float64 | dimensionless | Per-sensor squared weighted residual |
+
+### `CONSTRAINTS.ROGOWSKI`
+
+Rogowski coils.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `CONSTRAINTS.ROGOWSKI:CHI_SQ` |  | [N_TIME] | float64 | dimensionless | Sum over this sensor family |
 
 ### `CONSTRAINTS.PF_CURRENT.ALL`
 
@@ -271,6 +310,13 @@ Measurements used to constrain the equilibrium and their reconstructed values.
 |---|---|---|---|---|---|
 | `CONSTRAINTS.PF_CURRENT.ALL:NAMES` |  | [N_COIL] | str | dimensionless | PF coil circuit names |
 | `CONSTRAINTS.PF_CURRENT.ALL:MEASURED` |  | [N_TIME, N_COIL] | float64 | ampere | PF coil circuit currents |
+
+### `CONSTRAINTS.PF_PASSIVE.ALL`
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `CONSTRAINTS.PF_PASSIVE.ALL:NAMES` |  | [N_PASSIVE] | str | dimensionless | Passive current-mode names |
+| `CONSTRAINTS.PF_PASSIVE.ALL:RECONSTRUCT` |  | [N_TIME, N_PASSIVE] | float64 | ampere | Fitted passive current-mode amplitudes |
 
 ### `PROFILES_2D.R_Z`
 
@@ -281,6 +327,8 @@ On the rectangular (R, Z) grid.
 | `PROFILES_2D.R_Z:R` |  | [N_R] | float64 | metre | Major radius of the grid columns |
 | `PROFILES_2D.R_Z:Z` |  | [N_Z] | float64 | metre | Height of the grid rows |
 | `PROFILES_2D.R_Z:PSI` |  | [N_TIME, N_Z, N_R] | float64 | weber | Poloidal flux |
+| `PROFILES_2D.R_Z:B_FIELD_R` |  | [N_TIME, N_Z, N_R] | float64 | tesla | -d(psi)/dZ / (2 pi R); offline finite differences |
+| `PROFILES_2D.R_Z:B_FIELD_Z` |  | [N_TIME, N_Z, N_R] | float64 | tesla | +d(psi)/dR / (2 pi R); offline finite differences |
 | `PROFILES_2D.R_Z:PSI_NORM` |  | [N_TIME, N_Z, N_R] | float64 | dimensionless | Normalised poloidal flux; 0 on axis, 1 on the boundary and outside the plasma |
 | `PROFILES_2D.R_Z:MASK` |  | [N_TIME, N_Z, N_R] | int32 | dimensionless | 1 inside the plasma; 0 outside |
 | `PROFILES_2D.R_Z:J_PHI` |  | [N_TIME, N_Z, N_R] | float64 | ampere / metre ** 2 | Toroidal plasma current density |
@@ -302,8 +350,31 @@ The least-squares fit.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `FIT:X_VEC` |  | [N_TIME, N_X_VEC] | float64 | dimensionless | Solution of the least-squares problem a_matrix x_vec = b_vec |
-| `FIT:X_VEC_NAMES` |  | [N_X_VEC] | str | dimensionless | Names of the entries of x_vec |
+| `FIT:DOF_VALUES` |  | [N_TIME, N_FIT_DOF] | float64 | mixed; see DOF_UNITS | Fitted DOF values in physical units, not weighted; fit_matrix fit_dof approximates fit_target |
+| `FIT:DOF_NAMES` |  | [N_FIT_DOF] | str | dimensionless | Names of the entries of fit_dof |
+| `FIT:DOF_UNITS` |  | [N_FIT_DOF] | str | dimensionless | Physical units of each fitted plasma or passive DOF |
+| `FIT:TARGET_NAMES` |  | [N_FIT_TARGET] | str | dimensionless | Magnetic constraint rows followed by regularisation rows |
+| `FIT:TARGET` |  | [N_TIME, N_FIT_TARGET] | float64 | dimensionless | Weighted native measurements minus coil response; regularisation target zero |
+| `FIT:PREDICTION` |  | [N_TIME, N_FIT_TARGET] | float64 | dimensionless | Weighted reconstructed response including regularisation rows |
+| `FIT:RESIDUAL` |  | [N_TIME, N_FIT_TARGET] | float64 | dimensionless | PREDICTION minus TARGET; NaN on failed slices |
+| `FIT:CHI_SQ` |  | [N_TIME, N_FIT_TARGET] | float64 | dimensionless | Per-row squared weighted fit residual |
+| `FIT:FF_PRIME` |  | [N_TIME] | float64 | tesla | FF-prime model amplitude: mu0 times FF_PRIME_MU0 coefficient; native convention |
+
+### `INPUT`
+
+Inputs and settings.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `INPUT:SCHEMA` |  | scalar | str | dimensionless | Result schema and flux normalization contract |
+| `INPUT:COCOS` |  | scalar | int32 | dimensionless | COCOS convention of exported equilibrium fields and flux |
+
+### `FIT`
+
+The least-squares fit.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
 | `FIT:LAPACK_INFO` |  | [N_TIME] | int32 | dimensionless | INFO returned by LAPACK dgelss; 0 is success |
 
 ### `INPUT`
@@ -312,7 +383,7 @@ Inputs and settings.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `INPUT:SETTINGS` |  | scalar | str | dimensionless | XML settings of the replay |
+| `INPUT:SETTINGS` |  | scalar | str | dimensionless | Validated effective JSON settings of the replay |
 | `INPUT:PRESHOT_SRC` |  | scalar | str | dimensionless | Where the preshot was read from |
 | `INPUT:CODE_VERSION` |  | scalar | str | dimensionless | RT-GSFit version |
 | `INPUT:MEAS` |  | [N_TIME, N_MEAS] | float64 | dimensionless | meas: the PCS measurements passed to rtgsfit() |

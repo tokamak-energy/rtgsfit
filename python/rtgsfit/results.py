@@ -21,6 +21,7 @@ from rtgsfit.boundary import outline_size
 from rtgsfit.database_readers import Signals
 from rtgsfit.library import TIMING_SECTIONS
 from rtgsfit.library import SliceResult
+from rtgsfit.post_processing import post_process
 from rtgsfit.preshot import Preshot
 
 
@@ -55,7 +56,7 @@ def collect_results(
     preshot: Preshot,
     signals: Signals,
     slices: list[SliceResult],
-    settings_xml: str,
+    settings_json: str,
     preshot_source: str,
 ) -> Results:
     """Map the per-slice outputs of `rtgsfit()` onto the results nodes.
@@ -154,12 +155,12 @@ def collect_results(
         },
         "XPOINTS": {"ALL": {"N": xpt_n, "R": xpt("xpt_r"), "Z": xpt("xpt_z"), "PSI": xpt("xpt_psi")}},
         "FIT": {
-            "X_VEC": stack("x_vec"),
-            "X_VEC_NAMES": list(preshot["FIT:X_VEC_NAMES"]),
+            "DOF_VALUES": stack("fit_dof"),
+            "DOF_NAMES": list(preshot["FIT:DOF_NAMES"]),
             "LAPACK_INFO": stack("lapack_info", np.int32),
         },
         "INPUT": {
-            "SETTINGS": settings_xml,
+            "SETTINGS": settings_json,
             "PRESHOT_SRC": preshot_source,
             "CODE_VERSION": rtgsfit.__version__,
             "MEAS": np.asarray(signals.meas[:n_time], dtype=np.float64),
@@ -168,6 +169,7 @@ def collect_results(
         "TIMING": {"SECTIONS": list(TIMING_SECTIONS), "DURATION": timing},
     }
     nested.update(preshot.to_nested())
+    post_process(nested, preshot)
     results = Results(nested)
     validate_results(results, preshot)
     return results
@@ -185,9 +187,10 @@ def validate_results(results: Results, preshot: Preshot) -> None:
         raise ValueError(f"results nodes differ from the data dictionary: {sorted(set(flat) ^ expected)}")
     for node in dd.RESULTS_NODES:
         value = flat[node.key]
-        if node.dtype == "str":
-            continue
         array = np.asarray(value)
         shape = tuple(sizes[dim] for dim in node.shape)
-        if array.shape != shape or array.dtype != np.dtype(node.dtype):
+        dtype_valid = (
+            array.size == 0 or array.dtype.kind in "US" if node.dtype == "str" else array.dtype == np.dtype(node.dtype)
+        )
+        if array.shape != shape or not dtype_valid:
             raise ValueError(f"{node.mds_path}: {array.shape} {array.dtype}, expected {shape} {node.dtype}")

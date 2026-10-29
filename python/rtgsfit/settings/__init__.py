@@ -1,93 +1,56 @@
-"""XML settings, in the style of the IMAS Data Dictionary `code.parameters` field.
+"""JSON settings validated against the packaged schema, shared with VS Code.
 
-A settings file is a tree of elements under a `<parameters>` root. Every leaf element carries a
-`type` attribute that says how to parse its text:
-
-```xml
-<parameters>
-  <grid>
-    <n_r type="int">65</n_r>
-    <r_min type="float" unit="m">9.25</r_min>
-  </grid>
-  <fit>
-    <rogowski_names type="str_array">INIVC000 BVLT</rogowski_names>
-  </fit>
-</parameters>
-```
-
-Supported types: `int`, `float`, `bool`, `str`, `int_array`, `float_array`, `str_array`.
-Arrays are whitespace separated. Optional `unit` and `description` attributes are kept only for
-documentation. Settings are read into nested dictionaries, and the raw XML text is kept so that it
-can be stored in MDSplus next to the results (`INPUT:SETTINGS`).
+Settings contain ordinary JSON values. Units, descriptions and allowed values belong to
+``settings.schema.json``, not to each configuration. Archived settings are self-contained JSON.
 """
 
 from __future__ import annotations
 
 import copy
-import xml.etree.ElementTree as ElementTree
+import json
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-
-SETTINGS_ROOT_TAG = "parameters"
-
-_SCALAR_PARSERS = {
-    "int": int,
-    "float": float,
-    "str": lambda text: text,
-    "bool": lambda text: _parse_bool(text),
-}
-_ARRAY_DTYPES = {"int_array": np.int64, "float_array": np.float64}
+from jsonschema import Draft202012Validator
+from jsonschema import ValidationError
 
 
-def _parse_bool(text: str) -> bool:
-    lowered = text.strip().lower()
-    if lowered in ("true", "1", "yes"):
-        return True
-    if lowered in ("false", "0", "no"):
-        return False
-    raise ValueError(f"cannot parse {text!r} as bool")
+@lru_cache(maxsize=1)
+def settings_validator() -> Draft202012Validator:
+    schema = json.loads((resources.files(__name__) / "settings.schema.json").read_text())
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema)
 
 
-def _parse_leaf(element: ElementTree.Element, path: str) -> Any:
-    value_type = element.get("type")
-    text = (element.text or "").strip()
-    if value_type is None:
-        raise ValueError(f"settings leaf '{path}' has no 'type' attribute")
-    if value_type in _SCALAR_PARSERS:
-        return _SCALAR_PARSERS[value_type](text)
-    if value_type in _ARRAY_DTYPES:
-        return np.array(text.split(), dtype=_ARRAY_DTYPES[value_type])
-    if value_type == "str_array":
-        return text.split()
-    raise ValueError(f"settings leaf '{path}' has unknown type {value_type!r}")
-
-
-def _element_to_dict(element: ElementTree.Element, path: str) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for child in element:
-        child_path = f"{path}/{child.tag}"
-        if child.tag in result:
-            raise ValueError(f"duplicate settings element '{child_path}'")
-        if len(child) > 0:
-            result[child.tag] = _element_to_dict(child, child_path)
-        else:
-            result[child.tag] = _parse_leaf(child, child_path)
-    return result
+def validate_settings(values: dict[str, Any], name: str) -> None:
+    """Reject unknown settings and invalid values before building or running the solver."""
+    try:
+        settings_validator().validate(values)
+    except ValidationError as error:
+        path = "/".join(str(part) for part in error.absolute_path) or "<root>"
+        raise ValueError(f"invalid setting '{path}' in '{name}': {error.message}") from error
+    json.dumps(values, allow_nan=False)
 
 
 class Settings(dict[str, Any]):
-    """Nested dictionary of settings, plus the XML text it was read from."""
+    """Nested JSON values and their source name; serialisation reflects current effective values."""
 
-    def __init__(self, values: dict[str, Any], xml_text: str, name: str) -> None:
-        super().__init__(values)
-        self.xml_text = xml_text
+    def __init__(self, values: dict[str, Any], name: str = "<string>") -> None:
+        validate_settings(values, name)
+        super().__init__(copy.deepcopy(values))
         self.name = name
 
+    @property
+    def json_text(self) -> str:
+        """Self-contained, validated effective settings for storage and cache keys."""
+        validate_settings(self, self.name)
+        return json.dumps(self, indent=4, allow_nan=False) + "\n"
+
     def get_path(self, path: str) -> Any:
-        """Look up a value by a '/' separated path, e.g. `settings.get_path("grid/n_r")`."""
+        """Look up a setting by a slash-separated path, e.g. ``replay/time_step``."""
         node: Any = self
         for key in path.split("/"):
             if not isinstance(node, dict) or key not in node:
@@ -96,89 +59,69 @@ class Settings(dict[str, Any]):
         return node
 
     def copy_with(self, overrides: dict[str, Any]) -> Settings:
-        """Return a copy with values replaced, e.g. `{"replay/pulse": 13343}`.
-
-        The stored XML text is updated too, so the values written to MDSplus match the values used.
-        """
+        """Return an independently validated copy with slash-separated paths replaced."""
         values = copy.deepcopy(dict(self))
-        root = ElementTree.fromstring(self.xml_text)
         for path, value in overrides.items():
             keys = path.split("/")
+            if any(not key or ":" in key for key in keys):
+                raise ValueError(f"invalid setting path '{path}'; use slash-separated JSON keys")
             node = values
             for key in keys[:-1]:
-                node = node.setdefault(key, {})
+                child = node.setdefault(key, {})
+                if not isinstance(child, dict):
+                    raise ValueError(f"setting '{path}' traverses non-object '{key}'")
+                node = child
             node[keys[-1]] = value
-            element = root
-            for key in keys:
-                child = element.find(key)
-                if child is None:
-                    child = ElementTree.SubElement(element, key)
-                element = child
-            element.set("type", element.get("type") or _infer_type(value))
-            element.text = _format_value(value)
-        return Settings(values, ElementTree.tostring(root, encoding="unicode"), self.name)
+        return Settings(values, self.name)
 
 
-def _infer_type(value: Any) -> str:
-    if isinstance(value, bool):
-        return "bool"
-    if isinstance(value, (int, np.integer)):
-        return "int"
-    if isinstance(value, (float, np.floating)):
-        return "float"
-    if isinstance(value, str):
-        return "str"
-    array = np.asarray(value)
-    if array.dtype.kind in "iu":
-        return "int_array"
-    if array.dtype.kind == "f":
-        return "float_array"
-    return "str_array"
+def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in values:
+            raise ValueError(f"duplicate JSON setting '{key}'")
+        values[key] = value
+    return values
 
 
-def _format_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (str, int, float, np.integer, np.floating)):
-        return repr(float(value)) if isinstance(value, (float, np.floating)) else str(value)
-    return " ".join(repr(float(v)) if isinstance(v, (float, np.floating)) else str(v) for v in value)
+def reject_constant(value: str) -> None:
+    raise ValueError(f"nonfinite JSON number '{value}' is not a valid setting")
 
 
-def parse_settings(xml_text: str, name: str = "<string>") -> Settings:
-    """Parse settings from XML text."""
-    root = ElementTree.fromstring(xml_text)
-    if root.tag != SETTINGS_ROOT_TAG:
-        raise ValueError(f"settings root element must be <{SETTINGS_ROOT_TAG}>, not <{root.tag}>")
-    return Settings(_element_to_dict(root, ""), xml_text, name)
+def parse_settings(json_text: str, name: str = "<string>") -> Settings:
+    """Parse strict JSON; reject duplicate keys, nonfinite numbers and schema violations."""
+    values = json.loads(json_text, object_pairs_hook=unique_object, parse_constant=reject_constant)
+    if not isinstance(values, dict):
+        raise ValueError(f"settings in '{name}' must be a JSON object")
+    return Settings(values, name)
 
 
 def parse_overrides(settings: Settings, assignments: list[str]) -> dict[str, Any]:
-    """`["replay/pulse=13343"]` -> `{"replay/pulse": 13343}`, parsed with the type declared in the XML.
+    """Parse ``path=value`` assignments, using JSON literals or unquoted string values.
 
-    New settings (not in the XML) need an explicit type: `path:type=value`, e.g. `build/debug:bool=true`.
+    Quote arrays as one shell argument: ``--set 'writers/names=["local"]'``.
+    Schema validation catches unknown keys and wrong types, including newly added settings.
     """
-    root = ElementTree.fromstring(settings.xml_text)
     overrides: dict[str, Any] = {}
     for assignment in assignments:
-        target, separator, text = assignment.partition("=")
+        path, separator, text = assignment.partition("=")
         if not separator:
             raise ValueError(f"override {assignment!r} is not of the form path=value")
-        path, _, value_type = target.partition(":")
-        element = root.find(path)
-        if not value_type:
-            if element is None or element.get("type") is None:
-                raise ValueError(f"setting '{path}' is not in '{settings.name}'; give its type as {path}:<type>=...")
-            value_type = str(element.get("type"))
-        leaf = ElementTree.Element("leaf", type=value_type)
-        leaf.text = text
-        overrides[path] = _parse_leaf(leaf, path)
+        try:
+            value = json.loads(text, object_pairs_hook=unique_object, parse_constant=reject_constant)
+        except json.JSONDecodeError:
+            value = text
+        overrides[path] = value
+    settings.copy_with(overrides)
     return overrides
 
 
 def replay_times(settings: Settings) -> np.ndarray:
-    """The time slices of a replay: `replay/time_start` to `replay/time_end` in steps of `replay/time_step`."""
+    """Replay times from ``time_start`` through ``time_end`` in steps of ``time_step``."""
     replay = settings["replay"]
-    start, end, step = float(replay["time_start"]), float(replay["time_end"]), float(replay["time_step"])
+    start = float(replay["time_start"])
+    end = float(replay["time_end"])
+    step = float(replay["time_step"])
     if step <= 0.0 or end < start:
         raise ValueError("replay needs time_step > 0 and time_end >= time_start")
     n_time = int(np.floor((end - start) / step + 1e-9)) + 1
@@ -186,17 +129,19 @@ def replay_times(settings: Settings) -> np.ndarray:
 
 
 def available_settings() -> list[str]:
-    """Names of the settings shipped with the package."""
+    """Names of the configurations shipped with the package."""
     root = resources.files(__name__)
-    return sorted(entry.name for entry in root.iterdir() if entry.is_dir() and (entry / "rtgsfit.xml").is_file())
+    return sorted(entry.name for entry in root.iterdir() if entry.is_dir() and (entry / "rtgsfit.json").is_file())
 
 
 def load_settings(name_or_path: str | Path) -> Settings:
-    """Load settings by package name (e.g. `"analytic"`) or by path to an XML file."""
-    path = Path(name_or_path)
-    if path.suffix == ".xml" and path.is_file():
+    """Load a packaged name (e.g. ``analytic``) or a path to a JSON settings file."""
+    path = Path(name_or_path).expanduser()
+    if path.suffix == ".json":
         return parse_settings(path.read_text(), name=str(path))
-    resource = resources.files(__name__) / str(name_or_path) / "rtgsfit.xml"
+    if path.suffix == ".xml":
+        raise ValueError("XML settings are no longer supported; use an rtgsfit.json configuration")
+    resource = resources.files(__name__) / str(name_or_path) / "rtgsfit.json"
     if not resource.is_file():
         raise FileNotFoundError(f"no settings '{name_or_path}'; available: {', '.join(available_settings())}")
     return parse_settings(resource.read_text(), name=str(name_or_path))

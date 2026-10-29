@@ -1,0 +1,125 @@
+{
+    "$schema": "../settings.schema.json",
+    "preshot": {
+        "builder": "gsfit",
+        "reader": "rtgsfit_mdsplus",
+        "boundary": {
+            "xpt_fraction": 0.999,
+            "tolerance": 1e-10,
+            "ip_min": 1000.0,
+            "n_xpt_max": 50
+        },
+        "rtgsfit_mdsplus": {
+            "pulse": 52014922,
+            "run_name": "RUN21",
+            "legacy_schema": true
+        }
+    },
+    "signals": {
+        "reader": "st40_mdsplus",
+        "st40_mdsplus": {
+            "mag_run": "BEST"
+        }
+    },
+    "replay": {
+        "pulse": 14922,
+        "time_start": 0.0076,
+        "time_end": 0.3,
+        "time_step": 0.001,
+        "repeat": 1,
+        "stop_on_status": false,
+        "stop_below_ip": 0.0
+    },
+    "build": {
+        "timing": true,
+        "arch_flags": "-march=native"
+    },
+    "writers": {
+        "names": ["local"],
+        "local": {
+            "path": "rtgsfit_st40.npz",
+            "preshot_path": "rtgsfit_st40_preshot.npz"
+        },
+        "rtgsfit_mdsplus": {
+            "enabled": false,
+            "pulse": 52014922,
+            "run_name": "RUN21",
+            "run_description": "RT-GSFit v2",
+            "link_best": false
+        }
+    },
+    "gsfit": {
+        "settings_path": "st40_setup_for_rtgsfit",
+        "grid": {
+            "n_r": 33,
+            "n_z": 65,
+            "r_min": 0.11,
+            "r_max": 1.07,
+            "z_min": -0.96,
+            "z_max": 0.96
+        },
+        "sensor_names": "st40_pcs",
+        "rogowski_names": [
+            "INIVC000", "BVLT", "BVLB", "GASBFLT", "GASBFLB",
+            "HFSPSRT", "HFSPSRB", "DIVPSRT", "DIVPSRB"
+        ],
+        "coils": {
+            "groups": {
+                "SOL": ["SOL"],
+                "MCT": ["MCT"],
+                "MCB": ["MCB"],
+                "DIV": ["DIVT", "DIVB"],
+                "BVL": ["BVLT", "BVLB"],
+                "BVUT": ["BVUT"],
+                "BVUB": ["BVUB"],
+                "PSH": ["PSHT", "PSHB"]
+            },
+            "signals": [
+                "I_BVL_PSU", "I_BVUB_PSU", "I_BVUT_PSU", "I_DIV_PSU",
+                "I_MCVC_PSU", "I_PSH_PSU", "I_ROG_MCWIRE", "I_SOL_PSU"
+            ],
+            "matrix": [
+                [0, 0, 0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 1, 0, 1, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0]
+            ]
+        },
+        "sensor_replacements": {
+            "I_ROG_DIVPSRB": {
+                "replacements": ["V_FLOOP_024", "V_FLOOP_022", "V_FLOOP_020"],
+                "coefficients": [-164.0, 1532.88, 1467.12]
+            },
+            "I_ROG_DIVPSRT": {
+                "replacements": ["V_FLOOP_007", "V_FLOOP_009", "V_FLOOP_011"],
+                "coefficients": [-164.0, 1532.88, 1467.12]
+            },
+            "I_ROG_GASBFLB": {
+                "replacements": ["V_FLOOP_024"],
+                "coefficients": [2000.0]
+            },
+            "I_ROG_GASBFLT": {
+                "replacements": ["V_FLOOP_007"],
+                "coefficients": [2000.0]
+            },
+            "I_ROG_HFSPSRB": {
+                "replacements": ["V_FLOOP_020"],
+                "coefficients": [7000.0]
+            },
+            "I_ROG_HFSPSRT": {
+                "replacements": ["V_FLOOP_011"],
+                "coefficients": [7000.0]
+            }
+        },
+        "initial": {
+            "source": "gsfit_settings",
+            "r": 0.5,
+            "z": 0.0,
+            "radius": 0.2
+        }
+    }
+}

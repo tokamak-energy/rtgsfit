@@ -27,34 +27,38 @@
  */
 int32_t magnetic_nulls_find(const struct rtgsfit_grid *grid,
                             const double psi[],
-                            int32_t n_psi,
+                            const int32_t n_psi,
                             const int32_t mask_limiter[],
-                            int32_t n_mask_limiter,
+                            const int32_t n_mask_limiter,
                             double tolerance,
                             int32_t *axis_found,
                             double *axis_r,
                             double *axis_z,
                             double *axis_psi,
                             double xpt_r[],
-                            int32_t n_xpt_r,
+                            const int32_t n_xpt_r,
                             double xpt_z[],
-                            int32_t n_xpt_z,
+                            const int32_t n_xpt_z,
                             double xpt_psi[],
-                            int32_t n_xpt_psi,
+                            const int32_t n_xpt_psi,
                             int32_t *xpt_n);
 
 /*
- * 1 if the point (r, z) is on the same side as the magnetic axis of every x-point, where "side"
+ * Set *is_core_side to 1 if (r, z) is on the same side as the magnetic axis of every x-point,
+ * where "side"
  * is the half-plane through the x-point perpendicular to the line joining it to the axis.
- * xpt_r and xpt_z have length n_xpt; only the first xpt_n entries are used.
+ * Only the first xpt_n entries are used. Returns a status, not a boolean.
  */
 int32_t magnetic_nulls_is_core_side(double r,
                                     double z,
                                     double axis_r,
                                     double axis_z,
                                     const double xpt_r[],
+                                    const int32_t n_xpt_r,
                                     const double xpt_z[],
-                                    int32_t xpt_n);
+                                    const int32_t n_xpt_z,
+                                    int32_t xpt_n,
+                                    int32_t *is_core_side);
 
 /*
  * Remove x-points that are hidden behind another x-point, as seen from the magnetic axis:
@@ -66,22 +70,22 @@ int32_t magnetic_nulls_is_core_side(double r,
 int32_t magnetic_nulls_filter_xpts(double axis_r,
                                    double axis_z,
                                    double xpt_r[],
-                                   int32_t n_xpt_r,
+                                   const int32_t n_xpt_r,
                                    double xpt_z[],
-                                   int32_t n_xpt_z,
+                                   const int32_t n_xpt_z,
                                    double xpt_psi[],
-                                   int32_t n_xpt_psi,
+                                   const int32_t n_xpt_psi,
                                    int32_t *xpt_n,
                                    int32_t keep[],
-                                   int32_t n_keep);
+                                   const int32_t n_keep);
 
 /* Sort the first xpt_n x-points by descending psi. */
 int32_t magnetic_nulls_sort_xpts(double xpt_r[],
-                                 int32_t n_xpt_r,
+                                 const int32_t n_xpt_r,
                                  double xpt_z[],
-                                 int32_t n_xpt_z,
+                                 const int32_t n_xpt_z,
                                  double xpt_psi[],
-                                 int32_t n_xpt_psi,
+                                 const int32_t n_xpt_psi,
                                  int32_t xpt_n);
 
 #endif /* RTGSFIT_MAGNETIC_NULLS_H */

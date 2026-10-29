@@ -15,6 +15,7 @@ import numpy as np
 
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_readers import PreshotReader
+from rtgsfit.preshot import LEGACY_PRESHOT_NAMES
 from rtgsfit.preshot import Preshot
 from rtgsfit.settings import Settings
 
@@ -30,7 +31,12 @@ def _decode(value: Any) -> Any:
 
 
 def read_mdsplus_nodes(
-    pulse: int, run_name: str, nodes: tuple[dd.Node, ...], server: str = DEFAULT_SERVER
+    pulse: int,
+    run_name: str,
+    nodes: tuple[dd.Node, ...],
+    server: str = DEFAULT_SERVER,
+    *,
+    legacy_preshot: bool = False,
 ) -> dict[str, Any]:
     """Read `nodes` of `\\RTGSFIT::TOP.<run_name>` into a nested dictionary."""
     import mdsthin
@@ -39,8 +45,15 @@ def read_mdsplus_nodes(
     with mdsthin.Connection(server) as connection:
         connection.openTree(dd.TREE_NAME, pulse)
         for node in nodes:
-            path = f"\\{dd.TREE_NAME}::TOP.{run_name}.{node.mds_path}"
-            dd.nested_set(nested, node.path, _decode(connection.get(path).data()))
+            node_path = node.path
+            if legacy_preshot and node.path[0] == "PRESHOT":
+                _, group, name = node.path
+                if group == "INFO" and name in ("MU0", "PSI_TO_WB"):
+                    continue
+                node_path = ("PRESHOT", group, LEGACY_PRESHOT_NAMES.get((group, name), name))
+            mds_path = ".".join(node_path[:-1]) + ":" + node_path[-1] if len(node_path) > 1 else node_path[0]
+            path = f"\\{dd.TREE_NAME}::TOP.{run_name}.{mds_path}"
+            dd.nested_set(nested, node_path, _decode(connection.get(path).data()))
     return nested
 
 
@@ -48,6 +61,10 @@ class RtgsfitMdsplusReader(PreshotReader):
     def read_preshot(self, settings: Settings) -> Preshot:
         section = settings["preshot"]["rtgsfit_mdsplus"]
         nested = read_mdsplus_nodes(
-            int(section["pulse"]), str(section["run_name"]), dd.PRESHOT_NODES, section.get("server", DEFAULT_SERVER)
+            int(section["pulse"]),
+            str(section["run_name"]),
+            dd.PRESHOT_NODES,
+            section.get("server", DEFAULT_SERVER),
+            legacy_preshot=section.get("legacy_schema", False),
         )
         return Preshot.from_nested(nested)

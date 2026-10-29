@@ -128,7 +128,7 @@ def replay(
         print(f"{len(slices)} slices in {elapsed:.3f} s")
         print_timing(slices)
 
-    return collect_results(preshot, signals, slices, settings.xml_text, source)
+    return collect_results(preshot, signals, slices, settings.json_text, source)
 
 
 def write_results(results: Results, settings: Settings) -> None:

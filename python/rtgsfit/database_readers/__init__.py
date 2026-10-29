@@ -3,9 +3,11 @@
 A *preshot reader* returns the `Preshot`; a *signals reader* returns the `Signals` passed to
 `rtgsfit()` at each time slice. Readers are selected by name in the settings:
 
-```xml
-<preshot><reader type="str">analytic</reader></preshot>
-<signals><reader type="str">analytic</reader></signals>
+```json
+{
+    "preshot": {"reader": "analytic"},
+    "signals": {"reader": "analytic"}
+}
 ```
 
 | reader            | preshot | signals | needs                                      |

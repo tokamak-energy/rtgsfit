@@ -4,16 +4,35 @@
 
 \title{Analytic Test of RT-GSFit}
 \author{Alexander Prokopyszyn}
-\date{May 2025}
+\date{May 2025; total-flux normalisation revised October 2026}
 
 \begin{document}
 
 \maketitle
 
+\section*{Flux convention}
+
+Throughout this document, $\psi$ is total poloidal flux in weber, following COCOS 13,
+not flux per radian. The physical permeability $\mu_0$ contains no factor of $2\pi$.
+With $F=RB_\phi$ and primes denoting derivatives with respect to this total flux,
+\[
+B_R=-\frac{1}{2\pi R}\frac{\partial\psi}{\partial z},
+\qquad
+B_z=\frac{1}{2\pi R}\frac{\partial\psi}{\partial R},
+\qquad
+\Delta^*\psi=-2\pi\mu_0Rj_\phi.
+\]
+The earlier per-radian version of this derivation used
+$\psi_{\rm rad}=\psi/(2\pi)$. Rescaling flux does not change the magnetic field,
+current density or normalised flux.
+
 \section{Deriving Bessel's Eqn from the Grad-Shafranov Eqn}
 
 The Grad-Shafranov equation is given by
-\[\frac{\partial^2 \psi}{\partial R^2} - \frac{1}{R}\frac{\partial \psi}{\partial R} + \frac{\partial^2 \psi}{\partial z^2} = -\mu_oR^2p'(\psi) - F(\psi)F'(\psi).\]
+\[\frac{\partial^2 \psi}{\partial R^2} - \frac{1}{R}\frac{\partial \psi}{\partial R} + \frac{\partial^2 \psi}{\partial z^2}
+= -(2\pi)^2\left[\mu_0R^2p'(\psi)+F(\psi)F'(\psi)\right].\]
+The squared factor follows because both flux derivatives and the left-hand-side flux
+change when converting from flux per radian to total flux.
 We will assume a plasma beta, $\beta=0$. We are interested in solving the Grad-Shafranov equation inside the LCFS. 
 % Let $R=R_o$, $z=z_o$ be the coordinates of the o-point. 
 % We will assume that
@@ -22,9 +41,11 @@ We will assume a plasma beta, $\beta=0$. We are interested in solving the Grad-S
 % \[R\frac{\partial}{\partial z} = O\left(\frac{1}{\epsilon}\right)\]
 % \[\frac{|R-R_o|}{R_o} \ll 1,\]
 % \[\implies \frac{1}{R} = \frac{1}{R-R_0 + R_0} = \frac{1}{R_0}\left(\frac{1}{1+\frac{R-R_0}{R}}\right)\]
-We will take the large aspect-ratio limit and assume $R\rightarrow \infty$.
+We take the large aspect-ratio limit $\rho_b/R_o\ll1$, neglecting the
+$R^{-1}\partial_R\psi$ term relative to the second derivatives.
 Hence, we can simplify the Grad-Shafranov to
-\[\frac{\partial^2 \psi}{\partial R^2} + \frac{\partial^2 \psi}{\partial z^2} = -F(\psi)F'(\psi).\]
+\[\frac{\partial^2 \psi}{\partial R^2} + \frac{\partial^2 \psi}{\partial z^2}
+= -(2\pi)^2F(\psi)F'(\psi)=-2\pi\mu_0Rj_\phi.\]
 We will assume poloidal symmetry, and so we assume $\psi=\psi(\rho)$.
 Let
 \[\rho = \sqrt{(R-R_o)^2+(z-z_o)^2}.\]
@@ -50,11 +71,11 @@ Note that
 \end{aligned}
 \]
 \[\begin{aligned}
-\mathbf{\hat{R}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial R} &= \frac{\partial}{\partial R}\left(\frac{R-R_o}{\sqrt{(R-R_o^2)+(z-z_o^2)}}\right)\\
+\mathbf{\hat{R}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial R} &= \frac{\partial}{\partial R}\left(\frac{R-R_o}{\sqrt{(R-R_o)^2+(z-z_o)^2}}\right)\\
 &= \frac{\sin^2\theta}{\rho}
 \end{aligned}\]
 \[\begin{aligned}
-\mathbf{\hat{z}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial z} &= \frac{\partial}{\partial z}\left(\frac{z-R_o}{\sqrt{(R-R_o^2)+(z-z_o^2)}}\right)\\
+\mathbf{\hat{z}}\cdot\frac{\partial \mathbf{\hat{\rho}}}{\partial z} &= \frac{\partial}{\partial z}\left(\frac{z-z_o}{\sqrt{(R-R_o)^2+(z-z_o)^2}}\right)\\
 &= \frac{\cos^2\theta}{\rho}
 \end{aligned}\]
 \[\begin{aligned}
@@ -69,11 +90,11 @@ Note that
 \end{aligned}\]
 Hence,
 we can rewrite the Grad-Shafranov equation as
-\[\frac{d^2\psi}{d \rho^2} + \frac{1}{\rho}\frac{d \psi}{d \rho} = -F(\psi)F'(\psi).\]
+\[\frac{d^2\psi}{d \rho^2} + \frac{1}{\rho}\frac{d \psi}{d \rho} = -(2\pi)^2F(\psi)F'(\psi).\]
 
-RTGSFit assumes $FF'$ is of the form
-\[FF' = a(1-\psi_N),\]
-where $a$ is a constant and
+For this analytic case, choose
+\[(2\pi)^2FF' = a(1-\psi_N),\]
+where $a$ is the constant amplitude of the Laplacian source, not a fitted coefficient, and
 \[\psi_N = \frac{\psi_o-\psi}{\psi_o-\psi_b},\]
 where $\psi_b$ is $\psi$ at the last closed flux surface and $\psi_o$ is the value of $\psi$ at the o-point.
 Let
@@ -83,10 +104,10 @@ hence by substituting our expression for $\psi$ in terms of $\psi'$ and $a$ in t
 \[\frac{d^2\psi'}{d \rho^2} + \frac{1}{\rho}\frac{d \psi'}{d \rho} = -a'\psi'.\]
 Multiplying through by $\rho^2$ and rearranging we arrive at an equation that is nearly Bessel's equation of order 0
 \[\rho^2\frac{d^2\psi'}{d \rho^2} + \rho\frac{d \psi'}{d \rho} + a'\rho^2\psi'= 0.\]
-Let 
-\[s=\frac{a'}{|a'|}\sqrt{|a'|}\rho,\]
-\[\implies \rho=\frac{a'}{|a'|}\frac{1}{\sqrt{|a'|}}s\]
-\[\implies \frac{\partial }{\partial \rho} =\frac{a'}{|a'|}\sqrt{|a'|}\frac{\partial }{\partial s},\]
+For the Bessel solution we choose $a'>0$. Let
+\[s=\sqrt{a'}\rho,\]
+\[\implies \rho=\frac{s}{\sqrt{a'}},\]
+\[\implies \frac{\partial }{\partial \rho} =\sqrt{a'}\frac{\partial }{\partial s},\]
 \[\implies \frac{\partial^2 }{\partial \rho^2} =a'\frac{\partial^2 }{\partial s^2},\]
 \[\implies \rho^2 = \frac{s^2}{a'}\]
 Hence, the Grad-Shafranov equation becomes
@@ -172,32 +193,39 @@ Hence, for $\rho\ge\rho_b$
 
 For $\rho>\rho_b$, the poloidal field is given by
 \[\begin{aligned}
-B_\theta &= \frac{1}{R}\frac{d\psi}{d\rho}, \\
-&= -\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{(R_o+\rho\cos\theta)\rho}.
+B_\theta &= \frac{1}{2\pi R}\frac{d\psi}{d\rho}, \\
+&= -\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{2\pi(R_o+\rho\cos\theta)\rho}.
 \end{aligned}\]
-Using Ampere's law, namely,
-\[2\pi\rho B_\theta = \mu_0 I_\text{total},\]
+The direction of increasing $\theta$ has normal $-\mathbf{\hat{\phi}}$.
+Thus Ampere's law gives a negative circulation for positive toroidal current.
+For a contour $\rho=\rho_0>\rho_b$ with $\rho_0<R_o$,
 \[\begin{aligned}
-\oint_{\rho=\rho_0}B_\theta \rho_0d\theta &= \frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o}\frac{2\pi}{\sqrt{1-\frac{\rho_0^2}{R_o^2}}}\\
-&= 2\pi\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o}\quad (\text{for } \rho_0/R_o\rightarrow0)  \\
-&=\mu_0 I_\text{total}.
+\oint_{\rho=\rho_0}B_\theta \rho_0d\theta
+&= -\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o\sqrt{1-\rho_0^2/R_o^2}}\\
+&\simeq -\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o}
+=-\mu_0 I_\text{total}.
 \end{aligned}\]
 % \[\begin{aligned}
 % \oint_{\rho=\rho_0}B_\theta \rho_0 d\theta &= 2\pi\rho_o\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o\rho_0} + \oint_{\rho=\rho_0}\frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o\rho_0}\left(\frac{\rho\cos\theta}{R_o}\right)^2 d\theta + ...\\
 % &=\mu_0 I_\text{total}.
 % \end{aligned}\]
 Taking the leading-order term, we know that
-\[I_{total} = \frac{2\pi}{R_o\mu_0}(\psi_o-\psi_b)a^*J_1(a^*),\]
-\[\implies \psi_o-\psi_b = \frac{\mu_0I_\text{total} R_o}{2\pi a^*J_1(a^*)}\]
+\[I_\text{total} = \frac{(\psi_o-\psi_b)a^*J_1(a^*)}{R_o\mu_0},\]
+\[\implies \psi_o-\psi_b = \frac{\mu_0I_\text{total} R_o}{a^*J_1(a^*)}.\]
+Here $I_\text{total}$ is the prescribed current parameter (called \texttt{ip} in the code).
+Its identification with integrated current is leading order in $\rho_b/R_o$,
+consistent with the Laplacian approximation; it is not an exact finite-aspect-ratio equilibrium.
 
 \section{Calculating expressions for $\psi_o$, $\psi_b$}
 
 We need to ensure that $\psi$ is zero at $(R, z) = (0,0)$. Where we assume this is outside the region $\rho<\rho_b$.
 Let
-\[d = \sqrt{R_o^2-z_o^2}.\]
+\[d = \sqrt{R_o^2+z_o^2}.\]
 We impose $\psi(d) = 0$. Hence
-\[\psi_b = \frac{\mu_0I_\text{total}R_o}{2\pi}\ln\left(\frac{d}{\rho_b}\right),\]
-\[\implies \psi_o = \frac{\mu_0I_\text{total}R_o}{2\pi}\left[\ln\left(\frac{d}{\rho_b}\right)+\frac{1}{a^*J_1(a^*)}\right]\]
+\[\psi_b = \mu_0I_\text{total}R_o\ln\left(\frac{d}{\rho_b}\right),\]
+\[\implies \psi_o = \mu_0I_\text{total}R_o\left[\ln\left(\frac{d}{\rho_b}\right)+\frac{1}{a^*J_1(a^*)}\right].\]
+The zero at the origin fixes an additive flux gauge; the large-aspect-ratio field
+approximation is used near the plasma, not near $R=0$.
 
 \section{Full solution}
 
@@ -210,14 +238,34 @@ The full solution for $\psi$ is given by
 \]
 where
 \[\Delta_\psi = \psi_o - \psi_b\]
-\[\psi_o = \frac{\mu_0}{2\pi}I_\text{total}R_o\left[\ln\left(\frac{d}{\rho_b}\right)+\frac{1}{a^*J_1(a^*)}\right],\]
-\[\psi_b = \frac{\mu_0}{2\pi}I_\text{total}R_o\ln\left(\frac{d}{\rho_b}\right),\]
-\[\Delta_\psi = \frac{\mu_0I_\text{total}R_o}{2\pi a^* J_1(a^*)},\]
+\[\psi_o = \mu_0I_\text{total}R_o\left[\ln\left(\frac{d}{\rho_b}\right)+\frac{1}{a^*J_1(a^*)}\right],\]
+\[\psi_b = \mu_0I_\text{total}R_o\ln\left(\frac{d}{\rho_b}\right),\]
+\[\Delta_\psi = \frac{\mu_0I_\text{total}R_o}{a^* J_1(a^*)},\]
 \[\begin{aligned}
 a &= \frac{(a^*)^2(\psi_o-\psi_b)}{\rho_b^2} \\
-&= \frac{\mu_0 a^* I_\text{total}R_o}{2\pi J_1(a^*)\rho_b^2},
+&= \frac{\mu_0 a^* I_\text{total}R_o}{J_1(a^*)\rho_b^2},
 \end{aligned}\]
 and $a^*$ is the coordinate of a positive zero of $J_0$. Hence, the solution is not unique but if we impose that $\psi$ needs to decrease monotonically away from $\psi_o$ then this forces $a^*$ to be the first positive zero of $J_0$.
+
+\section{Current density and fitted coefficient}
+
+The current profile corresponding to the Laplacian source is
+\[
+j_\phi=\frac{a}{2\pi\mu_0R}(1-\psi_N)
+=\frac{a^*I_\text{total}R_o}{2\pi J_1(a^*)\rho_b^2R}(1-\psi_N)
+\quad (\rho\leq\rho_b),
+\]
+and zero outside. RT-GSFit fits the coefficient of the basis $(1-\psi_N)/R$:
+\[
+c_{\rm ff}=\frac{a}{2\pi\mu_0}
+=\frac{a^*I_\text{total}R_o}{2\pi J_1(a^*)\rho_b^2}.
+\]
+This is the coefficient labelled \texttt{FF\_PRIME\_MU0} in the implementation.
+In this label, the historical $F'$ uses the per-radian flux derivative:
+$c_{\rm ff}=F(dF/d\psi_{\rm rad})/\mu_0$.
+With the total-flux prime convention used in this document, it is instead
+$c_{\rm ff}=2\pi FF'/\mu_0$.
+The coefficient and current density are unchanged by the flux normalisation change.
 
 % Now we will write our solution for $\psi$ in the form we will use in RTGSFIT. We will set $\psi = 0$ at $(R, Z) = (0, 0)$. Let
 % \[d = \sqrt{R_o^2-z_o^2}.\]
@@ -238,13 +286,13 @@ and $a^*$ is the coordinate of a positive zero of $J_0$. Hence, the solution is 
 The magnetic field is given by
 \[\begin{aligned} 
     B_R &= B_\theta \vec{\hat{\theta}}\cdot \vec{\hat{R}} \\
-    &= -\frac{1}{R}\sin(\theta) \frac{d\psi}{d\rho} \\
-    &= -\frac{1}{R}\frac{z - z_o}{\rho}\frac{d\psi}{d\rho}
+    &= -\frac{1}{2\pi R}\sin(\theta) \frac{d\psi}{d\rho} \\
+    &= -\frac{1}{2\pi R}\frac{z - z_o}{\rho}\frac{d\psi}{d\rho}
 \end{aligned}\]
 \[\begin{aligned} 
 B_z &= B_\theta \vec{\hat{\theta}}\cdot \vec{\hat{z}} \\
-&= \frac{1}{R}\cos(\theta)\frac{d\psi}{d\rho} \\
-&= \frac{1}{R}\frac{R-R_o}{\rho}\frac{d\psi}{d\rho}
+&= \frac{1}{2\pi R}\cos(\theta)\frac{d\psi}{d\rho} \\
+&= \frac{1}{2\pi R}\frac{R-R_o}{\rho}\frac{d\psi}{d\rho}
 \end{aligned}\]
 % \[\begin{aligned}
 % B_\theta &= -\sin(\theta)B_R + \cos(\theta)B_z \\

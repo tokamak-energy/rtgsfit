@@ -41,7 +41,7 @@ ifeq ($(TIMING), 1)
 endif
 
 # Modules that do not depend on the preshot.
-MODULES := finite_difference current_basis least_squares poisson_solver magnetic_nulls \
+MODULES := finite_difference current_basis least_squares poisson_solver magnetic_nulls measurement_processing \
            plasma_boundary timing
 MODULE_OBJS := $(patsubst %,$(OBJ_DIR)/%.o,$(MODULES))
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
