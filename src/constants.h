@@ -151,7 +151,15 @@ extern const double G_GRID_VESSEL[];
 /* Poisson (Grad-Shafranov) operator on the grid, eq. (45) of Moret et al. (2015):
    psi[i+1][j] + psi[i-1][j] + POISSON_A[j] psi[i][j+1] + POISSON_B[j] psi[i][j-1] - POISSON_C[j] psi[i][j]
    for interior points, with Dirichlet (identity) rows on the grid boundary.
-   The three arrays have length N_R and are indexed by grid column j. */
+   The three arrays have length N_R and are indexed by grid column j.
+   Only interior columns j = 1 .. N_R-2 are read by the solver.
+   The utility writes the two boundary columns as zero.
+   The PRESHOT LOWER_BAND, UPPER_BAND and PERM_IDX nodes hold GSFit's
+   banded LU factors and row permutation. utility/mdsplus_const_to_file.py
+   recovers the stencil from them via utility/poisson_stencil.py.
+   Recovery checks every row for this separable stencil to a relative
+   tolerance of 1e-9 and stops generation with an error if a check fails.
+   The analytic test generator writes the stencil directly. */
 
 /* POISSON_A : coefficient of psi[i][j+1] (length N_R) */
 extern const double POISSON_A[];

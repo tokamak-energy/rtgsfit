@@ -4,6 +4,8 @@ import sys
 import numpy as np
 import mdsthin
 
+from poisson_stencil import stencil_from_lu_bands
+
 
 def const_to_file(const_dict, file_read="constants.h", file_write="constants.c"):
     with open(file_read, "r") as file:
@@ -87,9 +89,17 @@ if __name__ == "__main__":
         data_dictionary["n_vess"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_VESS").data()
         data_dictionary["n_xpt_max"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_XPT_MAX").data()
         data_dictionary["n_z"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_Z").data()
-        data_dictionary["poisson_a"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:POISSON_A").data()
-        data_dictionary["poisson_b"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:POISSON_B").data()
-        data_dictionary["poisson_c"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:POISSON_C").data()
+        # The PRESHOT node stores the Poisson operator as GSFit's banded LU factors; constants.c
+        # carries its stencil coefficients instead, recovered (and checked) from those factors.
+        lower_band = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:LOWER_BAND").data()
+        upper_band = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:UPPER_BAND").data()
+        perm_idx = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:PERM_IDX").data()
+        poisson_a, poisson_b, poisson_c = stencil_from_lu_bands(
+            lower_band, upper_band, perm_idx, int(data_dictionary["n_r"]), int(data_dictionary["n_z"])
+        )
+        data_dictionary["poisson_a"] = poisson_a
+        data_dictionary["poisson_b"] = poisson_b
+        data_dictionary["poisson_c"] = poisson_c
         data_dictionary["r_grid"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:R_GRID").data()
         data_dictionary["r_mu0_dz2"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:R_MU0_DZ2").data()
         data_dictionary["r_vec"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:R_VEC").data()

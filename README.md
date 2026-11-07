@@ -94,6 +94,23 @@ This script loads the compiled library, passes measurement and coil data to the 
 
 However, the full PCS implementation cannot be shown here, as the Simulink model and deployment pipeline are closed-source. Nevertheless, the analytic replay example provides a representative demonstration of the runtime interaction model used in actual experiments.
 
+### 4.4 Poisson solver
+
+The solver uses the LIUQE eq. (45) stencil: `POISSON_A`, `POISSON_B` and
+`POISSON_C`, one value per radial column. A dense sine transform along z
+reduces the system to one tridiagonal solve per mode, for any grid size.
+
+```text
+Existing PRESHOT LU nodes -> checked stencil -> sine transform + tridiagonals
+```
+
+`utility/mdsplus_const_to_file.py` recovers the stencil from the existing
+`LOWER_BAND`, `UPPER_BAND` and `PERM_IDX` nodes using NumPy. It checks every
+operator row at `1e-9` relative tolerance: identity boundary rows, vertical
+coupling 1, constant radial coefficients down each column and no entries
+outside the five-point stencil. Unsupported operators stop generation with
+an error. The analytic generator writes the stencil directly.
+
 ## 5. Tests<a name="tests"></a>
 
 All tests are located in the `tests/` directory.
@@ -115,6 +132,34 @@ cd src/
 cp ../test_data/constants.c .
 make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_find_plasma
 ./test_find_plasma
+```
+
+The Poisson tests compare with a dense LAPACK solve, the stencil residual
+and eq. (45), and check rejection of an unusable stencil:
+
+```bash
+cd src/
+cp ../test_data/constants.c .
+make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_poisson_fast test_poisson_invalid
+./test_poisson_fast
+./test_poisson_invalid
+```
+
+### 5.1.1 Timing benchmark without MDSplus
+
+`tests/rtgsfit_bench.c` times repeated `rtgsfit()` calls without MDSplus.
+Generate the analytic inputs and run:
+
+```bash
+cd tests/rtgsfit_verify_analytic
+source .venv/bin/activate
+python -m rtgsfit_verify_analytic.export_bench_inputs      # writes data/bench/
+cd ../../src
+cp ../tests/rtgsfit_verify_analytic/data/constants.c .
+make SHOT=0 RUN_NAME=no_mds DEBUG=0 TIMING=1
+cd ../tests
+make -f makefile_bench TIMING=1
+OPENBLAS_NUM_THREADS=1 ./rtgsfit_bench rtgsfit_verify_analytic/data/bench 10 2000 /tmp/bench_out
 ```
 
 
