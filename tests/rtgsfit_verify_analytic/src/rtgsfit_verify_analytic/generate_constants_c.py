@@ -347,7 +347,8 @@ def generate_data_dictionary():
 
 def const_to_file(const_dict,
                   file_read=os.path.join(cnst.DATA_DIR, 'constants.h'),
-                  file_write=os.path.join(cnst.DATA_DIR, 'constants.c')):
+                  file_write=os.path.join(cnst.DATA_DIR, 'constants.c'),
+                  as_enum=False):
 
     with open(file_read, 'r') as file:
         file_contents = file.read()
@@ -364,6 +365,9 @@ def const_to_file(const_dict,
         
         if var_name in const_dict:
             replacement = const_dict[var_name]
+            if as_enum:
+                # Array sizes become enum constants so they are integer constant expressions
+                return f'enum {{ {match.group(4)} = {int(replacement)} }};'
             # Check the data type of the replacement value
             if isinstance(replacement, bool):
                 return f'{var_name_in_file} = {int(replacement)};'
@@ -393,3 +397,7 @@ def generate_constants_c():
     data_dictionary = generate_data_dictionary()
     constant_h_path = os.path.join(cnst.RTGSFIT_PATH, 'src', 'constants.h')
     const_to_file(data_dictionary, file_read=constant_h_path)
+    constants_sizes_in_path = os.path.join(cnst.RTGSFIT_PATH, 'src', 'constants_sizes.h.in')
+    const_to_file(data_dictionary, file_read=constants_sizes_in_path,
+                  file_write=os.path.join(cnst.DATA_DIR, 'constants_sizes.h'),
+                  as_enum=True)

@@ -86,7 +86,7 @@ SHARED  = $(patsubst %.o,$(LIB)/lib%.so,$(OBJS))
 # --------------------------------------------------
 # Default target
 # --------------------------------------------------
-all: constants.c $(SHARED)
+all: constants.c constants_sizes.h $(SHARED)
 
 # --------------------------------------------------
 # Shared libraries
@@ -122,8 +122,11 @@ $(OBJS): %.o : %.c
 # --------------------------------------------------
 # Generated source
 # --------------------------------------------------
-constants.c: constants.h
+constants.c: constants.h constants_sizes.h.in
 	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
+
+# written by the same script run as constants.c
+constants_sizes.h: constants.c
 
 # --------------------------------------------------
 # Tests
@@ -136,4 +139,4 @@ test_find_plasma: $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o
 # Cleanup
 # --------------------------------------------------
 clean:
-	rm -f $(SHARED) $(OBJS) constants.c *.pyc test_*
+	rm -f $(SHARED) $(OBJS) constants.c constants_sizes.h *.pyc test_*

@@ -3,6 +3,7 @@ Generate a dictionary by reading the values from the
 constants.c file.
 """
 
+import os
 import re
 
 import numpy as np
@@ -16,23 +17,29 @@ def constants_c_dict(constants_c_path,
     with open(constants_c_path, 'r') as file:
         content = file.read()
 
+    # The array sizes (N_R, N_Z, ...) are enum constants in constants_sizes.h,
+    # which is generated next to constants.c
+    sizes_path = os.path.join(os.path.dirname(constants_c_path), 'constants_sizes.h')
+    with open(sizes_path, 'r') as file:
+        sizes = file.read()
+
     c_dict = {}
 
     # Extract N_R and N_Z
-    c_dict["n_r"] = int(re.search(r'const int N_R\s*=\s*(\d+);', content).group(1))
-    c_dict["n_z"] = int(re.search(r'const int N_Z\s*=\s*(\d+);', content).group(1))
+    c_dict["n_r"] = int(re.search(r'enum { N_R = (\d+) };', sizes).group(1))
+    c_dict["n_z"] = int(re.search(r'enum { N_Z = (\d+) };', sizes).group(1))
 
     # Extract N_MEAS
-    c_dict["n_meas"] = int(re.search(r'const int N_MEAS\s*=\s*(\d+);', content).group(1))
+    c_dict["n_meas"] = int(re.search(r'enum { N_MEAS = (\d+) };', sizes).group(1))
 
     # Extact N_COIL
-    c_dict["n_coil"] = int(re.search(r'const int N_COIL\s*=\s*(\d+);', content).group(1))
+    c_dict["n_coil"] = int(re.search(r'enum { N_COIL = (\d+) };', sizes).group(1))
 
     # Extact N_LCFS_MAX
-    c_dict["n_lcfs_max"] = int(re.search(r'const int N_LCFS_MAX\s*=\s*(\d+);', content).group(1))
+    c_dict["n_lcfs_max"] = int(re.search(r'enum { N_LCFS_MAX = (\d+) };', sizes).group(1))
 
     # Extract N_COEF
-    c_dict["n_coef"] = int(re.search(r'const int N_COEF\s*=\s*(\d+);', content).group(1))
+    c_dict["n_coef"] = int(re.search(r'enum { N_COEF = (\d+) };', sizes).group(1))
 
     # Extract R_VEC array
     r_vec_match = re.search(r'const double R_VEC\[\]\s*=\s*{([^}]*)};', content, re.DOTALL)
@@ -47,7 +54,7 @@ def constants_c_dict(constants_c_path,
     c_dict["z_vec"] = np.array(z_vec_list)
 
     # Extract N_LIMIT
-    n_limit_match = re.search(r'const int N_LIMIT\s*=\s*(\d+);', content)
+    n_limit_match = re.search(r'enum { N_LIMIT = (\d+) };', sizes)
     c_dict["n_limit"] = int(n_limit_match.group(1))
 
     # Extract LIMIT_IDX array
@@ -70,7 +77,7 @@ def constants_c_dict(constants_c_path,
         c_dict["g_grid_meas_weight"] = np.array(g_grid_meas_weight_list)
         
     # Extract N_XPT_MAX
-    n_xpt_max_match = re.search(r'const int N_XPT_MAX\s*=\s*(\d+);', content)
+    n_xpt_max_match = re.search(r'enum { N_XPT_MAX = (\d+) };', sizes)
     c_dict["n_xpt_max"] = int(n_xpt_max_match.group(1))
 
     return c_dict

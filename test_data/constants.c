@@ -1,48 +1,6 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
-/* N_ROW : number of rows */
-const int N_Z = 65;
-
-/* N_COL : number of rows */
-const int N_R = 33;
-
-/* N_GRID : number of grid points (N_COL * N_ROW) */
-const int N_GRID = 2145;
-
-/* N_MEAS : number of measurements */
-const int N_MEAS = 72;
-
-/* N_FLUX_LOOPS : number of flux loop measurements */
-const int N_FLUX_LOOPS = 26;
-
-/* N_BP_PROBES : number of bp-probe measurements */
-const int N_BP_PROBES = 21;
-
-/* N_ROGOWSKI_COILS : number of Rogowski coil measurements */
-const int N_ROGOWSKI_COILS = 9;
-
-/* N_COIL : number of PF coils */
-const int N_COIL = 8;
-
-/* N_LTRB : number of boundary points */
-const int N_LTRB = 192;
-
-/* N_LCFS_MAX : max storage allocated for find LCFS coordinates */ 
-const int N_LCFS_MAX = 500;
-
-/* N_XPT_MAX : max storage allocated for find xpts/opts */ 
-const int N_XPT_MAX = 50;
-
-/* N_COEF : number of basis coefficients */ 
-const int N_COEF = 25;
-
-/* N_PLS : number of basis coefficients */ 
-const int N_PLS = 3;
-
-/* N_VESS : number of basis coefficients */ 
-const int N_VESS = 22;
-
 /* FRAC : relative weight between flux_lcfs and flux_axis */
 const double FRAC = 0.99;
 
@@ -230,12 +188,6 @@ const double SENSOR_REPLACEMENT_MATRIX[] = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0
 , 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 , 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -164.0, 1532.88, 1467.12, 0.0, 0.0, 0.0};
 
-/* N_SENS_PCS : number of sensors read from PCS (i.e. the "good" sensors) */ 
-const int N_SENS_PCS = 56;
-
-/* N_LIMIT : number of limit points */
-const int N_LIMIT = 110;
-
 /* LIMIT_R : R values of the limit points (length N_LIMIT) */
 const double LIMIT_R[] = {0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.1705, 0.17637899, 0.20363089, 0.2318904, 0.25066569, 0.26116484, 0.28432368, 0.30748251, 0.33064134, 0.35380018
 , 0.37695901, 0.80283173, 0.82165018, 0.84046863, 0.83023864, 0.79462525, 0.75901186, 0.72339847, 0.68778508, 0.65217169, 0.62990008, 0.63005809, 0.63005809, 0.63005809, 0.65574039, 0.69570538, 0.73567037, 0.77563535, 0.81560034, 0.85308777
@@ -251,9 +203,6 @@ const double LIMIT_Z[] = {0.0, -0.039964989, -0.079929977, -0.11989497, -0.15985
 , 0.25596098, 0.29453177, 0.33310255, 0.37167333, 0.41024411, 0.44881489, 0.48738567, 0.52440767, 0.54931535, 0.54838488, 0.54838488, 0.54838488, 0.54838488, 0.54838488, 0.56266757, 0.60263256, 0.64259755, 0.68246874, 0.68235168, 0.66421644
 , 0.64608121, 0.62794598, 0.60981075, 0.59167551, 0.61620976, 0.6514669, 0.68672404, 0.68330599, 0.65073501, 0.61816403, 0.58559305, 0.55302207, 0.52045109, 0.48265925, 0.4498904, 0.42163089, 0.42239189, 0.39964989, 0.3596849, 0.31971991
 , 0.27975492, 0.23978993, 0.19982494, 0.15985995, 0.11989497, 0.079929977, 0.039964989, -0.0, -0.3131, 0.3031};
-
-/* N_INTRP : number of interpolation points */
-const int N_INTRP = 4;
 
 /* LIMIT_IDX : limiter index (N_LIMIT, N_INTRP) */
 const int LIMIT_IDX[] = {1025, 1026, 1058, 1059, 992, 993, 1025, 1026, 959, 960, 992, 993, 926, 927, 959, 960, 860, 861, 893, 894

@@ -15,6 +15,7 @@ make clean
 
 # Copy constants.c to src directory
 cp $constants_c_path .
+cp "$repo_path/data/constants_sizes.h" .
 
 make SHOT=0 RUN_NAME="no_mds"
 
