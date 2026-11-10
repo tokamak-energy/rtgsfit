@@ -45,6 +45,6 @@ jobs:
       working-directory: src
       run: |
         make clean
-        cp ../test_data/constants.c .
+        cp ../test_data/constants.c ../test_data/constants_sizes.h .
         make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_find_plasma
         ./test_find_plasma

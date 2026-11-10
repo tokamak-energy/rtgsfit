@@ -19,6 +19,8 @@ def run_pipeline():
 
     constants_c = Path(cnst.DATA_DIR) / "constants.c"
     shutil.copy(constants_c, rtgsfit_src / "constants.c")
+    constants_sizes_h = Path(cnst.DATA_DIR) / "constants_sizes.h"
+    shutil.copy(constants_sizes_h, rtgsfit_src / "constants_sizes.h")
 
     subprocess.run(
         "make SHOT=0 RUN_NAME=no_mds DEBUG=1",

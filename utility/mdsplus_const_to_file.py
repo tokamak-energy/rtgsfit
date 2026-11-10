@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 
@@ -5,7 +6,7 @@ import numpy as np
 import mdsthin
 
 
-def const_to_file(const_dict, file_read="constants.h", file_write="constants.c"):
+def const_to_file(const_dict, file_read="constants.h", file_write="constants.c", as_enum=False):
     with open(file_read, "r") as file:
         file_contents = file.read()
 
@@ -20,6 +21,9 @@ def const_to_file(const_dict, file_read="constants.h", file_write="constants.c")
 
         if var_name in const_dict:
             replacement = const_dict[var_name]
+            if as_enum:
+                # Array sizes become enum constants so they are integer constant expressions
+                return f"enum {{ {match.group(4)} = {int(replacement)} }};"
             # Check the data type of the replacement value
             if isinstance(replacement, bool):
                 return f"{var_name_in_file} = {int(replacement)};"
@@ -106,4 +110,9 @@ if __name__ == "__main__":
         data_dictionary["sensor_replacement_matrix"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:SENS_REP_MAT").data()
         data_dictionary["n_sens_pcs"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_SENS_PCS").data()
 
-    const_to_file(data_dictionary)
+    # Write both outputs to temporary files and only replace the real ones once both
+    # succeed, so a failure never leaves a new constants.c paired with old sizes
+    const_to_file(data_dictionary, file_write="constants.c.tmp")
+    const_to_file(data_dictionary, file_read="constants_sizes.h.in", file_write="constants_sizes.h.tmp", as_enum=True)
+    os.replace("constants_sizes.h.tmp", "constants_sizes.h")
+    os.replace("constants.c.tmp", "constants.c")

@@ -86,7 +86,7 @@ SHARED  = $(patsubst %.o,$(LIB)/lib%.so,$(OBJS))
 # --------------------------------------------------
 # Default target
 # --------------------------------------------------
-all: constants.c $(SHARED)
+all: constants.c constants_sizes.h $(SHARED)
 
 # --------------------------------------------------
 # Shared libraries
@@ -116,19 +116,23 @@ $(LIB)/librtgsfit.so: \
 # --------------------------------------------------
 # Object compilation
 # --------------------------------------------------
-$(OBJS): %.o : %.c
+# Every object includes constants_sizes.h through constants.h, so it must exist
+# first and a change to it must recompile them all
+$(OBJS): %.o : %.c constants_sizes.h
 	$(CC) $(CFLAGS) -I/usr/include/openblas -c $< -o $@
 
 # --------------------------------------------------
 # Generated source
 # --------------------------------------------------
-constants.c: constants.h
+# One script run writes both files. A pattern rule with two targets tells make
+# that, so if either file is missing or stale the pair is regenerated together.
+%.c %_sizes.h: %.h %_sizes.h.in
 	python ../utility/mdsplus_const_to_file.py SHOT=$(SHOT) RUN_NAME=$(RUN_NAME)
 
 # --------------------------------------------------
 # Tests
 # --------------------------------------------------
-test_find_plasma: $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o
+test_find_plasma: $(TEST_DIR)/test_find_plasma.c constants_sizes.h find_plasma.o constants.o
 	$(CC) $(CFLAGS) -o test_find_plasma \
         $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o -lm
 
@@ -136,4 +140,4 @@ test_find_plasma: $(TEST_DIR)/test_find_plasma.c find_plasma.o constants.o
 # Cleanup
 # --------------------------------------------------
 clean:
-	rm -f $(SHARED) $(OBJS) constants.c *.pyc test_*
+	rm -f $(SHARED) $(OBJS) constants.c constants_sizes.h *.tmp *.pyc test_*

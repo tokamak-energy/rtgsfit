@@ -3,6 +3,11 @@
 
 #include <stdint.h>   // for int32_t
 
+/* Array-size constants (N_Z, N_GRID, ...) as enum constants, so that they are
+   integer constant expressions. Generated together with constants.c from
+   constants_sizes.h.in. */
+#include "constants_sizes.h"
+
 /* Error flags */
 // We use powers of 2 so we can bitwise-OR them together
 #define ERR_NONE            ((int32_t)0)
@@ -17,48 +22,6 @@
    be considered a genuine plasma. Below this cutoff, the source is flushed to
    zero while the remaining stages still run to keep their code paths hot. */
 #define PLASMA_CURRENT_CUTOFF ((double)1e3)
-
-/* N_ROW : number of rows */
-extern const int N_Z;
-
-/* N_COL : number of rows */
-extern const int N_R;
-
-/* N_GRID : number of grid points (N_COL * N_ROW) */
-extern const int N_GRID;
-
-/* N_MEAS : number of measurements */
-extern const int N_MEAS;
-
-/* N_FLUX_LOOPS : number of flux loop measurements */
-extern const int N_FLUX_LOOPS;
-
-/* N_BP_PROBES : number of bp-probe measurements */
-extern const int N_BP_PROBES;
-
-/* N_ROGOWSKI_COILS : number of Rogowski coil measurements */
-extern const int N_ROGOWSKI_COILS;
-
-/* N_COIL : number of PF coils */
-extern const int N_COIL;
-
-/* N_LTRB : number of boundary points */
-extern const int N_LTRB;
-
-/* N_LCFS_MAX : max storage allocated for find LCFS coordinates */ 
-extern const int N_LCFS_MAX;
-
-/* N_XPT_MAX : max storage allocated for find xpts/opts */ 
-extern const int N_XPT_MAX;
-
-/* N_COEF : number of basis coefficients */ 
-extern const int N_COEF;
-
-/* N_PLS : number of basis coefficients */ 
-extern const int N_PLS;
-
-/* N_VESS : number of basis coefficients */ 
-extern const int N_VESS;
 
 /* FRAC : relative weight between flux_lcfs and flux_axis */
 extern const double FRAC;
@@ -84,20 +47,11 @@ extern const double WEIGHT[];
 /* SENSOR_REPLACEMENT_MATRIX : Replace "bad" sensors with "good" sensors */
 extern const double SENSOR_REPLACEMENT_MATRIX[];
 
-/* N_SENS_PCS : number of sensors read from PCS (i.e. the "good" sensors) */ 
-extern const int N_SENS_PCS;
-
-/* N_LIMIT : number of limit points */
-extern const int N_LIMIT;
-
 /* LIMIT_R : R values of the limit points (length N_LIMIT) */
 extern const double LIMIT_R[];
 
 /* LIMIT_Z : Z values of the limit points (length N_LIMIT) */
 extern const double LIMIT_Z[];
-
-/* N_INTRP : number of interpolation points */
-extern const int N_INTRP;
 
 /* LIMIT_IDX : limiter index (N_LIMIT, N_INTRP) */
 extern const int LIMIT_IDX[];

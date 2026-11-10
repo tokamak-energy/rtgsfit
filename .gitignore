@@ -54,6 +54,7 @@ dkms.conf
 
 # Created files
 src/constants.c
+src/constants_sizes.h
 tests/c_*.py
 **/__pycache__
 

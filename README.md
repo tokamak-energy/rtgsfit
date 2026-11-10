@@ -50,7 +50,7 @@ First, the required input data is written to Tokamak Energy’s [MDSPlus](https:
 
 ### 4.2 Compilation
 
-If the `constants.c` file has already been generated and placed in the `src/` directory, the code can be compiled using a command such as:
+If the `constants.c` file has already been generated and placed in the `src/` directory (together with `constants_sizes.h`, which holds the array sizes as enum constants and is generated alongside it), the code can be compiled using a command such as:
 
 ```bash
 cd src/
@@ -65,7 +65,7 @@ subnormal floating-point inputs and results as zero on the calling thread.
 Other targets, including 32-bit x86, leave the floating-point environment
 unchanged.
 
-In the ST40 PCS workflow, the `constants.c` file is not manually generated. Instead, it is produced automatically during compilation via the `Makefile`, which calls the script `utility/mdsplus_const_to_file.py`. This script retrieves the input data stored during the [initialisation](#initialisation) step and generates the `constants.c` prior to compilation.
+In the ST40 PCS workflow, the `constants.c` file is not manually generated. Instead, it is produced automatically during compilation via the `Makefile`, which calls the script `utility/mdsplus_const_to_file.py`. This script retrieves the input data stored during the [initialisation](#initialisation) step and generates the `constants.c` and `constants_sizes.h` prior to compilation.
 
 To run this script, a Python environment with MDSplus installed is required. On `newmsmaug2` (Tokamak Energy’s internal server), the environment is currently set up as follows:
 ```bash
@@ -112,7 +112,7 @@ Further testing and documentation are planned, including:
 We have some unit tests for the `find_plasma.c` file which we can be run using.
 ```bash
 cd src/
-cp ../test_data/constants.c .
+cp ../test_data/constants.c ../test_data/constants_sizes.h .
 make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_find_plasma
 ./test_find_plasma
 ```

@@ -1,0 +1,59 @@
+/* Array sizes. They are enum constants (not const int variables) so that they
+   are integer constant expressions and can be used as fixed array dimensions.
+   This file is generated from constants_sizes.h.in at the same time as
+   constants.c. */
+#ifndef CONSTANTS_SIZES_H_
+#define CONSTANTS_SIZES_H_
+
+/* N_ROW : number of rows */
+extern const int N_Z;
+
+/* N_COL : number of rows */
+extern const int N_R;
+
+/* N_GRID : number of grid points (N_COL * N_ROW) */
+extern const int N_GRID;
+
+/* N_MEAS : number of measurements */
+extern const int N_MEAS;
+
+/* N_FLUX_LOOPS : number of flux loop measurements */
+extern const int N_FLUX_LOOPS;
+
+/* N_BP_PROBES : number of bp-probe measurements */
+extern const int N_BP_PROBES;
+
+/* N_ROGOWSKI_COILS : number of Rogowski coil measurements */
+extern const int N_ROGOWSKI_COILS;
+
+/* N_COIL : number of PF coils */
+extern const int N_COIL;
+
+/* N_LTRB : number of boundary points */
+extern const int N_LTRB;
+
+/* N_LCFS_MAX : max storage allocated for find LCFS coordinates */ 
+extern const int N_LCFS_MAX;
+
+/* N_XPT_MAX : max storage allocated for find xpts/opts */ 
+extern const int N_XPT_MAX;
+
+/* N_COEF : number of basis coefficients */ 
+extern const int N_COEF;
+
+/* N_PLS : number of basis coefficients */ 
+extern const int N_PLS;
+
+/* N_VESS : number of basis coefficients */ 
+extern const int N_VESS;
+
+/* N_SENS_PCS : number of sensors read from PCS (i.e. the "good" sensors) */ 
+extern const int N_SENS_PCS;
+
+/* N_LIMIT : number of limit points */
+extern const int N_LIMIT;
+
+/* N_INTRP : number of interpolation points */
+extern const int N_INTRP;
+
+#endif
