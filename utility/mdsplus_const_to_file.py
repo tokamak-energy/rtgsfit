@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 
@@ -109,5 +110,9 @@ if __name__ == "__main__":
         data_dictionary["sensor_replacement_matrix"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:SENS_REP_MAT").data()
         data_dictionary["n_sens_pcs"] = conn.get(f"\\RTGSFIT::TOP.{run_name}.PRESHOT:N_SENS_PCS").data()
 
-    const_to_file(data_dictionary)
-    const_to_file(data_dictionary, file_read="constants_sizes.h.in", file_write="constants_sizes.h", as_enum=True)
+    # Write both outputs to temporary files and only replace the real ones once both
+    # succeed, so a failure never leaves a new constants.c paired with old sizes
+    const_to_file(data_dictionary, file_write="constants.c.tmp")
+    const_to_file(data_dictionary, file_read="constants_sizes.h.in", file_write="constants_sizes.h.tmp", as_enum=True)
+    os.replace("constants_sizes.h.tmp", "constants_sizes.h")
+    os.replace("constants.c.tmp", "constants.c")
