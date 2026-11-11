@@ -118,6 +118,7 @@ $(BUILD_DIR) $(OBJ_DIR) $(BUILD_DIR)/tests:
 	mkdir -p $@
 
 $(FLAGS_STAMP): FORCE | $(OBJ_DIR)
+	@command -v cmp >/dev/null || { echo "cmp not found; install diffutils." >&2; exit 1; }
 	@echo '$(BUILD_FLAGS)' | cmp -s - $@ || echo '$(BUILD_FLAGS)' > $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS) $(FLAGS_STAMP) | $(OBJ_DIR)

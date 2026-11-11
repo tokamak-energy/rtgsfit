@@ -5,15 +5,43 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 from rtgsfit.library import c_directory
+from rtgsfit.library import run_make
 
 
 @pytest.mark.skipif(shutil.which("make") is None, reason="needs make")
 def test_c_unit_tests() -> None:
     completed = subprocess.run(["make", "-C", str(c_directory()), "test"], capture_output=True, text=True)
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+@pytest.mark.parametrize("existing_flags", [False, True])
+def test_missing_cmp_fails_without_rewriting_flags(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing_flags: bool
+) -> None:
+    binaries = tmp_path / "bin"
+    binaries.mkdir()
+    for command in ("make", "mkdir"):
+        executable = shutil.which(command)
+        assert executable is not None, f"{command} is required for the C build tests"
+        (binaries / command).symlink_to(executable)
+    monkeypatch.setenv("PATH", str(binaries))
+
+    flags = tmp_path / "obj" / "flags"
+    if existing_flags:
+        flags.parent.mkdir()
+        flags.write_text("previous flags\n")
+
+    with pytest.raises(RuntimeError, match="cmp not found; install diffutils"):
+        run_make([f"OBJ_DIR={flags.parent}", "ARCH_FLAGS=", str(flags)])
+
+    if existing_flags:
+        assert flags.read_text() == "previous flags\n"
+    else:
+        assert not flags.exists()
 
 
 def test_every_c_array_parameter_has_an_adjacent_checked_length() -> None:

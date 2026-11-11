@@ -493,6 +493,9 @@ The code is C11 and compiles without warnings with
 `-Wall -Wextra -Wpedantic -Wshadow -Wvla -Wstrict-prototypes`. `-Wvla` guarantees that no
 variable-length arrays are used.
 
+The Makefile also requires `cmp`, provided by `diffutils` (`dnf install diffutils` on Rocky Linux),
+to check whether the build flags have changed without rebuilding unchanged objects.
+
 **The preshot generator.** The preshot is compiled into the library. `c/tools/write_preshot.c`, built by
 make as `c/build/write_preshot`, writes it as `c/src/preshot_sizes.h` (the sizes, as an `enum`) and
 `c/src/preshot_data.c` (every array as a `const` initialiser, in read-only data, and

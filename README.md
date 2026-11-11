@@ -65,7 +65,7 @@ creation and writing, with its `mdsthin` transport explicitly selected.
 
 | Feature | Off the TE network | Needs |
 |---|---|---|
-| Build the C library and run the C unit tests (`make -C c test`) | ✅ | gcc, OpenBLAS (CBLAS and LAPACK) |
+| Build the C library and run the C unit tests (`make -C c test`) | ✅ | gcc, GNU make, `diffutils` (`cmp`), OpenBLAS (CBLAS and LAPACK) |
 | Analytic replay and its tests (`rtgsfit replay analytic`) | ✅ | numpy, scipy, contourpy |
 | Local preshot and results files (`.npz`), C preshot from a local file | ✅ | |
 | Native NetCDF capture and offline post-processing | ✅ | `netCDF4` plus NetCDF-C development/runtime library for the shared C writer; no compiler needed for readback |
