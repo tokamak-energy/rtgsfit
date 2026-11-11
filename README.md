@@ -52,6 +52,9 @@ See the [flux conventions](documentation/manual.md#2-conventions).
   the working variables mean, including the `local` NPZ readers/writers.
 * [Negative-current assessment](documentation/negative_current.md): proposed work and acceptance
   tests; negative-current topology support is not implemented yet.
+* [Examples](examples/): Jupyter notebooks that run RT-GSFit step by step.
+  [Example 01](examples/example_01_run_full_pipeline_st40/README.md) runs the full ST40 pipeline: it
+  builds the preshot with GSFit, replays a pulse and stores both in MDSplus.
 
 ## What works where
 
@@ -65,6 +68,7 @@ creation and writing, with its `mdsthin` transport explicitly selected.
 | Build the C library and run the C unit tests (`make -C c test`) | ✅ | gcc, OpenBLAS (CBLAS and LAPACK) |
 | Analytic replay and its tests (`rtgsfit replay analytic`) | ✅ | numpy, scipy, contourpy |
 | Local preshot and results files (`.npz`), C preshot from a local file | ✅ | |
+| Native NetCDF capture and offline post-processing | ✅ | `netCDF4` plus NetCDF-C development/runtime library for the shared C writer; no compiler needed for readback |
 | FreeGSNKE MAST-U-like replay (`rtgsfit replay freegsnke`) | ✅ | [GSFit](https://github.com/tokamak-energy/gsfit) and [FreeGSNKE](https://github.com/FusionComputingLab/freegsnke), with FreeGSNKE's example machine files |
 | ST40 preshot (`rtgsfit preshot st40`) | ❌ | GSFit and ST40 data in MDSplus |
 | ST40 replay (`rtgsfit replay st40`) | ❌ | `mdsthin` and access to the MAG/ST40 and RTGSFIT trees |
@@ -74,16 +78,29 @@ creation and writing, with its `mdsthin` transport explicitly selected.
 
 ## Quick start
 
-    python -m venv .venv && . .venv/bin/activate
-    pip install -e ".[dev]"          # add [freegsnke] or [te] for those readers
+These commands and CI use Python 3.13 via [uv](https://docs.astral.sh/uv/), which downloads the
+interpreter if needed. The package minimum remains Python 3.11; other virtual-environment tools
+work too.
+
+    uv venv --python 3.13 && . .venv/bin/activate
+    uv pip install -e ".[dev]"       # add [freegsnke] or [te] for those readers
     make -C c test                   # C unit tests
     pytest                           # off-network tests; TE and FreeGSNKE tests are skipped
-    rtgsfit replay analytic          # writes the results to rtgsfit_analytic.npz
+    pytest --figures -m figures      # draw what the analytic and FreeGSNKE tests compare: tests/figures/<UTC time>/
+    rtgsfit replay analytic          # writes the results to c/cache/rtgsfit_analytic.npz
 
 On the TE network:
 
     rtgsfit replay st40 --set replay/pulse=13343 --set replay/time_end=0.2
     pytest --te-network
+    pytest --te-network --figures -m figures            # the figures of every suite, ST40 vs GSFit too
+    pytest --te-network --timing tests/test_timing.py   # rtgsfit() timing: c/cache/timing/*.csv
+
+The figures are only drawn when asked for, never in CI. Each run writes PNG and PDF files to a new
+directory, so earlier figures are kept; see the manual's Verification section.
+
+The ST40 default reads the current-schema preshot from `RTGSFIT` pulse 52014922, `RUN22`.
+The older `RUN21` lacks `PRESHOT.FIT:DOF_UNITS` and cannot be used with the current schema.
 
 Configurations are in `python/rtgsfit/settings/<name>/rtgsfit.json`; a path to a custom JSON
 file also works. VS Code provides completion, descriptions and validation through the shared
@@ -94,21 +111,37 @@ Read the results:
 
 ```python
 import numpy as np
-results = np.load("rtgsfit_analytic.npz")
+results = np.load("c/cache/rtgsfit_analytic.npz")
 results["GLOBAL.IP"], results["PROFILES_2D.R_Z.PSI"]   # [N_TIME], [N_TIME, N_Z, N_R]
 ```
 
+To emulate the future PCS logger, save a native capture before offline processing:
+
+```sh
+rtgsfit replay analytic --set capture/path=analytic.nc
+rtgsfit post-process c/cache/analytic.nc
+```
+
+The second command reads the captured C inputs/outputs and embedded preshot, then writes
+`c/cache/analytic_processed.npz` without rebuilding C, rerunning the solver or reading a database.
+Replay and PCS use the same C writer and versioned capture contract; legacy v1 NetCDF files are not reinterpreted.
+See [the native capture specification](documentation/manual.md#76-native-netcdf-captures-replay-and-pcs).
+
 ## Repository layout
 
-    c/src/                C library: rtgsfit.h is the public interface
+    c/src/                C library: rtgsfit.h is the public interface; the active preshot is generated here
+    c/tools/              write_preshot.c, which generates the preshot C files from MDSplus or a file
     c/tests/              C unit tests
-    c/preshot/            generated preshot_sizes.h and preshot_data.c (not committed)
+    c/build/              compiled library, objects and generator (not committed)
+    c/cache/              local writer outputs (not committed)
     python/rtgsfit/       Python package: settings/, database_readers/, database_writers/, replay, preshot
     tests/                pytest: every integration test is a replay
+    tests/figures/        diagnostic figures from pytest --figures, one directory per run (not committed)
+    examples/             Jupyter notebooks that run RT-GSFit step by step, committed without outputs
     documentation/        manual, data dictionary, style guide
 
 Private analysis notebooks and one-off replays live in a separate repository,
-`rtgsfit_workbench`, so that this repository contains only the code and its tests.
+`rtgsfit_workbench`, so that this repository contains only the code, its tests and its examples.
 
 ## What a fresh clone contains
 
@@ -118,38 +151,49 @@ and test fixtures. It does **not** include a machine's generated C constants or 
 | File or directory | In Git? | How it is obtained |
 |---|---|---|
 | `c/src/preshot.h` | Yes | Hand-maintained declarations and compile-time checks |
-| `c/preshot/preshot_sizes.h` | No | Generated compile-time size enums |
-| `c/preshot/preshot_data.c` | No | Generated numerical arrays; replaces the old large constants source |
-| `c/build/` | No | C compiler outputs |
+| `c/tools/write_preshot.c` | Yes | The C generator that writes the two files below |
+| `c/src/preshot_sizes.h` | No | Generated compile-time size enums |
+| `c/src/preshot_data.c` | No | Generated numerical arrays; replaces the old large constants source |
+| `c/build/` | No | `librtgsfit.so`, objects and the generator |
 | Replay/preshot `.npz` files | No, except committed test references | Generated by local writers |
-| `~/.cache/rtgsfit/` | Outside the repository | Automatically generated per-preshot replay builds |
+| `c/cache/` | No | Local writer outputs |
 
-The whole `c/preshot/` directory is ignored, just as the old generated constants source was.
-It may not exist immediately after cloning. Do not edit its generated files.
+The two generated files in `c/src/` are gitignored, just as the old generated constants source was.
+They do not exist immediately after cloning. Do not edit them.
 
 For an off-network first run:
 
 ```sh
-pip install -e ".[dev]"
+uv venv --python 3.13 && . .venv/bin/activate
+uv pip install -e ".[dev]"
 make -C c test
 rtgsfit replay analytic
 ```
 
-The replay generates and compiles its preshot automatically in the cache. C unit tests need
-no generated machine preshot.
+There is one active preshot: the last one built. The replay writes it into `c/src/` and compiles
+`c/build/librtgsfit.so`, inside this repository whatever the working directory. Make recompiles only
+what changed, so replaying the same preshot again does not recompile; another preshot replaces it.
+Run one build at a time. The library holds a CRC-32 of its preshot, and Python refuses a library
+built from a different one.
 
-For a manual C build, first generate a preshot, then compile:
+Relative local-writer filenames, including those in the bundled settings, go under `c/cache/`; use an
+absolute filename for an explicit export elsewhere. `RTGSFIT_CACHE_DIR` remains an optional override.
+C unit tests need no preshot.
+
+The C build itself needs no Python. The generator `c/tools/write_preshot.c` reads the preshot
+either from MDSplus or from a file that Python writes:
 
 ```sh
-rtgsfit write-c-preshot analytic --output-dir c/preshot
-make -C c
+make -C c SHOT=99000230 RUN_NAME=TEST03   # read RTGSFIT 99000230 TEST03 from MDSplus, then compile (the PCS)
+rtgsfit write-c-preshot analytic          # a preshot that is only in Python (analytic, FreeGSNKE, ...)
+make -C c                                 # compile the active preshot
 ```
 
+`write-c-preshot` writes `c/build/preshot.bin` and runs `make PRESHOT_FILE=c/build/preshot.bin preshot`.
 Replace `analytic` with `st40` on the TE network to read the configured stored ST40 preshot.
 To calculate a new ST40 preshot using GSFit instead, add `--set preshot/reader=gsfit`.
 These commands generate local files; they do not write to the shared database.
-The resulting source files can be compiled without Python once generated, using the required
-C compiler and BLAS/LAPACK libraries. They are machine/preshot-specific, not universal constants.
+The generated files are machine/preshot-specific, not universal constants.
 
 ## Status
 

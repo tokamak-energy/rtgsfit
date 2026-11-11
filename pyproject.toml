@@ -14,11 +14,13 @@ dependencies = [
     "scipy>=1.11",
     "contourpy>=1.2",
     "jsonschema>=4.18",
+    "netCDF4>=1.6",
 ]
 
 [project.optional-dependencies]
 # Tokamak Energy internal packages. They are not on PyPI; install them from TE's GitLab.
-te = ["gsfit", "mdsthin", "standard_utility"]
+# GSFit's ST40 reader, used to build the ST40 preshot, needs its with_st40_mdsplus extra.
+te = ["gsfit[with_st40_mdsplus]", "mdsthin", "standard_utility"]
 # FreeGSNKE synthetic data. GSFit computes the preshot (Green's functions) for the FreeGSNKE machine.
 freegsnke = ["gsfit", "freegsnke"]
 dev = ["pytest>=8", "ruff>=0.5", "clang-format==21.1.8", "matplotlib"]
@@ -34,9 +36,13 @@ rtgsfit = ["settings/*/*.json", "settings/settings.schema.json", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Dash (a dependency of st40-database) registers a pytest plugin that RT-GSFit does not use.
+addopts = "-p no:dash"
 markers = [
     "te_network: needs the Tokamak Energy network (MDSplus); run with --te-network",
     "freegsnke: needs FreeGSNKE and GSFit installed",
+    "timing: ST40 timing benchmark; run with --te-network --timing",
+    "figures: diagnostic figures, written to a new tests/figures/<UTC time>/; run with --figures",
 ]
 
 [tool.ruff]

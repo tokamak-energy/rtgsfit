@@ -26,7 +26,7 @@ def test_every_c_node_is_declared_in_preshot_h() -> None:
     declared = set(re.findall(r"extern const \w+ (\w+)\s*[\[;]", header))
     sizes_enum = set(dd.SIZE_NAMES)
     expected = {node.c_name for node in dd.C_NODES if node.c_name not in sizes_enum}
-    assert declared == expected
+    assert declared == expected | {"PRESHOT_CHECKSUM"}
 
 
 def test_documentation_is_up_to_date() -> None:

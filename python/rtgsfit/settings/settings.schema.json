@@ -81,6 +81,18 @@
                 "arch_flags": {"type": "string", "description": "Compiler architecture flags; empty for a portable build."}
             }
         },
+        "capture": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Optional native NetCDF capture, written before offline processing. Relative paths use c/cache/; contains the exact preshot and C inputs/outputs."
+                }
+            }
+        },
         "writers": {
             "type": "object",
             "additionalProperties": false,
@@ -95,14 +107,15 @@
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                        "path": {"type": "string", "minLength": 1, "description": "Results NPZ path."},
-                        "preshot_path": {"type": "string", "minLength": 1, "description": "Preshot NPZ path."}
+                        "path": {"type": "string", "minLength": 1, "description": "Results NPZ path, relative to c/cache/ by default. Absolute paths are used unchanged."},
+                        "preshot_path": {"type": "string", "minLength": 1, "description": "Preshot NPZ path, relative to c/cache/ by default. Absolute paths are used unchanged."}
                     }
                 },
                 "c_source": {
                     "type": "object",
                     "additionalProperties": false,
-                    "properties": {"output_dir": {"type": "string", "description": "Generated C preshot directory."}}
+                    "description": "No settings: makes the preshot the active one, c/src/preshot_sizes.h and c/src/preshot_data.c.",
+                    "properties": {}
                 },
                 "rtgsfit_mdsplus": {
                     "type": "object",
@@ -207,8 +220,16 @@
                         "p_axis": {"type": "number", "minimum": 0, "description": "Axis pressure [Pa]."},
                         "ip": {"type": "number", "description": "Plasma current [A]."},
                         "f_vacuum": {"type": "number", "description": "Vacuum R B_phi [T m]."},
-                        "alpha_m": {"type": "number", "exclusiveMinimum": 0},
-                        "alpha_n": {"type": "number", "exclusiveMinimum": 0}
+                        "alpha_m": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "j_phi is proportional to (1 - psi_norm^alpha_m)^alpha_n; 1 with alpha_n = 1 gives RT-GSFit's linear p' and FF'."
+                        },
+                        "alpha_n": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "j_phi is proportional to (1 - psi_norm^alpha_m)^alpha_n; 1 with alpha_m = 1 gives RT-GSFit's linear p' and FF'."
+                        }
                     }
                 }
             }

@@ -21,9 +21,12 @@ from __future__ import annotations
 
 import json
 import time as wall_clock
+from pathlib import Path
 
 import numpy as np
 
+from rtgsfit.capture import Capture
+from rtgsfit.capture import write_capture
 from rtgsfit.database_readers import Signals
 from rtgsfit.database_readers import get_preshot_reader
 from rtgsfit.database_readers import get_signals_reader
@@ -32,15 +35,15 @@ from rtgsfit.library import TIMING_SECTIONS
 from rtgsfit.library import BuildOptions
 from rtgsfit.library import Rtgsfit
 from rtgsfit.library import SliceResult
+from rtgsfit.library import cache_directory
 from rtgsfit.library import describe_status
 from rtgsfit.preshot import Preshot
 from rtgsfit.results import Results
-from rtgsfit.results import collect_results
 from rtgsfit.settings import Settings
 
 
 def preshot_location(settings: Settings, section: str = "preshot", key: str = "reader") -> str:
-    """Where the preshot comes from, e.g. `rtgsfit_mdsplus {"pulse": 52014922, "run_name": "RUN21"}`."""
+    """Where the preshot comes from, e.g. `rtgsfit_mdsplus {"pulse": 52014922, "run_name": "RUN22"}`."""
     name = str(settings[section][key])
     options = settings[section].get(name, {})
     return f"{name} {json.dumps(options, default=str)}" if options else name
@@ -96,7 +99,10 @@ def replay(
     signals: Signals | None = None,
     verbose: bool = True,
 ) -> Results:
-    """Replay without writing; `preshot` and `signals` override the readers in `settings`."""
+    """Replay without result writers; optionally write native `capture/path` before processing.
+
+    `preshot` and `signals` override the readers in `settings`.
+    """
     if preshot is None:
         preshot = read_preshot(settings)
         source = preshot_location(settings)
@@ -108,6 +114,8 @@ def replay(
         signals.validate(preshot)
 
     rtgsfit = Rtgsfit.build(preshot, BuildOptions.from_settings(settings))
+    if verbose:
+        print(f"Using C library: {rtgsfit.library_path}")
     coil_current = signals.coil_current(preshot)
 
     slices: list[SliceResult] = []
@@ -128,7 +136,17 @@ def replay(
         print(f"{len(slices)} slices in {elapsed:.3f} s")
         print_timing(slices)
 
-    return collect_results(preshot, signals, slices, settings.json_text, source)
+    n_time = len(slices)
+    logged = Signals(signals.time[:n_time], signals.meas[:n_time], signals.coil_signal[:n_time])
+    capture = Capture(preshot, logged, slices, settings.json_text, source)
+    if "capture" in settings:
+        path = Path(settings["capture"]["path"]).expanduser()
+        if not path.is_absolute():
+            path = cache_directory() / path
+        written = write_capture(path, capture, library_path=rtgsfit.library_path)
+        if verbose:
+            print(f"Wrote native capture to {written}")
+    return capture.to_results()
 
 
 def write_results(results: Results, settings: Settings) -> None:

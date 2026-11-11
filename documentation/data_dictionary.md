@@ -48,7 +48,7 @@ The computational grid.
 | `PRESHOT.GRID:R_FLAT` | `GRID_R_FLAT` | [N_GRID] | float64 | metre | R of every grid point; index i_z * N_R + i_r |
 | `PRESHOT.GRID:Z_FLAT` | `GRID_Z_FLAT` | [N_GRID] | float64 | metre | Z of every grid point; index i_z * N_R + i_r |
 | `PRESHOT.GRID:INV_R` | `GRID_INV_R` | [N_GRID] | float64 | 1 / metre | 1 / R; FF_PRIME_MU0 fits FF-prime / mu0 |
-| `PRESHOT.GRID:MASK_LIMITER` | `GRID_MASK_LIMITER` | [N_GRID] | int32 | dimensionless | 1 where plasma current is allowed (inside the limiter); 0 elsewhere |
+| `PRESHOT.GRID:MASK_LIMITER` | `GRID_MASK_LIMITER` | [N_GRID] | int32 | dimensionless | Fixed geometry mask: 1 where plasma current is allowed; 0 in excluded regions |
 | `PRESHOT.GRID:G_COIL` | `GRID_G_COIL` | [N_GRID, N_COIL] | float64 | weber / ampere | Greens function: psi on the grid per unit coil current |
 | `PRESHOT.GRID:G_PASSIVE` | `GRID_G_PASSIVE` | [N_GRID, N_PASSIVE] | float64 | weber / ampere | Greens function: psi on the grid per unit passive degree of freedom |
 
@@ -103,9 +103,10 @@ The weighted least-squares problem fit_matrix fit_dof = fit_target.
 |---|---|---|---|---|---|
 | `PRESHOT.FIT:TARGET_NAMES` |  | [N_FIT_TARGET] | str | dimensionless | Names of the rows of fit_target: constraints, then regularisations |
 | `PRESHOT.FIT:DOF_NAMES` |  | [N_FIT_DOF] | str | dimensionless | Names of the entries of fit_dof: plasma, then passive degrees of freedom |
+| `PRESHOT.FIT:DOF_UNITS` |  | [N_FIT_DOF] | str | dimensionless | Physical units of each fitted plasma or passive DOF |
 | `PRESHOT.FIT:WEIGHT` | `FIT_WEIGHT` | [N_FIT_TARGET] | float64 | dimensionless | Weight of each row of fit_target; 1 / uncertainty |
-| `PRESHOT.FIT:A_GRID` | `FIT_A_GRID` | [N_GRID, N_FIT_TARGET] | float64 | dimensionless | Weighted response of fit_target to the current in each grid cell, including d_r d_z |
-| `PRESHOT.FIT:A_PASSIVE` | `FIT_A_PASSIVE` | [N_PASSIVE, N_FIT_TARGET] | float64 | dimensionless | Weighted response of fit_target to each passive degree of freedom; rows of the transposed fit_matrix |
+| `PRESHOT.FIT:G_GRID` | `FIT_G_GRID` | [N_FIT_TARGET, N_GRID] | float64 | dimensionless | Greens function: weighted fit_target per unit j_phi in each grid cell, including d_r d_z |
+| `PRESHOT.FIT:G_PASSIVE` | `FIT_G_PASSIVE` | [N_FIT_TARGET, N_PASSIVE] | float64 | dimensionless | Greens function: weighted fit_target per unit passive DOF; the passive columns of fit_matrix |
 
 ### `PRESHOT.SETTINGS`
 
@@ -316,7 +317,7 @@ Rogowski coils.
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
 | `CONSTRAINTS.PF_PASSIVE.ALL:NAMES` |  | [N_PASSIVE] | str | dimensionless | Passive current-mode names |
-| `CONSTRAINTS.PF_PASSIVE.ALL:RECONSTRUCT` |  | [N_TIME, N_PASSIVE] | float64 | ampere | Fitted passive current-mode amplitudes |
+| `CONSTRAINTS.PF_PASSIVE.ALL:RECONSTRUCT` |  | [N_TIME, N_PASSIVE] | float64 | mixed | Fitted passive current-mode amplitudes; units in FIT:DOF_UNITS (ampere or ampere / metre ** 2) |
 
 ### `PROFILES_2D.R_Z`
 
@@ -333,16 +334,16 @@ On the rectangular (R, Z) grid.
 | `PROFILES_2D.R_Z:MASK` |  | [N_TIME, N_Z, N_R] | int32 | dimensionless | 1 inside the plasma; 0 outside |
 | `PROFILES_2D.R_Z:J_PHI` |  | [N_TIME, N_Z, N_R] | float64 | ampere / metre ** 2 | Toroidal plasma current density |
 
-### `XPOINTS.ALL`
+### `XPT.ALL`
 
 All x-points that were found.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `XPOINTS.ALL:N` |  | [N_TIME] | int32 | dimensionless | Number of x-points found |
-| `XPOINTS.ALL:R` |  | [N_TIME, N_XPT_MAX] | float64 | metre | Major radius of the x-points, sorted by psi; NaN padded |
-| `XPOINTS.ALL:Z` |  | [N_TIME, N_XPT_MAX] | float64 | metre | Height of the x-points; NaN padded |
-| `XPOINTS.ALL:PSI` |  | [N_TIME, N_XPT_MAX] | float64 | weber | Poloidal flux at the x-points; NaN padded |
+| `XPT.ALL:N` |  | [N_TIME] | int32 | dimensionless | Number of x-points found |
+| `XPT.ALL:R` |  | [N_TIME, N_XPT_MAX] | float64 | metre | Major radius of the x-points, sorted by psi; NaN padded |
+| `XPT.ALL:Z` |  | [N_TIME, N_XPT_MAX] | float64 | metre | Height of the x-points; NaN padded |
+| `XPT.ALL:PSI` |  | [N_TIME, N_XPT_MAX] | float64 | weber | Poloidal flux at the x-points; NaN padded |
 
 ### `FIT`
 
@@ -350,7 +351,7 @@ The least-squares fit.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `FIT:DOF_VALUES` |  | [N_TIME, N_FIT_DOF] | float64 | mixed; see DOF_UNITS | Fitted DOF values in physical units, not weighted; fit_matrix fit_dof approximates fit_target |
+| `FIT:DOF_VALUES` |  | [N_TIME, N_FIT_DOF] | float64 | mixed | Fitted DOF values in physical units (see DOF_UNITS), not weighted; fit_matrix fit_dof approximates fit_target |
 | `FIT:DOF_NAMES` |  | [N_FIT_DOF] | str | dimensionless | Names of the entries of fit_dof |
 | `FIT:DOF_UNITS` |  | [N_FIT_DOF] | str | dimensionless | Physical units of each fitted plasma or passive DOF |
 | `FIT:TARGET_NAMES` |  | [N_FIT_TARGET] | str | dimensionless | Magnetic constraint rows followed by regularisation rows |

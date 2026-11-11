@@ -29,6 +29,8 @@ from rtgsfit.settings import load_settings
 
 DATA_DIR = Path(__file__).parent / "data"
 CONSTRAINT_GROUPS = ("FLUX_LOOP", "BP_PROBE", "ROGOWSKI")
+PSI_RTOL = 1e-2
+J_PHI_ATOL = 1e4  # the peak current density is about 3e6 A/m^2
 
 
 def _grid(results: Results) -> tuple[np.ndarray, np.ndarray]:
@@ -55,7 +57,7 @@ def test_every_slice_succeeds(analytic_results: Results) -> None:
 
 def test_psi_matches_exact_solution(analytic_results: Results, plasma) -> None:  # type: ignore[no-untyped-def]
     r_2d, z_2d = _grid(analytic_results)
-    assert_allclose(analytic_results["PROFILES_2D.R_Z.PSI"][-1], plasma.psi(r_2d, z_2d), rtol=1e-2)
+    assert_allclose(analytic_results["PROFILES_2D.R_Z.PSI"][-1], plasma.psi(r_2d, z_2d), rtol=PSI_RTOL)
 
 
 def test_b_theta_matches_exact_solution(analytic_results: Results, plasma) -> None:  # type: ignore[no-untyped-def]
@@ -72,8 +74,7 @@ def test_b_theta_matches_exact_solution(analytic_results: Results, plasma) -> No
 
 def test_j_phi_matches_exact_solution(analytic_results: Results, plasma) -> None:  # type: ignore[no-untyped-def]
     r_2d, z_2d = _grid(analytic_results)
-    # the peak current density is about 3e6 A/m^2
-    assert_allclose(analytic_results["PROFILES_2D.R_Z.J_PHI"][-1], plasma.j_phi(r_2d, z_2d), atol=1e4)
+    assert_allclose(analytic_results["PROFILES_2D.R_Z.J_PHI"][-1], plasma.j_phi(r_2d, z_2d), atol=J_PHI_ATOL)
 
 
 def test_global_quantities_match_exact_solution(analytic_results: Results, plasma) -> None:  # type: ignore[no-untyped-def]
@@ -114,6 +115,41 @@ def test_replay_is_deterministic(analytic_results: Results, analytic_preshot: Pr
     assert_array_equal(again["FIT.DOF_VALUES"], analytic_results["FIT.DOF_VALUES"])
 
 
+@pytest.mark.figures
+def test_figures(analytic_results: Results, plasma, figure_dir: Path) -> None:  # type: ignore[no-untyped-def]
+    """Diagnostic figures (`pytest --figures`): the iterations against the exact solution."""
+    import plotting
+
+    settings = load_settings("analytic")
+    r_2d, z_2d = _grid(analytic_results)
+    theta = np.linspace(0.0, 2.0 * np.pi, 361)
+    loop_r, loop_z = analytic.flux_loop_geometry(settings)
+    probe_r, probe_z, _ = analytic.probe_geometry(settings)
+    exact = plotting.Reference(
+        name="exact",
+        r=analytic_results["PROFILES_2D.R_Z.R"],
+        z=analytic_results["PROFILES_2D.R_Z.Z"],
+        psi=plasma.psi(r_2d, z_2d),
+        j_phi=plasma.j_phi(r_2d, z_2d),
+        ip=plasma.ip,
+        axis_r=plasma.r_0,
+        axis_z=plasma.z_0,
+        axis_psi=plasma.axis_psi,
+        boundary_psi=plasma.boundary_psi,
+        outline=(plasma.r_0 + plasma.rho_b * np.cos(theta), plasma.z_0 + plasma.rho_b * np.sin(theta)),
+        sensors={"flux loops": (loop_r, loop_z), "Bp probes": (probe_r, probe_z)},
+    )
+    figures = {
+        "psi": plotting.plot_map(analytic_results, exact, "PSI", rtol=PSI_RTOL),
+        "j_phi": plotting.plot_map(analytic_results, exact, "J_PHI", atol=J_PHI_ATOL),
+        "midplane": plotting.plot_midplane(analytic_results, plasma),
+        "constraints": plotting.plot_constraints(analytic_results),
+        "convergence": plotting.plot_convergence(analytic_results, exact),
+    }
+    paths = plotting.save(figures, figure_dir / "analytic")
+    assert all(path.stat().st_size > 0 for path in paths)
+
+
 # ----------------------------------------------------------------------------------------------
 # Against v1
 # ----------------------------------------------------------------------------------------------
@@ -130,11 +166,13 @@ V1_KEYS = (
     "GLOBAL.CURRENT_CENT.R",
     "GLOBAL.CURRENT_CENT.Z",
     "CONSTRAINTS.CHI_SQ_MAG",
-    "XPOINTS.ALL.N",
+    "XPT.ALL.N",
     "GLOBAL.XPT_DIVERTED",
     "GLOBAL.STATUS",
     "FIT.LAPACK_INFO",
 )
+# Names in the v1 reference file that have since been renamed
+V1_OLD_KEYS = {"FIT.DOF_VALUES": "FIT.X_VEC", "XPT.ALL.N": "XPOINTS.ALL.N"}
 
 
 def _v1_results(preshot: Preshot, ip: float | None) -> Results:
@@ -162,7 +200,7 @@ def _assert_matches_v1(results: Results, case: str) -> None:
     actual["B_PRED"] = _constraints(results, "RECONSTRUCT")
     actual["B_VEC_MEAS"] = _constraints(results, "MEASURED")
     for key, value in actual.items():
-        old_key = "FIT.X_VEC" if key == "FIT.DOF_VALUES" else key
+        old_key = V1_OLD_KEYS.get(key, key)
         expected = np.ravel(reference[f"{case}/{old_key}"]).copy()
         if key == "FIT.DOF_VALUES":
             expected[1] /= MU_0

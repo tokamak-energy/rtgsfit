@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import re
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -12,13 +13,22 @@ from numpy.testing import assert_array_equal
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_readers.local import read_preshot
 from rtgsfit.database_readers.local import read_results
-from rtgsfit.database_writers.c_source import data_source
-from rtgsfit.database_writers.c_source import sizes_header
-from rtgsfit.database_writers.c_source import write_c_source
+from rtgsfit.database_readers.rtgsfit_mdsplus import read_mdsplus_nodes
+from rtgsfit.database_writers.c_source import preshot_checksum
+from rtgsfit.database_writers.c_source import write_preshot_file
+from rtgsfit.database_writers.local import LocalWriter
 from rtgsfit.database_writers.local import write_npz
+from rtgsfit.library import Rtgsfit
+from rtgsfit.library import build_directory
+from rtgsfit.library import build_library
+from rtgsfit.library import c_directory
+from rtgsfit.library import cache_directory
+from rtgsfit.library import run_make
 from rtgsfit.preshot import Preshot
 from rtgsfit.preshot import PreshotError
+from rtgsfit.replay import build_preshot
 from rtgsfit.results import Results
+from rtgsfit.settings import load_settings
 
 
 def _assert_same(actual: object, expected: object, key: str) -> None:
@@ -43,6 +53,86 @@ def test_preshot_round_trip(analytic_preshot: Preshot, tmp_path: Path) -> None:
     again = read_preshot(path)
     assert again.content_hash() == analytic_preshot.content_hash()
     assert again["FIT:TARGET_NAMES"] == analytic_preshot["FIT:TARGET_NAMES"]
+
+
+def test_cache_directory_is_repository_local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RTGSFIT_CACHE_DIR", raising=False)
+    monkeypatch.delenv("RTGSFIT_C_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    assert cache_directory() == Path(__file__).resolve().parents[1] / "c" / "cache"
+
+
+def test_cache_directory_follows_explicit_c_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RTGSFIT_CACHE_DIR", raising=False)
+    monkeypatch.setenv("RTGSFIT_C_DIR", str(tmp_path / "c"))
+    assert cache_directory() == tmp_path / "c" / "cache"
+
+
+def test_cache_directory_can_be_explicitly_overridden(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RTGSFIT_CACHE_DIR", str(tmp_path / "export"))
+    assert cache_directory() == tmp_path / "export"
+
+
+def test_build_writes_the_active_preshot_and_reuses_it(analytic_preshot: Preshot) -> None:
+    library = build_library(analytic_preshot)
+    assert library == build_directory() / "librtgsfit.so"
+    files = [library, c_directory() / "src" / "preshot_sizes.h", c_directory() / "src" / "preshot_data.c"]
+    mtimes = [path.stat().st_mtime_ns for path in files]
+    assert build_library(analytic_preshot) == library
+    assert [path.stat().st_mtime_ns for path in files] == mtimes
+
+
+def test_rebuilding_for_another_preshot_reloads_the_library(analytic_preshot: Preshot) -> None:
+    def call(rtgsfit: Rtgsfit, preshot: Preshot) -> int:
+        return rtgsfit(np.zeros(preshot.sizes["N_MEAS"]), np.zeros(preshot.sizes["N_COIL"])).status
+
+    coarse = build_preshot(load_settings("analytic").copy_with({"analytic/grid/n_r": 33, "analytic/grid/n_z": 65}))
+    before = Rtgsfit.build(analytic_preshot)
+    after = Rtgsfit.build(coarse)
+    assert after.sizes == coarse.sizes
+    call(after, coarse)
+    with pytest.raises(RuntimeError, match="rebuilt"):
+        call(before, analytic_preshot)
+    assert Rtgsfit.build(analytic_preshot).sizes == analytic_preshot.sizes
+
+
+def test_library_of_another_preshot_is_rejected(analytic_preshot: Preshot) -> None:
+    library = build_library(analytic_preshot)
+    tolerance = analytic_preshot["SETTINGS:TOLERANCE"]
+    other = Preshot(_modified(analytic_preshot, "SETTINGS:TOLERANCE", tolerance * 2))
+    assert other.sizes == analytic_preshot.sizes
+    with pytest.raises(RuntimeError, match="checksum"):
+        Rtgsfit(library, other)
+
+
+@pytest.mark.parametrize("absolute_paths", [False, True])
+def test_local_writers_resolve_paths(
+    analytic_preshot: Preshot,
+    analytic_results: Results,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    absolute_paths: bool,
+) -> None:
+    cache = tmp_path / "cache"
+    working_directory = tmp_path / "working"
+    working_directory.mkdir()
+    monkeypatch.setenv("RTGSFIT_CACHE_DIR", str(cache))
+    monkeypatch.chdir(working_directory)
+    settings = load_settings("analytic")
+    if absolute_paths:
+        output = tmp_path / "export"
+        settings = settings.copy_with({
+            "writers/local/path": str(output / "rtgsfit_analytic.npz"),
+            "writers/local/preshot_path": str(output / "rtgsfit_preshot.npz"),
+        })  # fmt: skip
+    else:
+        output = cache
+    writer = LocalWriter()
+    writer.write_preshot(analytic_preshot, settings)
+    writer.write_results(analytic_results, settings)
+    assert read_preshot(output / "rtgsfit_preshot.npz").content_hash() == analytic_preshot.content_hash()
+    assert_array_equal(read_results(output / "rtgsfit_analytic.npz")["GLOBAL.IP"], analytic_results["GLOBAL.IP"])
+    assert not list(working_directory.iterdir())
 
 
 def _modified(preshot: Preshot, key: str, value: object) -> dict:
@@ -74,16 +164,44 @@ def test_preshot_validation_rejects_unknown_node(analytic_preshot: Preshot) -> N
         Preshot(_modified(analytic_preshot, "GRID:EXTRA", np.zeros(1)))
 
 
-def test_c_sizes_are_enum_constants(analytic_preshot: Preshot) -> None:
+# ----------------------------------------------------------------------------------------------
+# The C generator, c/tools/write_preshot.c, run into a temporary directory (not the active c/src)
+# ----------------------------------------------------------------------------------------------
+def _generator(target: str = "tools", name: str = "write_preshot") -> Path:
+    run_make([target])
+    return build_directory() / name
+
+
+def _generate(preshot: Preshot, directory: Path) -> str:
+    preshot_file = write_preshot_file(preshot, directory / "preshot.bin")
+    command = [str(_generator()), "--file", str(preshot_file), str(directory)]
+    return subprocess.run(command, check=True, capture_output=True, text=True).stdout
+
+
+@pytest.fixture(scope="module")
+def generated(analytic_preshot: Preshot, tmp_path_factory: pytest.TempPathFactory) -> Path:
+    directory = tmp_path_factory.mktemp("generated")
+    _generate(analytic_preshot, directory)
+    return directory
+
+
+def test_generator_lists_the_data_dictionary() -> None:
+    """The generator's own table of nodes (c/tools/write_preshot.c) is `data_dictionary.C_NODES`."""
+    listing = subprocess.run([str(_generator()), "--list"], check=True, capture_output=True, text=True).stdout
+    expected = [" ".join([f"{node.path[1]}:{node.path[2]}", node.dtype, *node.shape]) for node in dd.C_NODES]
+    assert listing.splitlines() == expected
+
+
+def test_c_sizes_are_enum_constants(analytic_preshot: Preshot, generated: Path) -> None:
     """Issue #97: array sizes must be integer constant expressions, so they are enum members."""
-    header = sizes_header(analytic_preshot)
-    enum_body = header[header.index("enum {") : header.index("};")]
-    values = dict(re.findall(r"(\w+)\s*=\s*(\d+),", enum_body))
-    assert {name: int(value) for name, value in values.items()} == analytic_preshot.sizes
+    header = (generated / "preshot_sizes.h").read_text()
+    entries = re.findall(r"^ +(\w+) += +(\d+), /\* (.*) \*/$", header, flags=re.MULTILINE)
+    assert {name: int(value) for name, value, _ in entries} == analytic_preshot.sizes
+    assert {name: description for name, _, description in entries} == dd.SIZE_DESCRIPTIONS
 
 
-def test_c_arrays_have_the_dictionary_lengths(analytic_preshot: Preshot) -> None:
-    source = data_source(analytic_preshot)
+def test_c_arrays_have_the_dictionary_lengths(analytic_preshot: Preshot, generated: Path) -> None:
+    source = (generated / "preshot_data.c").read_text()
     lengths = {name: int(length) for name, length in re.findall(r"const \w+ (\w+)\[(\d+)\] = \{", source)}
     sizes = analytic_preshot.symbolic_sizes()
     for node in dd.C_NODES:
@@ -91,6 +209,42 @@ def test_c_arrays_have_the_dictionary_lengths(analytic_preshot: Preshot) -> None
             assert lengths[node.c_name] == int(np.prod([sizes[dim] for dim in node.shape])), node.c_name
 
 
+def test_c_checksum_is_the_python_checksum(analytic_preshot: Preshot, generated: Path) -> None:
+    match = re.search(r"PRESHOT_CHECKSUM = 0x([0-9A-F]{8})u;", (generated / "preshot_data.c").read_text())
+    assert match is not None
+    assert int(match.group(1), 16) == preshot_checksum(analytic_preshot)
+
+
 def test_c_source_is_only_rewritten_when_it_changes(analytic_preshot: Preshot, tmp_path: Path) -> None:
-    assert len(write_c_source(analytic_preshot, tmp_path)) == 2
-    assert write_c_source(analytic_preshot, tmp_path) == []
+    assert _generate(analytic_preshot, tmp_path).count("Wrote") == 2
+    files = [tmp_path / "preshot_sizes.h", tmp_path / "preshot_data.c"]
+    mtimes = [path.stat().st_mtime_ns for path in files]
+    assert _generate(analytic_preshot, tmp_path).count("is unchanged") == 2
+    assert [path.stat().st_mtime_ns for path in files] == mtimes
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["preshot.bin", "preshot_data.c", "preshot_sizes.h"]
+
+
+@pytest.mark.te_network
+def test_mdsplus_generator_reads_what_python_reads(tmp_path: Path) -> None:
+    """`make SHOT=... RUN_NAME=...` (the PCS, no Python) generates the same C as the preshot file route.
+
+    Uses RTGSFIT 99000230 TEST03, written by examples/example_01_run_full_pipeline_st40.
+    """
+    pulse, run_name = 99000230, "TEST03"
+    nodes = tuple(node for node in dd.PRESHOT_NODES if node.c_name is not None or node.path[1:] == ("INFO", "SOURCE"))
+    groups = read_mdsplus_nodes(pulse, run_name, nodes)["PRESHOT"]
+
+    class CNodes:
+        def __getitem__(self, key: str) -> object:
+            group, _, name = key.partition(":")
+            return groups[group][name]
+
+    from_file = tmp_path / "file"
+    from_file.mkdir()
+    _generate(CNodes(), from_file)  # type: ignore[arg-type]
+    from_mdsplus = tmp_path / "mdsplus"
+    from_mdsplus.mkdir()
+    generator = _generator("tools-mdsplus", "write_preshot_mdsplus")
+    subprocess.run([str(generator), "--mdsplus", "smaug", str(pulse), run_name, str(from_mdsplus)], check=True)
+    for name in ("preshot_sizes.h", "preshot_data.c"):
+        assert (from_mdsplus / name).read_text() == (from_file / name).read_text(), name

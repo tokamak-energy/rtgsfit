@@ -10,6 +10,8 @@ are GSFit's, because the PCS PSU signals differ from them by up to 1 % (v1 used 
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -26,18 +28,51 @@ pytestmark = pytest.mark.te_network
 
 CASES = [(pulse, time) for pulse in (13343, 13345, 13346) for time in (0.030, 0.100)]
 
-# (GSFit sensor quantity, vs measured rtol/atol, vs GSFit's reconstruction rtol/atol); from v1
+# Tolerances of RT-GSFit's last iteration against GSFit, 2-3 times the largest difference over the six cases. The two
+# codes fit the same measurements with the same preshot and coil currents, so they differ only by their algorithms.
+# Measured (largest of the six): psi 4.7e-3 Wb (at 100 ms, when RT-GSFit's psi changes by 2e-6 Wb per iteration, so
+# not from convergence); j_phi 1.2e4 A/m^2 (peak 3.1e6); Ip 6.8e-5 relative; the magnetic axis 5.1e-4 m in R and
+# 2.4e-4 m in Z (the cell is 0.03 m); psi at the axis 7.5e-4 Wb and at the boundary 6.3e-4 Wb; flux loops
+# 2.9e-4 Wb, Bp probes 9.0e-4 T, Rogowski coils 2.4 A; IVC eigenmode currents 1.1 A.
+RTOL = {"GLOBAL.IP": 2e-4}
+"""Relative tolerances against GSFit."""
+ATOL = {"GLOBAL.MAG_AXIS.R": 1.5e-3, "GLOBAL.MAG_AXIS.Z": 1.5e-3, "GLOBAL.PSI_MAG_AXIS": 2e-3, "BOUNDARY.PSI": 2e-3}
+"""Absolute tolerances against GSFit [m, Wb]; psi at the boundary can be near 0, so not relative."""
+PSI_ATOL = 1e-2
+"""[Wb] at every grid point."""
+J_PHI_ATOL = 3e4
+"""[A/m^2] at every grid point."""
+IVC_ATOL = 3.0
+"""[A] for each IVC eigenmode current."""
+# (group, GSFit sensor quantity, atol vs the measurements, atol vs GSFit's reconstruction) [Wb, T, A]. RT-GSFit's
+# residuals are GSFit's to within the atol vs GSFit (|RT-GSFit - measured| <= |GSFit - measured| + atol), so the
+# atol vs the measurements only bounds the fit of both codes: 2-3 times the largest residual of the six cases,
+# flux loops 2.4e-2 Wb, Bp probes 6.2e-2 T and Rogowski coils 64 A.
 SENSORS = {
-    "flux_loop": ("FLUX_LOOP", "psi", (5e-2, 5e-2), (1e-3, 1e-3)),
-    "bp_probe": ("BP_PROBE", "b", (0.1, 0.5), (1e-3, 1e-3)),
-    "rogowski": ("ROGOWSKI", "i", (5e-2, 5e2), (5e-2, 10.0)),
+    "flux_loop": ("FLUX_LOOP", "psi", 5e-2, 1e-3),
+    "bp_probe": ("BP_PROBE", "b", 0.15, 2e-3),
+    "rogowski": ("ROGOWSKI", "i", 150.0, 5.0),
 }
 
 
 def test_mdsplus_preshot_is_the_gsfit_build() -> None:
-    """The PRESHOT in MDSplus (`preshot/reader`) equals a fresh build from GSFit (`preshot/builder`)."""
+    """The PRESHOT in MDSplus (`preshot/reader`) equals a fresh build from GSFit (`preshot/builder`).
+
+    Floating-point nodes are compared to round-off rather than by `content_hash`: the Poisson LU
+    bands come from threaded LAPACK, whose rounding depends on the BLAS thread count.
+    """
     settings = load_settings("st40")
-    assert read_preshot(settings).content_hash() == build_preshot(settings).content_hash()
+    stored, built = read_preshot(settings), build_preshot(settings)
+    assert built.groups.keys() == stored.groups.keys()
+    for group, nodes in stored.groups.items():
+        assert built.groups[group].keys() == nodes.keys(), group
+        for name, value in nodes.items():
+            expected, actual = np.asarray(value), np.asarray(built.groups[group][name])
+            if expected.dtype.kind == "f":
+                scale = float(np.abs(expected).max(initial=0.0))
+                assert_allclose(actual, expected, rtol=1e-12, atol=1e-12 * scale, err_msg=f"{group}:{name}")
+            else:
+                assert_array_equal(actual, expected, err_msg=f"{group}:{name}")
 
 
 def test_default_replay() -> None:
@@ -82,55 +117,105 @@ def case(request: pytest.FixtureRequest):  # type: ignore[no-untyped-def]
     return settings, results, controller
 
 
-def test_succeeds(case) -> None:  # type: ignore[no-untyped-def]
-    _, results, _ = case
-    assert_array_equal(results["GLOBAL.STATUS"], 0)
-    assert_array_equal(results["FIT.LAPACK_INFO"], 0)
-
-
-def test_psi_matches_gsfit(case) -> None:  # type: ignore[no-untyped-def]
+def _gsfit_equilibrium(controller) -> dict[str, Any]:  # type: ignore[no-untyped-def]
+    """GSFit's reconstruction of the time slice, by RT-GSFit's results node (on the same grid)."""
     from gsfit_rs.imas import equilibrium_paths
 
-    _, results, controller = case
-    psi_gsfit = np.asarray(controller.plasma.get(equilibrium_paths.time_slice[0].profiles_2d[0].psi))
-    assert_allclose(results["PROFILES_2D.R_Z.PSI"][-1], psi_gsfit, rtol=0.33, atol=5e-3)
+    time_slice = equilibrium_paths.time_slice[0]
+    profiles_2d, quantities = time_slice.profiles_2d[0], time_slice.global_quantities
+
+    def array(path) -> np.ndarray:  # type: ignore[no-untyped-def]
+        return np.asarray(controller.plasma.get(path))
+
+    def scalar(path) -> float:  # type: ignore[no-untyped-def]
+        return float(np.ravel(array(path))[0])
+
+    return {
+        "PROFILES_2D.R_Z.R": array(profiles_2d.grid.dim1),
+        "PROFILES_2D.R_Z.Z": array(profiles_2d.grid.dim2),
+        "PROFILES_2D.R_Z.PSI": array(profiles_2d.psi),
+        "PROFILES_2D.R_Z.J_PHI": array(profiles_2d.j_phi),
+        "GLOBAL.IP": scalar(quantities.ip),
+        "GLOBAL.MAG_AXIS.R": scalar(quantities.magnetic_axis.r),
+        "GLOBAL.MAG_AXIS.Z": scalar(quantities.magnetic_axis.z),
+        "GLOBAL.PSI_MAG_AXIS": scalar(quantities.psi_magnetic_axis),
+        "BOUNDARY.PSI": scalar(time_slice.boundary.psi),
+        "BOUNDARY.OUTLINE.R": array(time_slice.boundary.outline.r),
+        "BOUNDARY.OUTLINE.Z": array(time_slice.boundary.outline.z),
+    }
 
 
-@pytest.mark.parametrize("kind", SENSORS)
-def test_sensors_match_gsfit(case, kind: str) -> None:  # type: ignore[no-untyped-def]
+def _gsfit_sensors(settings, results, controller, kind: str) -> tuple[np.ndarray, np.ndarray]:  # type: ignore[no-untyped-def]
+    """GSFit's measured and reconstructed values of the `kind` sensors, in RT-GSFit's order of `CONSTRAINTS`."""
     from rtgsfit.database_readers.gsfit import constraint_sensors
     from rtgsfit.database_readers.gsfit import sensor_name
 
-    settings, results, controller = case
-    group, quantity, vs_measured, vs_gsfit = SENSORS[kind]
+    group, quantity, _, _ = SENSORS[kind]
     sensors = {
         "flux_loop": controller.flux_loops,
         "bp_probe": controller.bp_probes,
         "rogowski": controller.rogowski_coils,
     }[kind]
     names = list(results[f"CONSTRAINTS.{group}.ALL.NAMES"])
-    reconstructed = results[f"CONSTRAINTS.{group}.ALL.RECONSTRUCT"][-1]
     measured, gsfit = np.zeros(len(names)), np.zeros(len(names))
     for sensor in (sensor for sensor in constraint_sensors(controller, settings) if sensor.kind == kind):
         index = names.index(sensor_name(sensor, "st40_pcs"))
         measured[index] = sensors.get_array1([sensor.name, quantity, "measured", "value"])[0]
         gsfit[index] = sensors.get_array1([sensor.name, quantity, "calculated", "value"])[0]
-    assert_allclose(reconstructed, measured, rtol=vs_measured[0], atol=vs_measured[1])
-    assert_allclose(reconstructed, gsfit, rtol=vs_gsfit[0], atol=vs_gsfit[1])
+    return measured, gsfit
+
+
+def _ivc_eigenmodes(results, controller) -> tuple[list[str], np.ndarray]:  # type: ignore[no-untyped-def]
+    """The names of RT-GSFit's IVC eigenmode DOFs, and GSFit's values of them."""
+    names = [str(name) for name in results["FIT.DOF_NAMES"] if str(name).startswith("IVC_EIG")]
+    gsfit = np.array([
+        controller.passives.get_array1(["IVC", "dof", name.removeprefix("IVC_").lower(), "calculated"])[0]
+        for name in names
+    ])  # fmt: skip
+    return names, gsfit
+
+
+def test_succeeds(case) -> None:  # type: ignore[no-untyped-def]
+    _, results, _ = case
+    assert_array_equal(results["GLOBAL.STATUS"], 0)
+    assert_array_equal(results["FIT.LAPACK_INFO"], 0)
+
+
+def test_matches_gsfit(case) -> None:  # type: ignore[no-untyped-def]
+    _, results, controller = case
+    gsfit = _gsfit_equilibrium(controller)
+    for name, rtol in RTOL.items():
+        assert results[name][-1] == pytest.approx(gsfit[name], rel=rtol, abs=0.0), name
+    for name, atol in ATOL.items():
+        assert results[name][-1] == pytest.approx(gsfit[name], rel=0.0, abs=atol), name
+
+
+def test_psi_and_j_phi_match_gsfit(case) -> None:  # type: ignore[no-untyped-def]
+    _, results, controller = case
+    gsfit = _gsfit_equilibrium(controller)
+    for name in ("PROFILES_2D.R_Z.R", "PROFILES_2D.R_Z.Z"):
+        assert_allclose(results[name], gsfit[name], rtol=0.0, atol=1e-12, err_msg=name)
+    assert_allclose(results["PROFILES_2D.R_Z.PSI"][-1], gsfit["PROFILES_2D.R_Z.PSI"], rtol=0.0, atol=PSI_ATOL)
+    assert_allclose(results["PROFILES_2D.R_Z.J_PHI"][-1], gsfit["PROFILES_2D.R_Z.J_PHI"], rtol=0.0, atol=J_PHI_ATOL)
+
+
+@pytest.mark.parametrize("kind", SENSORS)
+def test_sensors_match_gsfit(case, kind: str) -> None:  # type: ignore[no-untyped-def]
+    settings, results, controller = case
+    group, _, vs_measured, vs_gsfit = SENSORS[kind]
+    reconstructed = results[f"CONSTRAINTS.{group}.ALL.RECONSTRUCT"][-1]
+    measured, gsfit = _gsfit_sensors(settings, results, controller, kind)
+    assert_allclose(reconstructed, measured, rtol=0.0, atol=vs_measured)
+    assert_allclose(reconstructed, gsfit, rtol=0.0, atol=vs_gsfit)
 
 
 def test_ivc_eigenmode_currents_match_gsfit(case) -> None:  # type: ignore[no-untyped-def]
     _, results, controller = case
-    names = list(results["FIT.DOF_NAMES"])
-    fit_dof = results["FIT.DOF_VALUES"][-1]
-    eigenmodes = [(index, name) for index, name in enumerate(names) if name.startswith("IVC_EIG")]
-    assert eigenmodes
-    rtgsfit = np.array([fit_dof[index] for index, _ in eigenmodes])
-    gsfit = np.array([
-        controller.passives.get_array1(["IVC", "dof", name.removeprefix("IVC_").lower(), "calculated"])[0]
-        for _, name in eigenmodes
-    ])  # fmt: skip
-    assert_allclose(rtgsfit, gsfit, rtol=1e-3, atol=3.0)
+    names, gsfit = _ivc_eigenmodes(results, controller)
+    assert names
+    all_names = list(results["FIT.DOF_NAMES"])
+    rtgsfit = results["FIT.DOF_VALUES"][-1][[all_names.index(name) for name in names]]
+    assert_allclose(rtgsfit, gsfit, rtol=0.0, atol=IVC_ATOL)
 
 
 def test_results_are_complete(case) -> None:  # type: ignore[no-untyped-def]
@@ -139,3 +224,49 @@ def test_results_are_complete(case) -> None:  # type: ignore[no-untyped-def]
     assert isinstance(results, Results)
     assert results["INPUT.SETTINGS"] == settings.json_text
     assert results["INPUT.MEAS"].shape[1] == results["PRESHOT.SIZES.N_MEAS"]
+
+
+@pytest.mark.figures
+def test_figures(case, figure_dir: Path) -> None:  # type: ignore[no-untyped-def]
+    """What the tests above compare with GSFit, as figures in `<figure_dir>/st40/<pulse>@<time>/`."""
+    import plotting
+
+    settings, results, controller = case
+    gsfit = _gsfit_equilibrium(controller)
+    constraints = {}
+    for kind, (group, _, vs_measured, vs_gsfit) in SENSORS.items():
+        measured, reconstructed = _gsfit_sensors(settings, results, controller, kind)
+        constraints[group] = [
+            plotting.Expected("GSFit reconstruction", reconstructed, atol=vs_gsfit),
+            plotting.Expected("GSFit measured", measured, atol=vs_measured),
+        ]
+    reference = plotting.Reference(
+        name="GSFit",
+        r=gsfit["PROFILES_2D.R_Z.R"],
+        z=gsfit["PROFILES_2D.R_Z.Z"],
+        psi=gsfit["PROFILES_2D.R_Z.PSI"],
+        j_phi=gsfit["PROFILES_2D.R_Z.J_PHI"],
+        ip=gsfit["GLOBAL.IP"],
+        axis_r=gsfit["GLOBAL.MAG_AXIS.R"],
+        axis_z=gsfit["GLOBAL.MAG_AXIS.Z"],
+        axis_psi=gsfit["GLOBAL.PSI_MAG_AXIS"],
+        boundary_psi=gsfit["BOUNDARY.PSI"],
+        outline=(gsfit["BOUNDARY.OUTLINE.R"], gsfit["BOUNDARY.OUTLINE.Z"]),
+        sensors=plotting.gsfit_sensor_positions(controller, settings),
+        constraints=constraints,
+    )
+    names, ivc = _ivc_eigenmodes(results, controller)
+    filaments, currents = plotting.gsfit_passive_currents(results, controller)
+    figures = {
+        "psi": plotting.plot_map(results, reference, "PSI", atol=PSI_ATOL),
+        "j_phi": plotting.plot_map(results, reference, "J_PHI", atol=J_PHI_ATOL),
+        "constraints": plotting.plot_constraints(results, reference),
+        "ivc_eigenmodes": plotting.plot_dofs(
+            results, names, plotting.Expected("GSFit", ivc, atol=IVC_ATOL), "IVC eigenmode currents"
+        ),
+        "passive_currents": plotting.plot_passive_currents(results, filaments, currents, "GSFit"),
+        "convergence": plotting.plot_convergence(results, reference, RTOL, ATOL),
+    }
+    pulse, time = settings.get_path("replay/pulse"), settings.get_path("replay/time_start")
+    paths = plotting.save(figures, figure_dir / "st40" / f"{pulse}@{time}")
+    assert all(path.stat().st_size > 0 for path in paths)

@@ -160,6 +160,12 @@ LAPACK overwrites its RHS buffer with the solution, but the solver uses a dispos
 
 ### 4.2 Current model
 
+`GRID:MASK_LIMITER` is a **fixed geometry mask**, not the instantaneous plasma shape and not
+just an exclusion of the outer grid edge. It is 1 where plasma current is geometrically allowed
+and 0 in excluded regions. For ST40, GSFit supplies the ELMAG vacuum-vessel contour; the mask
+includes its interior plus grid points within half a grid diagonal of limiter samples.
+The separate, evolving `mask` identifies the plasma core from the reconstructed flux.
+
 Inside the plasma core (`mask` = 1 and `GRID:MASK_LIMITER` = 1) the toroidal current density is
 
     j_phi = fit_dof[0] basis_0 + fit_dof[1] basis_1 + fit_dof[2] basis_2
@@ -183,14 +189,18 @@ The passive structures (vessel, passive plates, ...) have `N_PASSIVE` degrees of
 in individual passive elements, or eigenmodes of the vessel such as `IVC_EIG_01`. They are the last
 entries of `fit_dof`. Regularisation rows (`N_REG`) penalise passive currents that the measurements
 do not constrain.
+`PRESHOT.FIT:DOF_UNITS` records the unit of every plasma and passive DOF. For GSFit passives, an
+eigenmode amplitude is in amperes; a constant-current-density amplitude is in A/m^2. The result
+`FIT:DOF_UNITS` is copied from that preshot metadata.
 
 ### 4.3 The least-squares fit
 
-    fit_matrix = [ basis FIT:A_GRID | FIT:A_PASSIVE^T ]        [N_FIT_TARGET, N_FIT_DOF]
+    fit_matrix = [ FIT:G_GRID basisᵀ | FIT:G_PASSIVE ]        [N_FIT_TARGET, N_FIT_DOF]
 
-`FIT:A_GRID [N_GRID, N_FIT_TARGET]` is the weighted response of `fit_target` to the current in each grid cell,
-including the cell area `d_r d_z`, so the plasma columns are a single matrix product. The passive
-columns do not depend on the plasma and are fixed at preshot. Then
+`FIT:G_GRID [N_FIT_TARGET, N_GRID]` is the weighted response of `fit_target` to the current in each grid cell,
+including the cell area `d_r d_z`, so the plasma columns are a single matrix product with the
+`basis [N_PLASMA, N_GRID]`. The passive columns, `FIT:G_PASSIVE [N_FIT_TARGET, N_PASSIVE]`, do not
+depend on the plasma and are fixed at preshot. Then
 
     minimise |fit_matrix fit_dof - fit_target|²
 
@@ -310,8 +320,9 @@ invalid argument or a LAPACKE error; the raw value preserves the exact distincti
 ### 4.11 Post-processing (Python only)
 
 After the replay loop, `collect_results` calls the offline `post_processing` module. The same
-API accepts captured `Signals` and `SliceResult` objects from a PCS log; a NetCDF decoder can
-construct those objects without rerunning the solver. No database operations or derived-output
+API accepts captured `Signals` and `SliceResult` objects without rerunning the solver.
+`capture.read_capture(path).to_results()` reads those objects and their embedded preshot from a
+native NetCDF capture (section 7.6), then calls the same `collect_results`. No database operations or derived-output
 calculations are added to the live C call or Python replay loop.
 
 Products include the boundary outline and shape, poloidal area/perimeter and axisymmetric volume,
@@ -335,7 +346,7 @@ constant `<GROUP>_<NODE>`.
 | Group | Contents |
 |---|---|
 | `SIZES` | Array sizes; `enum` constants in C |
-| `GRID` | Grid, limiter mask, coil and passive Greens functions on the grid |
+| `GRID` | Grid, fixed allowed-plasma mask, coil and passive Greens functions on the grid |
 | `EDGE` | Edge points, and the edge Greens function for the free-boundary condition |
 | `LIMITER` | Limiter points and their interpolation stencils |
 | `POISSON` | LU factors of the discrete Grad-Shafranov operator |
@@ -354,19 +365,23 @@ data dictionary and every size relation (the same relations as the `_Static_asse
 
 **Making a preshot for ST40** (TE network):
 
+Choose an unused run name (`RUN_NEW` below); do not overwrite the bundled `RUN22` reference:
+
     python -m rtgsfit preshot st40 --set writers/names=rtgsfit_mdsplus \
-        --set writers/rtgsfit_mdsplus/enabled=true --set writers/rtgsfit_mdsplus/run_name=RUN22
+        --set writers/rtgsfit_mdsplus/enabled=true --set writers/rtgsfit_mdsplus/run_name=RUN_NEW
 
 This runs GSFit with the `st40_setup_for_rtgsfit` settings (`preshot/builder = gsfit`) and writes
-`PRESHOT` to the `RTGSFIT` tree. The PCS build then reads it:
+`PRESHOT` to the `RTGSFIT` tree. The PCS build then reads it, without Python:
 
-    make -C c SHOT=52014922 RUN_NAME=RUN22
+    make -C c SHOT=52014922 RUN_NAME=RUN_NEW
 
-which calls `python -m rtgsfit write-c-preshot --pulse 52014922 --run-name RUN22`, writing
-`c/preshot/preshot_sizes.h` and `c/preshot/preshot_data.c`, and compiles `c/build/librtgsfit.so`.
+which runs the C generator `c/tools/write_preshot.c` (section 6.6). It reads `PRESHOT` with the MDSplus
+C library, writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c`, and compiles `c/build/librtgsfit.so`.
 
 ST40 preshots in `RTGSFIT` pulse 52014922: `RUN19` was written by an early v1, `RUN20` by v1, and
-`RUN21` by v2. v1 and v2 trees are not interchangeable (the node names changed, section 11).
+`RUN21` by an earlier v2. `RUN22` is the current default, including `FIT:DOF_UNITS` and the
+`FIT:G_GRID`/`FIT:G_PASSIVE` layout. `RUN21` is preserved but lacks the required units metadata.
+v1 and v2 trees are not interchangeable (the node names changed, section 11).
 
 ## 6. The C library
 
@@ -377,6 +392,7 @@ ST40 preshots in `RTGSFIT` pulse 52014922: `RUN19` was written by an early v1, `
 | `rtgsfit.h` | The public interface: `rtgsfit()`, status flags, sizes, timers |
 | `rtgsfit.c` | The 12 steps of section 4; the only file that includes the preshot |
 | `preshot.h` | `extern` declarations of every preshot constant, and `_Static_assert`s on the sizes |
+| `preshot_sizes.h`, `preshot_data.c` | Generated, not committed: the sizes and data of the active preshot (section 6.6) |
 | `grid.h` | `struct rtgsfit_grid` and grid helpers |
 | `argument_check.h` | `RTGSFIT_CHECK_SIZE` and `RTGSFIT_CHECK_MIN_SIZE` |
 | `current_basis.c` | Section 4.2 |
@@ -425,13 +441,18 @@ caller lying about an allocation's actual size; callers must supply truthful ele
 
 The sizes are `enum` constants in the generated `preshot_sizes.h`, so they are true compile-time
 constants and every array has a fixed size (issue #97; `const int` is not a constant expression in
-C). `rtgsfit_get_sizes()` returns them in the order of `enum rtgsfit_size_index`, so a caller can
-check that the library was built from the preshot it expects.
+C). `rtgsfit_get_sizes()` returns them in the order of `enum rtgsfit_size_index`, and
+`rtgsfit_get_preshot_checksum()` returns `PRESHOT_CHECKSUM`, a CRC-32 of the preshot data, so a caller
+can check that the library was built from the preshot it expects. Python's `Rtgsfit` checks both.
 
 ### 6.4 Timing
 
 Built with `TIMING=1`, `rtgsfit_timing_get()` returns the thread CPU time of each step, summed since
-`rtgsfit_timing_reset()`. A replay stores them per call at `TIMING:DURATION`. Typical medians on an
+`rtgsfit_timing_reset()`. A replay stores them per call at `TIMING:DURATION`, and
+`rtgsfit replay` prints their statistics. The benchmark `pytest --te-network --timing
+tests/test_timing.py` converges each vs-GSFit ST40 case, times 1,000 calls from the converged
+state, and writes the per-section mean, median, std, min, max, p95 and p99, with the commit and
+host, to a new `c/cache/timing/rtgsfit_timing_<UTC time>.csv` for each run. Typical medians on an
 x86 workstation (one OpenBLAS thread):
 
 | Case | Grid | `rtgsfit()` total | Poisson solve |
@@ -451,19 +472,46 @@ x86 workstation (one OpenBLAS thread):
 
 ### 6.6 Building
 
-    make -C c                                  # c/build/librtgsfit.so from c/preshot
-    make -C c SHOT=52014922 RUN_NAME=RUN21     # write c/preshot from MDSplus first (TE network)
+    make -C c SHOT=52014922 RUN_NAME=RUN22     # read the preshot from MDSplus, then compile (the PCS)
+    make -C c PRESHOT_FILE=<path>              # read the preshot from a file written by Python, then compile
+    make -C c                                  # compile the active preshot in c/src
     make -C c test                             # C unit tests; no preshot needed
     make -C c DEBUG=1 TIMING=1 ARCH_FLAGS=...
+    make -C c clean                            # remove c/build and the generated preshot
 
 The code is C11 and compiles without warnings with
 `-Wall -Wextra -Wpedantic -Wshadow -Wvla -Wstrict-prototypes`. `-Wvla` guarantees that no
 variable-length arrays are used.
 
-**Integrating into the PCS.** Compile `c/src/*.c` and `c/preshot/preshot_data.c` with
-`c/preshot` and `c/src` on the include path, link OpenBLAS, and call `rtgsfit()` once per cycle with
-`psi_norm` and `mask` kept between calls and initialised from `PRESHOT.INITIAL`. The v2 signature
-differs from v1 (section 11), so the Simulink wrapper must be updated.
+**The preshot generator.** The preshot is compiled into the library. `c/tools/write_preshot.c`, built by
+make as `c/build/write_preshot`, writes it as `c/src/preshot_sizes.h` (the sizes, as an `enum`) and
+`c/src/preshot_data.c` (every array as a `const` initialiser, in read-only data, and
+`PRESHOT_CHECKSUM`). Both are gitignored. The generator is C, so the PCS build needs no Python. It
+has two sources:
+
+* **MDSplus** (`SHOT`, `RUN_NAME`, and optionally `MDSPLUS_SERVER`, default `smaug`): reads
+  `\RTGSFIT::TOP.<RUN_NAME>.PRESHOT` with the MDSplus C library (`MDSPLUS_DIR`, default
+  `/usr/local/mdsplus`); make builds this variant as `c/build/write_preshot_mdsplus`. This is how a
+  preshot written by `rtgsfit preshot` (section 5) reaches the PCS.
+* **A preshot file** (`PRESHOT_FILE`): for preshots that exist only in Python, such as the analytic
+  and FreeGSNKE ones. `rtgsfit.database_writers.c_source.write_preshot_file` writes it: a header
+  line, `SOURCE <INFO:SOURCE>`, then for every C node a line `GROUP:NAME float64|int32 <count>`
+  followed by the raw little-endian values, and `END`. `build_library`, the replay and
+  `rtgsfit write-c-preshot` do this, writing `c/build/preshot.bin`.
+
+The generator has its own table of the 47 C nodes; `write_preshot --list` prints it, and a test checks
+it against the data dictionary. It reads and checks everything (the size of every node, finite values)
+before writing anything, and rewrites a file only if its content changes, so make recompiles only
+`rtgsfit.c` and `preshot_data.c`, and only when the preshot changed. A changed preshot takes about
+3 s to compile for ST40, and 10 s for the 65 × 129 analytic grid.
+
+There is one active preshot, the last one generated, so run one build at a time. Python reloads the
+library when it is rebuilt; an `Rtgsfit` object created before then raises an error.
+
+**Integrating into the PCS.** Generate the preshot, then compile `c/src/*.c` (which includes the
+generated `preshot_data.c`) with `c/src` on the include path, link OpenBLAS, and call `rtgsfit()` once
+per cycle with `psi_norm` and `mask` kept between calls and initialised from `PRESHOT.INITIAL`. The v2
+signature differs from v1 (section 11), so the Simulink wrapper must be updated.
 
 ## 7. The Python package
 
@@ -487,7 +535,7 @@ python/rtgsfit/
     rtgsfit replay analytic
     rtgsfit replay st40 --set replay/pulse=13343 --set replay/time_end=0.2
     rtgsfit preshot st40
-    rtgsfit write-c-preshot --pulse 52014922 --run-name RUN21
+    rtgsfit write-c-preshot --pulse 52014922 --run-name RUN22
     rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
     rtgsfit write-data-dictionary documentation/data_dictionary.md
 
@@ -509,9 +557,11 @@ results.nested["CONSTRAINTS"]["BP_PROBE"]["ALL"]["RECONSTRUCT"]
 ```
 
 `replay(settings, preshot=..., signals=...)` replaces the readers, for example to replay modified
-measurements. `run_replay(settings)` also runs the writers. Each preshot is compiled once into
-`$RTGSFIT_CACHE_DIR` (default `~/.cache/rtgsfit`), keyed by the preshot content, the C source and
-the build options.
+measurements. `run_replay(settings)` also runs the writers. The replay makes its preshot the active
+one (section 6.6): it writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c` and compiles
+`c/build/librtgsfit.so`, in the repository whatever the working directory. Replaying the same preshot
+again compiles nothing. From Python, `build_library(preshot)` does the same and returns the library
+path, and `Rtgsfit.build(preshot)` also loads it.
 
 ### 7.3 Database readers
 
@@ -538,14 +588,194 @@ time base is `dim_of(BPPROBE.P101:B)`, matching the ST40 database template.
 | Writer | Preshot | Results | Notes |
 |---|---|---|---|
 | `local` | `.npz` | `.npz` | keys are data dictionary keys, e.g. `GLOBAL.IP`; no pickling |
-| `c_source` | `preshot_sizes.h`, `preshot_data.c` | | only rewrites files whose content changed |
+| `c_source` | `c/src/preshot_sizes.h`, `c/src/preshot_data.c` | | makes the preshot the active one; needs make and a C compiler |
 | `rtgsfit_mdsplus` | `PRESHOT` | everything | needs `writers/rtgsfit_mdsplus/enabled = true` |
 
 A results file or tree contains the whole preshot, the effective settings JSON, the code version and the raw
 `meas` and `coil_signal`, so every replay can be reproduced from its own output.
 
+For the `local` writer, relative `path` and `preshot_path` values are resolved under the repository's
+gitignored `c/cache/` (`RTGSFIT_CACHE_DIR` overrides it), not the working directory. For example, the
+analytic preset writes `c/cache/rtgsfit_analytic.npz`. Absolute paths remain explicit exports and are
+used unchanged.
+The low-level `write_npz(path, ...)` function uses its caller-supplied path unchanged.
+
 Both tree creation and writing explicitly pass `use_mdsthin=True` to `standard_utility`.
 The MDSplus server remains the storage backend; no native MDSplus client installation is required.
+
+### 7.5 Historical ST40 replays for PPAC
+
+For a post-shot survey, build a fresh preshot for **each pulse**, then replay that pulse using
+MAG `BEST` and the PSU signals. There is no need to reuse the stored RUN22 preshot or run GSFit's
+inverse solver. Select `preshot/reader = gsfit`: changing only `preshot/builder` does **not** change
+which preshot a replay reads.
+
+Use GSFit's `st40_setup_for_rtgsfit` settings, with
+`GSFIT_code_settings.json` -> `database_reader/st40_mdsplus/workflow/mag/run_name = BEST`
+and `pulseNo = null` (the current settings). This selects the pulse's MAG `BEST` for building
+the preshot as well as for reading the signals below. Check this if using a different GSFit
+settings directory; `signals/st40_mdsplus/mag_run` does not override GSFit's own workflow.
+
+This example replays two pulses sequentially from 0 to 300 ms, including times before plasma
+formation or after termination. Nonzero solver statuses do not stop the replay. Change the pulses
+and extend the time window for the survey as appropriate for the archived signal coverage:
+
+```python
+from datetime import datetime, timezone
+
+from rtgsfit.library import cache_directory
+from rtgsfit.replay import run_replay
+from rtgsfit.settings import load_settings
+
+output = cache_directory().resolve() / "ppac" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+output.mkdir(parents=True, exist_ok=False)
+
+for pulse in (13343, 13345):
+    settings = load_settings("st40").copy_with({
+        "preshot/reader": "gsfit",
+        "gsfit/settings_path": "st40_setup_for_rtgsfit",
+        "gsfit/pulse": pulse,
+        "replay/pulse": pulse,
+        "replay/time_start": 0.0,
+        "replay/time_end": 0.3,
+        "replay/time_step": 0.001,
+        "replay/repeat": 1,
+        "replay/stop_on_status": False,
+        "replay/stop_below_ip": 0.0,
+        "signals/reader": "st40_mdsplus",
+        "signals/st40_mdsplus/mag_run": "BEST",
+        "capture/path": str(output / f"{pulse}.nc"),
+        "writers/names": ["local"],
+        "writers/local/path": str(output / f"{pulse}.npz"),
+    })
+    print(f"Replaying pulse {pulse}", flush=True)
+    results = run_replay(settings, verbose=False)
+    status = results["GLOBAL.STATUS"]
+    print(f"{pulse}: {(status != 0).sum()} / {len(status)} slices have nonzero status")
+```
+
+Each pulse writes a native `.nc` capture before processing and a processed `.npz` result.
+Both contain the newly built preshot, input signals, settings and per-slice status.
+The timestamped directory keeps separate surveys from overwriting each other.
+The loop stops with an exception on a read/build failure, leaving earlier files intact; nonzero
+solver statuses are retained and reported, not silently treated as successful reconstructions.
+Run one replay at a time because all pulses share the active C build; do not run this loop alongside
+tests or another process that rebuilds that library.
+
+Do not use failure as a detector of the end of recorded data: the current `st40_mdsplus` reader
+uses `numpy.interp`, which holds the first/last value outside a signal's recorded time range.
+A production PPAC runner needs an explicit signal-coverage check, not just a large `time_end`.
+
+Unlike the vs-GSFit test, this loop does **not** replace PSU signals with PSU2COIL currents.
+GSFit's preshot builder still initialises its own readers, so its configured ELMAG and PSU2COIL
+runs must exist even though PSU2COIL currents are not passed to the RT-GSFit replay.
+
+Rebuilding follows the pulse's geometry and sensor list, but MAG `BEST` is **not** an automatic
+dead-sensor mask. GSFit's `include` flags and weights, and RT-GSFit's coil mapping and sensor
+replacements, remain those of the chosen settings. Historical hardware changes still need
+suitable settings; missing or nonfinite inputs fail rather than being silently dropped.
+
+### 7.6 Native NetCDF captures: replay and PCS
+
+The capture is **before** offline processing: native flux units, original input channels and
+all C outputs, including unsuccessful calls. It is not an alternative encoding of the processed
+results tree. The intended shared path is:
+
+    replay or PCS logger -> native NetCDF -> Capture -> collect_results -> result writers
+
+The replay's optional `capture/path` writes this file after the last C call and before any
+offline processing. Relative paths are under `c/cache/`; absolute paths are used unchanged.
+Early-stop settings shorten the capture to exactly the calls made. The file is published by an
+atomic rename, so a failed write does not replace an existing capture. A post-processing failure
+leaves the completed native capture available for another attempt.
+
+```sh
+rtgsfit replay analytic --set capture/path=analytic.nc
+rtgsfit post-process c/cache/analytic.nc
+rtgsfit post-process c/cache/analytic.nc --set writers/local/path=reprocessed.npz
+```
+
+`post-process` writes `<capture>_processed.npz` beside the capture by default, even if the
+archived replay settings enabled database writers. Only `writers/` overrides are accepted:
+changing a grid or time range cannot change an already captured C call. To write MDSplus, select
+`writers/names=["rtgsfit_mdsplus"]` and explicitly enable/configure that writer as usual.
+The archived `INPUT:SETTINGS` and `INPUT:CODE_VERSION` remain the original capture's provenance.
+
+```python
+from rtgsfit.capture import read_capture
+
+capture = read_capture("c/cache/analytic.nc")
+results = capture.to_results()  # no solver, compiler or database access
+```
+
+#### Logger contract (`rtgsfit-capture-2`)
+
+Use **NetCDF-4**, not the old classic-format v1 file. The shared C writer is `c/src/capture.c`,
+declared in `c/src/capture.h`; replay calls it through ctypes, and a PCS logger can call the same
+function after buffering its slices. The Python reader and offline processing are in
+`python/rtgsfit/capture.py`. No PCS source is changed here, and the old
+`flux_total`/`coef`/`meas_model` files are explicitly rejected rather than guessed or padded.
+
+Root attributes:
+
+| Attribute | Value |
+|---|---|
+| `schema` | `rtgsfit-capture-2` |
+| `flux_convention` | `native` |
+| `settings_json` | Effective RT-GSFit JSON settings |
+| `preshot_source` | Original preshot provenance |
+| `solver_checksum` | CRC-32 of the preshot compiled into the C solver |
+| `preshot_checksum` | CRC-32 of all preshot values embedded in the capture |
+| `code_version` | Version of the code that produced the captured C outputs |
+| `timing_enabled` | int32 0 or 1; applies to every captured call |
+
+Root dimensions are `Preshot.symbolic_sizes()`, plus `N_TIME` (actual number of calls) and
+`N_TIMING` (length of `rtgsfit.library.TIMING_SECTIONS`). Zero-size dimensions, such as
+`N_PASSIVE` or `N_REG`, use zero-length unlimited NetCDF4 dimensions; do not write dummy elements.
+
+The PCS and replay writer should buffer the per-call values in memory and invoke the C writer
+after the loop; it must not perform NetCDF I/O in the real-time thread. The public C API accepts
+dimensions and variable descriptors, plus the settings, source and version strings. It writes the
+47 size/solver preshot entries directly from the compiled library; the caller supplies the other
+14 metadata and initial-state entries. The writer stores `rtgsfit_get_preshot_checksum()` as
+`solver_checksum`, and computes `preshot_checksum` over all 61 embedded entries. The Python reader
+recomputes both checksums and rejects a mismatch. These CRC-32 checks detect accidental mismatch or
+corruption; they are not cryptographic authentication.
+
+The three groups are:
+
+* `PRESHOT`: the **complete** preshot data dictionary, with subgroups such as `GRID`, `FIT`
+  and `INFO`. Store numeric nodes as their specified int32/float64 type and text as NetCDF4
+  strings. This binds the capture to its actual preshot, not a later `BEST` run.
+* `INPUT`: `time[N_TIME]`, `meas[N_TIME,N_MEAS]`, `coil_signal[N_TIME,N_COIL_SIGNAL]` and the
+  actual `coil_current[N_TIME,N_COIL]`, all float64. Inputs precede sensor replacement; coil
+  currents must match `COIL:MATRIX @ coil_signal`. Log both original channels and actual coil
+  currents, not just one reconstructed from a pseudoinverse.
+* `OUTPUT`: the fields of the C-call `SliceResult`, named as in that Python/C interface:
+
+| Output variables | Dimensions (after `N_TIME`) | Type |
+|---|---|---|
+| `psi`, `psi_norm`, `j_phi` | `N_Z,N_R` | float64 |
+| `mask` | `N_Z,N_R` | int32 |
+| `fit_dof` | `N_FIT_DOF` | float64 |
+| `constraint_measured`, `constraint_reconstructed` | `N_CONSTRAINT` | float64 |
+| `xpt_r`, `xpt_z`, `xpt_psi` | `N_XPT_MAX` | float64 |
+| `status`, `lapack_info`, `xpt_n`, `xpt_diverted` | scalar per time | int32 |
+| `ip`, `axis_psi`, `axis_r`, `axis_z`, `boundary_psi` | scalar per time | float64 |
+| `current_centroid_r`, `current_centroid_z`, `chi_sq_magnetic`, `chi_sq_total` | scalar per time | float64 |
+
+When timing is enabled, also include `OUTPUT/timing[N_TIME,N_TIMING]` (float64 seconds) and
+`OUTPUT/timing_sections[N_TIMING]` (strings in `TIMING_SECTIONS` order). Omit both when disabled.
+Grid arrays use the C row-major order `i_z * N_R + i_r`.
+Log `j_phi` directly: recomputing it from the saved, updated `psi_norm` would use the wrong
+iteration state. Retain invalid/nonfinite C outputs and their status codes without substituting
+plausible values. Offline products mask unsuccessful slices.
+
+Readback checks the schema, dimensions, types, preshot hash and coil-current mapping.
+It does not rerun C or infer missing outputs. `Capture.to_results()` makes fresh result arrays,
+so repeated processing cannot double-convert the native flux. The magnetic field calculation
+remains the existing finite-difference derivative of captured flux; Green-function fields are
+not part of this capture change.
 
 ## 8. Settings
 
@@ -585,6 +815,7 @@ with an adjusted relative path if needed, or use the workspace schema associatio
 | `signals` | `reader` and its options |
 | `replay` | `pulse`, `time_start`, `time_end`, `time_step`, `repeat`, `stop_on_status`, `stop_below_ip` |
 | `build` | `timing`, `arch_flags` |
+| `capture` | Optional `path` for a native NetCDF capture before offline processing |
 | `writers` | `names`, and one section per writer |
 | `analytic`, `gsfit`, `freegsnke` | Reader-specific options: grid, sensors, coils, initial guess |
 
@@ -632,13 +863,53 @@ The tests are replays: the same code path as `rtgsfit replay`.
 | C unit tests | `c/tests`, `tests/test_c_core.py` | Least squares vs LAPACKE, Poisson vs a dense solve, finite differences, nulls, boundary, flood fill, argument checks |
 | Analytic replay | `tests/test_analytic_replay.py` | `psi` within 1 %, `b_theta` and `j_phi` vs the exact solution; Ip, axis, circular boundary; monotonic convergence; zero current gives `NO_AXIS`; bit-for-bit agreement with v1 |
 | Data dictionary, settings, I/O, CLI | `tests/test_*.py` | Names, CSV, generated docs, round trips, preshot validation, enum sizes |
-| FreeGSNKE | `tests/test_freegsnke.py` | Ip 599.0 vs 600 kA; `boundary_psi` 0.18165 vs 0.18178 Wb; axis within one cell; diverted |
-| ST40 | `tests/test_st40.py` (TE network) | RUN21 equals a fresh GSFit build; a pulse replay; and vs GSFit for pulses 13343, 13345, 13346 at 30 and 100 ms |
+| FreeGSNKE | `tests/test_freegsnke.py` | FreeGSNKE's p' and FF' are linear in `psi_norm` (`alpha_m = alpha_n = 1`), as in RT-GSFit, on the same grid: Ip to 1e-4, `psi` at the axis and boundary to 2e-3 relative, axis to 0.7 mm, `psi` to 1.8e-3 Wb and `j_phi` to 3e3 A/m² everywhere, `P_PRIME` and `FF_PRIME_MU0` to 0.4 % of FreeGSNKE's coefficients; diverted |
+| ST40 | `tests/test_st40.py` (TE network) | RUN22 equals a fresh GSFit build (floats to round-off); a pulse replay; and vs GSFit for pulses 13343, 13345, 13346 at 30 and 100 ms: Ip, axis, `psi` at the axis and boundary, `psi` and `j_phi` everywhere, every sensor and the IVC eigenmode currents, to 2-3 times the largest difference (below) |
+| ST40 timing | `tests/test_timing.py` (TE network, `--timing`) | 1,000 converged calls per vs-GSFit case succeed; sections add up to `TOTAL`; statistics written to `c/cache/timing/` (§6.4) |
 
-ST40 vs GSFit (13343 at 30 ms): `psi` within 2e-3 Wb, flux loops 5.7e-4 Wb, Bp probes 4.3e-4 T,
-Rogowski coils 3.3 A, IVC eigenmode currents 1.9 A. The vs-GSFit test uses GSFit's coil currents,
-because the PCS PSU signals differ from them by up to 1 %, which alone moves the Bp probes by more
-than 1e-3 T at 100 ms.
+The tests marked `figures` draw what the analytic, FreeGSNKE and ST40 tests compare, so that a
+pass can be checked by eye. They are skipped unless `--figures` is given, so CI never draws them:
+
+    pytest --figures -m figures                  # analytic and FreeGSNKE
+    pytest --te-network --figures -m figures     # and ST40 vs GSFit, every case
+
+`-m figures` selects only the figure tests; the other tests are reported as **deselected**, not
+failed. Omit `-m figures` to run the numerical tests as well: `pytest --te-network --figures`.
+
+Each run writes PNG and PDF files to a new directory `tests/figures/<UTC time>/` (gitignored), with
+`run.txt` recording the time, commit, host and command; an earlier run's directory is never
+overwritten. The figures compare RT-GSFit's first, second and last iterations with the reference
+(the exact solution, FreeGSNKE or GSFit), with the test's tolerances drawn where it has them:
+
+| Figure | Suites | Shows |
+|---|---|---|
+| `psi`, `j_phi` | all | Contours, boundaries, axes and x-points over the machine; below, RT-GSFit - reference |
+| `constraints` | all | Every magnetic constraint: measured, reference and reconstructed; then RT-GSFit's last iteration minus each |
+| `convergence` | all | Change of `psi` per iteration, `chi_sq`, relative errors of Ip and `psi` at the axis and boundary, the axis position and `psi` at the axis and boundary |
+| `midplane` | analytic | `psi`, `b_theta` and `j_phi` along the grid row nearest the plasma centre, against the exact solution |
+| `ivc_eigenmodes`, `passive_currents` | ST40 | The fitted IVC eigenmode currents, and the current density and net current of each passive |
+
+ST40 vs GSFit, the largest difference of RT-GSFit's last iteration over the six cases (the test's
+tolerance in brackets): `psi` 4.7e-3 Wb (1e-2), in a few cells next to the PF coils at the corners
+of the grid, about 1e-3 Wb inside the vessel; `j_phi` 1.2e4 A/m² (3e4) of a 3e6 A/m² peak; Ip
+6.8e-5 relative (2e-4); the axis 0.5 mm (1.5 mm); `psi` at the axis and boundary 7.5e-4 Wb (2e-3);
+flux loops 2.9e-4 Wb (1e-3), Bp probes 9.0e-4 T (2e-3), Rogowski coils 2.4 A (5 A); IVC eigenmode
+currents 1.1 A (3 A). RT-GSFit's residuals are therefore GSFit's to within these; the largest is
+2.4e-2 Wb for the flux loops (tested to 5e-2), 6.2e-2 T for the Bp probes (0.15) and 64 A for the
+Rogowski coils (150). The vs-GSFit test uses GSFit's coil currents, because the PCS PSU signals
+differ from them by up to 1 %, which alone moves the Bp probes by more than 1e-3 T at 100 ms.
+
+Identical inputs do not make the two algorithms identical. RT-GSFit solves the finite-difference
+Poisson problem for its fitted plasma current (including the vertical-shift basis), then adds
+unshifted coil and passive flux. GSFit instead sums Green's functions and applies its vertical
+correction to the total grid flux, including coils and passives, although its magnetic fitting
+matrix's vertical-shift column only uses the plasma current.
+For pulse 13345 at 100 ms, the maximum flux difference is still 4.685e-3 Wb after 40 RT-GSFit
+iterations. Subtracting only GSFit's coil/passive shift from its output map reduces that maximum
+to 1.222e-3 Wb on the 33x65 grid; on a 63x125 grid, the corresponding residual is 5.682e-4 Wb.
+This identifies a contribution from GSFit's external-flux shift and is consistent with a remaining
+discretisation difference; it does not isolate every contribution. The subtraction is a diagnostic,
+not a rerun of a corrected GSFit solver. Neither solver nor the test tolerances are changed by it.
 
 The analytic solution and the large-aspect-ratio mutual inductances used by the analytic reader are
 derived in [analytic_solution.pdf](analytic_solution/analytic_solution.pdf) and
@@ -656,8 +927,8 @@ rebuilds v1's rounded measurements, and then agrees with v1 to 1e-4 on every out
 | v1 | v2 |
 |---|---|
 | `src/` | `c/src/` |
-| `src/constants.c` (generated) | `c/preshot/preshot_sizes.h` + `preshot_data.c` (generated) |
-| `utility/mdsplus_const_to_file.py` | `python -m rtgsfit write-c-preshot` |
+| `src/constants.c` (generated) | `c/src/preshot_sizes.h` + `preshot_data.c` (generated, not committed) |
+| `utility/mdsplus_const_to_file.py` | `c/tools/write_preshot.c`, run by `make -C c SHOT=... RUN_NAME=...` (no Python) |
 | `tests/rtgsfit_verify_analytic` | `tests/test_analytic_replay.py` + `database_readers/analytic` |
 | `tests/rtgsfit_vs_gsfit` | `tests/test_st40.py` + `database_readers/gsfit` |
 | `replay_rtgsfit_st40` (GitLab) | `rtgsfit replay st40`; private analysis in `rtgsfit_workbench` |
@@ -695,8 +966,8 @@ rebuilds v1's rounded measurements, and then agrees with v1 to 1e-4 on every out
 | `SENSOR_REPLACEMENT_MATRIX` / `SENS_REP_MAT` | `CONSTRAINT:REPLACEMENT` |
 | `G_MEAS_COIL` / `GREENS.MEAS_COIL` | `CONSTRAINT:G_COIL` |
 | `WEIGHT` | `FIT:WEIGHT` |
-| `G_GRID_MEAS_WEIGHT` / `GREENS.GRID_MEAS_W` | `FIT:A_GRID` |
-| `G_COEF_MEAS_WEIGHT` / `GREENS.COEF_MEAS_W` | `FIT:A_PASSIVE` (passive rows only) |
+| `G_GRID_MEAS_WEIGHT` / `GREENS.GRID_MEAS_W` | `FIT:G_GRID` (transposed) |
+| `G_COEF_MEAS_WEIGHT` / `GREENS.COEF_MEAS_W` | `FIT:G_PASSIVE` (passive DOFs only, transposed) |
 | `COEF_NAMES` | `FIT:DOF_NAMES` |
 | `MEAS_NAMES` | `MEAS:NAMES` |
 | `COIL_NAMES`, `COIL_SIGNALS`, `COIL_MATRIX` | `COIL:NAMES`, `COIL:SIGNALS`, `COIL:MATRIX` |
@@ -737,15 +1008,25 @@ New preshots use `N_FIT_TARGET`, `N_FIT_DOF`, `FIT:TARGET_NAMES`, `FIT:DOF_NAMES
 and `GRID:INV_R`. Results use `FIT:DOF_VALUES`; the old `FIT:X_VEC` name is not
 written alongside it. Existing local preshots with the original v2 sizes are explicitly migrated
 on loading. For remote original-v2 preshots, select
-`preshot/rtgsfit_mdsplus/legacy_schema=true` (already selected for the existing RUN21).
+`preshot/rtgsfit_mdsplus/legacy_schema=true`.
 Migration converts metadata and the inverse-R basis; it does not modify the remote tree.
 Use `legacy_schema=false` when reading a newly generated preshot.
+Migration requires `FIT:DOF_UNITS`: it does not infer missing passive units. The old `RUN21`
+does not have this node and must be rebuilt under a new run name. The bundled ST40 settings now
+read the rebuilt `RUN22` with `legacy_schema=false`.
 
 The earlier coefficient-named v2 layout is now DOF-named: `N_FIT_COEF` becomes
 `N_FIT_DOF`, `FIT:COEF_NAMES` becomes `FIT:DOF_NAMES`, and result nodes
 `FIT:COEFFICIENTS`/`COEF_UNITS` become `FIT:DOF_VALUES`/`DOF_UNITS`.
 `Preshot.from_nested()` accepts the earlier coefficient-named preshot without rescaling its
-arrays. New result captures identify this layout as `rtgsfit-4`; regenerate stored preshots
+arrays.
+
+The fit Greens functions `FIT:A_GRID [N_GRID, N_FIT_TARGET]` and `FIT:A_PASSIVE [N_PASSIVE,
+N_FIT_TARGET]` are now `FIT:G_GRID` and `FIT:G_PASSIVE`, stored `[N_FIT_TARGET, source]` like every
+other Greens function. `Preshot.from_nested()` transposes the old arrays, so the content hash is
+unchanged. The result x-points `XPOINTS.ALL` are now `XPT.ALL`, as in GSFit, and the unit of
+`CONSTRAINTS.PF_PASSIVE.ALL:RECONSTRUCT` is `mixed` (see `FIT:DOF_UNITS`). New result captures
+identify this layout as `rtgsfit-5`; regenerate stored preshots
 before reading them through the current non-legacy MDSplus schema.
 
 Old result archives are not silently relabelled: their coefficient and native analytic flux

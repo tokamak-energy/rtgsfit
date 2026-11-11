@@ -6,7 +6,7 @@ section, e.g. `writers/local/path`:
 | writer            | preshot | results | needs                      |
 |-------------------|---------|---------|----------------------------|
 | `local`           | yes     | yes     | nothing (writes a `.npz`)  |
-| `c_source`        | yes     |         | nothing (writes C source)  |
+| `c_source`        | yes     |         | a C compiler (writes c/src)|
 | `rtgsfit_mdsplus` | yes     | yes     | the TE network             |
 
 Every writer stores the same nodes, those of `rtgsfit.data_dictionary`, so a local file and the

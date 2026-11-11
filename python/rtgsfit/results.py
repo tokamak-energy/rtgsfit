@@ -58,6 +58,8 @@ def collect_results(
     slices: list[SliceResult],
     settings_json: str,
     preshot_source: str,
+    *,
+    code_version: str = rtgsfit.__version__,
 ) -> Results:
     """Map the per-slice outputs of `rtgsfit()` onto the results nodes.
 
@@ -153,7 +155,7 @@ def collect_results(
                 "J_PHI": grid("j_phi"),
             }
         },
-        "XPOINTS": {"ALL": {"N": xpt_n, "R": xpt("xpt_r"), "Z": xpt("xpt_z"), "PSI": xpt("xpt_psi")}},
+        "XPT": {"ALL": {"N": xpt_n, "R": xpt("xpt_r"), "Z": xpt("xpt_z"), "PSI": xpt("xpt_psi")}},
         "FIT": {
             "DOF_VALUES": stack("fit_dof"),
             "DOF_NAMES": list(preshot["FIT:DOF_NAMES"]),
@@ -162,7 +164,7 @@ def collect_results(
         "INPUT": {
             "SETTINGS": settings_json,
             "PRESHOT_SRC": preshot_source,
-            "CODE_VERSION": rtgsfit.__version__,
+            "CODE_VERSION": code_version,
             "MEAS": np.asarray(signals.meas[:n_time], dtype=np.float64),
             "COIL_SIGNAL": np.asarray(coil_signal, dtype=np.float64),
         },
@@ -194,3 +196,5 @@ def validate_results(results: Results, preshot: Preshot) -> None:
         )
         if array.shape != shape or not dtype_valid:
             raise ValueError(f"{node.mds_path}: {array.shape} {array.dtype}, expected {shape} {node.dtype}")
+    if results["FIT.DOF_UNITS"] != preshot["FIT:DOF_UNITS"]:
+        raise ValueError("FIT.DOF_UNITS does not match PRESHOT.FIT:DOF_UNITS")

@@ -48,8 +48,8 @@
             "p_axis": 8000.0,
             "ip": 600000.0,
             "f_vacuum": 0.5,
-            "alpha_m": 1.8,
-            "alpha_n": 1.2
+            "alpha_m": 1.0,
+            "alpha_n": 1.0
         },
         "tolerance": 1e-09
     },

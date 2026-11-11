@@ -135,6 +135,12 @@ enum rtgsfit_size_index
 int32_t rtgsfit_get_sizes(int32_t sizes[], const int32_t n_sizes);
 
 /*
+ * The CRC-32 (as zlib) of every value of the compiled-in preshot, sizes first, in the order of
+ * rtgsfit.data_dictionary.C_NODES. A caller can compare it with the preshot it expects.
+ */
+uint32_t rtgsfit_get_preshot_checksum(void);
+
+/*
  * CPU time spent in each section, in microseconds, summed since the last
  * `rtgsfit_timing_reset()`. The times are only recorded when the library was built with
  * `TIMING=1`; otherwise every value is zero.

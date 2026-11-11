@@ -1,18 +1,18 @@
 """Build librtgsfit.so for a preshot and call it through ctypes.
 
-The preshot is compiled into the library, so each preshot needs its own build. Builds are cached
-in `$RTGSFIT_CACHE_DIR` (default `~/.cache/rtgsfit`) under a key made from the preshot content, the
-C sources and the build options, so replaying the same preshot again does not recompile.
+The preshot is compiled into the library. `build_library` writes it to `c/build/preshot.bin` and runs
+`make`, which generates `c/src/preshot_sizes.h` and `c/src/preshot_data.c` with the C generator
+`c/tools/write_preshot.c` and compiles `c/build/librtgsfit.so`. Make recompiles only what changed, so
+building the same preshot again is quick. There is one build, of the last preshot built, so build from
+one process at a time.
 """
 
 from __future__ import annotations
 
+import _ctypes
 import ctypes
-import fcntl
-import hashlib
 import os
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,7 +21,8 @@ import numpy as np
 import numpy.typing as npt
 
 from rtgsfit import data_dictionary as dd
-from rtgsfit.database_writers.c_source import write_c_source
+from rtgsfit.database_writers.c_source import preshot_checksum
+from rtgsfit.database_writers.c_source import write_preshot_file
 from rtgsfit.preshot import Preshot
 
 FloatArray = npt.NDArray[np.float64]
@@ -71,15 +72,20 @@ def c_directory() -> Path:
 
 
 def cache_directory() -> Path:
-    return Path(os.environ.get("RTGSFIT_CACHE_DIR", Path.home() / ".cache" / "rtgsfit"))
+    """Generated outputs live beside the C sources, independent of the working directory."""
+    if "RTGSFIT_CACHE_DIR" in os.environ:
+        return Path(os.environ["RTGSFIT_CACHE_DIR"])
+    return c_directory().resolve() / "cache"
 
 
-def _source_hash(c_dir: Path) -> str:
-    digest = hashlib.sha256()
-    for path in sorted([c_dir / "Makefile", *(c_dir / "src").glob("*.[ch]")]):
-        digest.update(path.name.encode())
-        digest.update(path.read_bytes())
-    return digest.hexdigest()[:16]
+def build_directory() -> Path:
+    """`c/build`, which holds the library, its objects and the preshot file (`make clean` removes it)."""
+    return c_directory().resolve() / "build"
+
+
+PRESHOT_FILE = "preshot.bin"
+"""The preshot file that `build_library` writes into `build_directory()` for `make`."""
+LIBRARY = "librtgsfit.so"
 
 
 @dataclass(frozen=True)
@@ -101,41 +107,56 @@ class BuildOptions:
 DEFAULT_BUILD_OPTIONS = BuildOptions()
 
 
-def _resolved_arch(arch_flags: str) -> str:
-    """The target that `-march=native` resolves to on this machine, so that hosts with different
-    CPUs sharing a cache directory never load each other's binaries."""
-    if "native" not in arch_flags:
-        return ""
-    compiler = os.environ.get("CC", "gcc")
-    result = subprocess.run(
-        [compiler, *arch_flags.split(), "-Q", "--help=target"], capture_output=True, text=True, check=False
-    )
-    return hashlib.sha256(result.stdout.encode()).hexdigest() if result.returncode == 0 else os.uname().nodename
+def run_make(arguments: list[str], verbose: bool = False) -> None:
+    """Run `make -C c <arguments>`; raise with make's error output if it fails."""
+    command = ["make", "-C", str(c_directory()), *arguments]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if verbose:
+        print(result.stdout, result.stderr, sep="\n")
+    if result.returncode != 0:
+        raise RuntimeError(f"{' '.join(command)} failed:\n{result.stderr[-4000:]}")
 
 
 def build_library(preshot: Preshot, options: BuildOptions = DEFAULT_BUILD_OPTIONS, verbose: bool = False) -> Path:
-    """Compile librtgsfit.so for `preshot` (or reuse a cached build) and return its path."""
-    c_dir = c_directory()
-    identity = f"{preshot.content_hash()} {_source_hash(c_dir)} {options} {_resolved_arch(options.arch_flags)}"
-    key = hashlib.sha256(identity.encode()).hexdigest()[:20]
-    build_root = cache_directory() / key
-    library = build_root / "build" / "librtgsfit.so"
-    build_root.mkdir(parents=True, exist_ok=True)
-    with open(build_root / ".lock", "w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        if not library.is_file():
-            write_c_source(preshot, build_root / "preshot")
-            command = [
-                "make", "-C", str(c_dir), f"PRESHOT_DIR={build_root / 'preshot'}", f"BUILD_DIR={build_root / 'build'}",
-                f"TIMING={int(options.timing)}", f"DEBUG={int(options.debug)}", f"ARCH_FLAGS={options.arch_flags}",
-                f"PYTHON={sys.executable}",
-            ]  # fmt: skip
-            result = subprocess.run(command, capture_output=True, text=True)
-            if verbose or result.returncode != 0:
-                print(result.stdout, result.stderr, sep="\n")
-            if result.returncode != 0:
-                raise RuntimeError(f"building librtgsfit failed: {' '.join(command)}")
-    return library
+    """Compile `c/build/librtgsfit.so` for `preshot` and return its path."""
+    preshot_file = write_preshot_file(preshot, build_directory() / PRESHOT_FILE)
+    run_make(
+        [
+            f"PRESHOT_FILE={preshot_file}", f"TIMING={int(options.timing)}", f"DEBUG={int(options.debug)}",
+            f"ARCH_FLAGS={options.arch_flags}",
+        ],
+        verbose=verbose,
+    )  # fmt: skip
+    return build_directory() / LIBRARY
+
+
+@dataclass
+class _LoadedLibrary:
+    file_id: tuple[int, ...]
+    cdll: ctypes.CDLL
+    unloaded: bool = False
+
+
+_LOADED: dict[Path, _LoadedLibrary] = {}
+
+
+def _load_library(path: Path) -> _LoadedLibrary:
+    """Load `path`, or reuse it if it is loaded and unchanged.
+
+    The dynamic loader returns the library already loaded from a path even if the file has been rebuilt
+    since, so a rebuilt library is first unloaded. `Rtgsfit` objects that still use it then raise.
+    """
+    path = path.resolve()
+    status = path.stat()
+    file_id = (status.st_dev, status.st_ino, status.st_size, status.st_mtime_ns)
+    loaded = _LOADED.get(path)
+    if loaded is not None and loaded.file_id == file_id:
+        return loaded
+    if loaded is not None:
+        loaded.unloaded = True
+        _ctypes.dlclose(loaded.cdll._handle)
+    _LOADED[path] = _LoadedLibrary(file_id, ctypes.CDLL(str(path), mode=ctypes.RTLD_LOCAL))
+    return _LOADED[path]
 
 
 @dataclass
@@ -180,14 +201,17 @@ class Rtgsfit:
     rtgsfit = Rtgsfit.build(preshot)
     result = rtgsfit(meas, coil_current)
     ```
-    The library keeps a static workspace, so only one `Rtgsfit` per library should be used at a time.
+    The library keeps a static workspace, so use one `Rtgsfit` at a time. Creating an `Rtgsfit` for a
+    rebuilt library (another preshot or other options) unloads the old library; earlier `Rtgsfit`
+    objects then raise.
     """
 
     def __init__(self, library_path: str | Path, preshot: Preshot, timing: bool = False) -> None:
         self.library_path = Path(library_path)
         self.preshot = preshot
         self.timing = timing
-        self._lib = ctypes.CDLL(str(self.library_path), mode=ctypes.RTLD_LOCAL)
+        self._loaded = _load_library(self.library_path)
+        self._lib = self._loaded.cdll
         self._lib.rtgsfit.restype = _I32
         self._lib.rtgsfit.argtypes = (
             [_DOUBLE_P, _I32] * 2 + [_DOUBLE_P, _I32, _INT32_P, _I32] + [_DOUBLE_P, _I32] * 8
@@ -195,11 +219,13 @@ class Rtgsfit:
         )  # fmt: skip
         self._lib.rtgsfit_get_sizes.restype = _I32
         self._lib.rtgsfit_get_sizes.argtypes = [_INT32_P, _I32]
+        self._lib.rtgsfit_get_preshot_checksum.restype = ctypes.c_uint32
+        self._lib.rtgsfit_get_preshot_checksum.argtypes = []
         self._lib.rtgsfit_timing_get.restype = _I32
         self._lib.rtgsfit_timing_get.argtypes = [_DOUBLE_P, _I32]
         self._lib.rtgsfit_timing_reset.restype = None
         self._lib.rtgsfit_timing_reset.argtypes = []
-        self._check_sizes()
+        self._check_preshot()
         self.sizes = preshot.sizes
         self.reset()
 
@@ -207,13 +233,21 @@ class Rtgsfit:
     def build(cls, preshot: Preshot, options: BuildOptions = DEFAULT_BUILD_OPTIONS) -> Rtgsfit:
         return cls(build_library(preshot, options), preshot, timing=options.timing)
 
-    def _check_sizes(self) -> None:
+    def _check_preshot(self) -> None:
+        """Check that the library was compiled from `self.preshot`: first the sizes, then every value."""
         sizes = np.zeros(len(dd.SIZE_NAMES), dtype=np.int32)
         if self._lib.rtgsfit_get_sizes(sizes, len(sizes)) != 0:
             raise RuntimeError("rtgsfit_get_sizes failed: the library and the data dictionary disagree")
         compiled = dict(zip(dd.SIZE_NAMES, sizes.tolist(), strict=True))
         if compiled != self.preshot.sizes:
             raise RuntimeError(f"{self.library_path} was built for sizes {compiled}, not {self.preshot.sizes}")
+        checksum = int(self._lib.rtgsfit_get_preshot_checksum())
+        expected = preshot_checksum(self.preshot)
+        if checksum != expected:
+            raise RuntimeError(
+                f"{self.library_path} was built from another preshot (checksum {checksum:08X}, expected "
+                f"{expected:08X}); build it with Rtgsfit.build(preshot)"
+            )
 
     def reset(self) -> None:
         """Restart from the initial conditions in the preshot."""
@@ -221,6 +255,11 @@ class Rtgsfit:
         self.mask = np.array(self.preshot["INITIAL:MASK"], dtype=np.int32)
 
     def __call__(self, meas: FloatArray, coil_current: FloatArray) -> SliceResult:
+        if self._loaded.unloaded:
+            raise RuntimeError(
+                f"{self.library_path} was rebuilt and reloaded after this Rtgsfit was created; "
+                "create a new one with Rtgsfit.build(preshot)"
+            )
         sizes = self.sizes
         meas = np.ascontiguousarray(meas, dtype=np.float64)
         coil_current = np.ascontiguousarray(coil_current, dtype=np.float64)

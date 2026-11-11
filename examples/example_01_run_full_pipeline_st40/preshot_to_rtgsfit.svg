@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="760" viewBox="0 0 1260 760" role="img" aria-labelledby="title desc">
+  <title id="title">How the preshot reaches rtgsfit during replay</title>
+  <desc id="desc">The preshot is assembled from GSFit, stored in MDSplus, read back, written as C constants, and compiled into a shared library. During replay, measurements and coil currents enter rtgsfit alongside the compiled constants. The fit results include updated plasma state psi_norm and mask, which feed the next time slice.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#435466"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#18794e"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #172b4d; }
+      .lane { fill: #f5f8fc; stroke: #c6d3e1; stroke-width: 1.5; }
+      .prep { fill: #e7f0ff; stroke: #5b86c5; }
+      .compile { fill: #eee8ff; stroke: #8561c5; }
+      .runtime { fill: #e6f5ee; stroke: #42946b; }
+      .output { fill: #fff3dc; stroke: #ca8b21; }
+      .box { stroke-width: 1.5; rx: 12; }
+      .head { font-size: 19px; font-weight: 700; }
+      .title { font-size: 17px; font-weight: 700; }
+      .body { font-size: 14px; }
+      .small { font-size: 12px; fill: #44566c; }
+      .lane-title { font-size: 16px; font-weight: 700; letter-spacing: .3px; }
+      .arrow { fill: none; stroke: #435466; stroke-width: 2; marker-end: url(#arrow); }
+      .feedback { fill: none; stroke: #18794e; stroke-width: 2; marker-end: url(#arrow-green); }
+      .tag { font-size: 12px; font-weight: 600; fill: #435466; }
+    </style>
+  </defs>
+
+  <rect x="18" y="18" width="1224" height="320" rx="18" class="lane"/>
+  <text x="42" y="49" class="lane-title">PREPARATION · one preshot, compiled once</text>
+
+  <rect x="42" y="82" width="164" height="150" class="box prep"/>
+  <text x="124" y="113" text-anchor="middle" class="title">GSFit</text>
+  <text x="124" y="141" text-anchor="middle" class="body">Machine, sensors,</text>
+  <text x="124" y="161" text-anchor="middle" class="body">Green's functions</text>
+  <text x="124" y="197" text-anchor="middle" class="small">pulse + settings</text>
+
+  <rect x="230" y="82" width="190" height="150" class="box prep"/>
+  <text x="325" y="113" text-anchor="middle" class="title">Build preshot</text>
+  <text x="325" y="141" text-anchor="middle" class="body">Assemble 60 nodes</text>
+  <text x="325" y="161" text-anchor="middle" class="body">and precompute</text>
+  <text x="325" y="181" text-anchor="middle" class="body">fit + Poisson data</text>
+  <text x="325" y="209" text-anchor="middle" class="small">Python · assemble_preshot</text>
+
+  <rect x="444" y="82" width="174" height="150" class="box prep"/>
+  <text x="531" y="113" text-anchor="middle" class="title">Store preshot</text>
+  <text x="531" y="141" text-anchor="middle" class="body">Write all nodes to</text>
+  <text x="531" y="161" text-anchor="middle" class="body">the RTGSFIT tree</text>
+  <text x="531" y="197" text-anchor="middle" class="small">MDSplus</text>
+
+  <rect x="642" y="82" width="174" height="150" class="box prep"/>
+  <text x="729" y="113" text-anchor="middle" class="title">Read back</text>
+  <text x="729" y="141" text-anchor="middle" class="body">PCS-style reader</text>
+  <text x="729" y="161" text-anchor="middle" class="body">checks content hash</text>
+  <text x="729" y="197" text-anchor="middle" class="small">Python · read_preshot</text>
+
+  <rect x="840" y="82" width="174" height="150" class="box compile"/>
+  <text x="927" y="113" text-anchor="middle" class="title">Generate C data</text>
+  <text x="927" y="141" text-anchor="middle" class="body">C generator, no Python</text>
+  <text x="927" y="161" text-anchor="middle" class="body">17 sizes → enum</text>
+  <text x="927" y="181" text-anchor="middle" class="body">30 data nodes → arrays</text>
+  <text x="927" y="209" text-anchor="middle" class="small">preshot_sizes.h + preshot_data.c</text>
+
+  <rect x="1038" y="82" width="180" height="150" class="box compile"/>
+  <text x="1128" y="113" text-anchor="middle" class="title">Compile + link</text>
+  <text x="1128" y="141" text-anchor="middle" class="body">C solver + preshot</text>
+  <text x="1128" y="161" text-anchor="middle" class="body">constants → shared</text>
+  <text x="1128" y="181" text-anchor="middle" class="body">library</text>
+  <text x="1128" y="209" text-anchor="middle" class="small">librtgsfit.so</text>
+
+  <path d="M206 157 H224" class="arrow"/>
+  <path d="M420 157 H438" class="arrow"/>
+  <path d="M618 157 H636" class="arrow"/>
+  <path d="M816 157 H834" class="arrow"/>
+  <path d="M1014 157 H1032" class="arrow"/>
+
+  <rect x="18" y="360" width="1224" height="382" rx="18" class="lane"/>
+  <text x="42" y="392" class="lane-title">REPLAY · each time slice</text>
+
+  <rect x="48" y="448" width="210" height="142" class="box prep"/>
+  <text x="153" y="480" text-anchor="middle" class="title">Pulse signals</text>
+  <text x="153" y="510" text-anchor="middle" class="body">meas</text>
+  <text x="153" y="532" text-anchor="middle" class="body">coil_signal</text>
+  <text x="153" y="568" text-anchor="middle" class="small">read from diagnostics / PSU</text>
+
+  <rect x="300" y="448" width="230" height="142" class="box prep"/>
+  <text x="415" y="480" text-anchor="middle" class="title">Prepare inputs</text>
+  <text x="415" y="510" text-anchor="middle" class="body">coil_current =</text>
+  <text x="415" y="532" text-anchor="middle" class="body">coil_signal × COIL:MATRIXᵀ</text>
+  <text x="415" y="568" text-anchor="middle" class="small">Python · order measurements</text>
+
+  <rect x="610" y="430" width="292" height="178" class="box runtime"/>
+  <text x="756" y="466" text-anchor="middle" class="title">rtgsfit() in C</text>
+  <text x="756" y="497" text-anchor="middle" class="body">meas · coil_current</text>
+  <text x="756" y="519" text-anchor="middle" class="body">psi_norm · mask</text>
+  <line x1="640" y1="537" x2="872" y2="537" stroke="#9ac8ae"/>
+  <text x="756" y="561" text-anchor="middle" class="small">fit → solve Poisson → update equilibrium</text>
+  <text x="756" y="584" text-anchor="middle" class="small">static work state; not re-entrant</text>
+
+  <rect x="982" y="448" width="220" height="142" class="box output"/>
+  <text x="1092" y="480" text-anchor="middle" class="title">Per-slice results</text>
+  <text x="1092" y="510" text-anchor="middle" class="body">fit_dof, Ip, chi², ψ</text>
+  <text x="1092" y="532" text-anchor="middle" class="body">new psi_norm + mask</text>
+  <text x="1092" y="568" text-anchor="middle" class="small">saved as replay results</text>
+
+  <path d="M258 519 H292" class="arrow"/>
+  <path d="M530 519 H602" class="arrow"/>
+  <path d="M902 519 H974" class="arrow"/>
+
+  <path d="M1128 232 V332 H756 V422" class="arrow"/>
+  <rect x="902" y="292" width="216" height="28" rx="14" fill="#fff" stroke="#c6d3e1"/>
+  <text x="1010" y="311" text-anchor="middle" class="tag">compiled preshot constants</text>
+
+  <path d="M1092 590 V666 H756 V616" class="feedback"/>
+  <rect x="822" y="651" width="230" height="28" rx="14" fill="#fff" stroke="#9ac8ae"/>
+  <text x="937" y="670" text-anchor="middle" class="tag">state carried to next time slice</text>
+
+  <text x="48" y="715" class="small">Names, strings, coil mapping and initial state remain in Python; numerical arrays used by the C solver are compiled into the library.</text>
+</svg>

@@ -113,20 +113,28 @@ int32_t rtgsfit_get_sizes(int32_t sizes[], const int32_t n_sizes)
     return RTGSFIT_OK;
 }
 
+uint32_t rtgsfit_get_preshot_checksum(void)
+{
+    return PRESHOT_CHECKSUM;
+}
+
 /*
- * Build the column-major fit_matrix [N_FIT_TARGET x N_FIT_DOF]. Column k is the weighted response of
- * every row of fit_target to unit fit_dof[k]:
- *   plasma columns   basis FIT_A_GRID (FIT_A_GRID already contains FIT_WEIGHT and d_r d_z)
- *   passive columns  FIT_A_PASSIVE, fixed at preshot
+ * Build the column-major fit_matrix [N_FIT_TARGET x N_FIT_DOF], i.e. row-major [N_FIT_DOF x
+ * N_FIT_TARGET]. Column k is the weighted response of every row of fit_target to unit fit_dof[k]:
+ *   plasma columns   FIT_G_GRID basis^T (FIT_G_GRID already contains FIT_WEIGHT and d_r d_z)
+ *   passive columns  FIT_G_PASSIVE, fixed at preshot
  */
 static void build_fit_matrix(void)
 {
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_PLASMA, N_FIT_TARGET, N_GRID, 1.0,
-                work.basis, N_GRID, FIT_A_GRID, N_FIT_TARGET, 0.0, work.fit_matrix, N_FIT_TARGET);
-    if (N_PASSIVE > 0)
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, N_PLASMA, N_FIT_TARGET, N_GRID, 1.0,
+                work.basis, N_GRID, FIT_G_GRID, N_GRID, 0.0, work.fit_matrix, N_FIT_TARGET);
+    for (int32_t i_passive = 0; i_passive < N_PASSIVE; i_passive++)
     {
-        memcpy(&work.fit_matrix[N_PLASMA * N_FIT_TARGET], FIT_A_PASSIVE,
-               sizeof(double) * (size_t)N_PASSIVE * N_FIT_TARGET);
+        double *column = &work.fit_matrix[(N_PLASMA + i_passive) * N_FIT_TARGET];
+        for (int32_t i_fit_target = 0; i_fit_target < N_FIT_TARGET; i_fit_target++)
+        {
+            column[i_fit_target] = FIT_G_PASSIVE[i_fit_target * N_PASSIVE + i_passive];
+        }
     }
 }
 

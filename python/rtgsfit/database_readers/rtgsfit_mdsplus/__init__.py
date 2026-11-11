@@ -1,6 +1,6 @@
 """Read the preshot from the RTGSFIT MDSplus tree (TE network only).
 
-Settings, `preshot/rtgsfit_mdsplus/`: `pulse` (e.g. 52_014_922), `run_name` (e.g. `RUN21`) and
+Settings, `preshot/rtgsfit_mdsplus/`: `pulse` (e.g. 52_014_922), `run_name` (e.g. `RUN22`) and
 optionally `server` (default `smaug`). The preshot is written there by
 `python -m rtgsfit preshot <settings>` with the `rtgsfit_mdsplus` writer.
 
@@ -15,6 +15,7 @@ import numpy as np
 
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_readers import PreshotReader
+from rtgsfit.preshot import LEGACY_FIT_GREENS
 from rtgsfit.preshot import LEGACY_PRESHOT_NAMES
 from rtgsfit.preshot import Preshot
 from rtgsfit.settings import Settings
@@ -42,6 +43,7 @@ def read_mdsplus_nodes(
     import mdsthin
 
     nested: dict[str, Any] = {}
+    legacy_names = {**LEGACY_PRESHOT_NAMES, **LEGACY_FIT_GREENS}
     with mdsthin.Connection(server) as connection:
         connection.openTree(dd.TREE_NAME, pulse)
         for node in nodes:
@@ -50,7 +52,7 @@ def read_mdsplus_nodes(
                 _, group, name = node.path
                 if group == "INFO" and name in ("MU0", "PSI_TO_WB"):
                     continue
-                node_path = ("PRESHOT", group, LEGACY_PRESHOT_NAMES.get((group, name), name))
+                node_path = ("PRESHOT", group, legacy_names.get((group, name), name))
             mds_path = ".".join(node_path[:-1]) + ":" + node_path[-1] if len(node_path) > 1 else node_path[0]
             path = f"\\{dd.TREE_NAME}::TOP.{run_name}.{mds_path}"
             dd.nested_set(nested, node_path, _decode(connection.get(path).data()))

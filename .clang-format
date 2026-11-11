@@ -1,4 +1,4 @@
-# RT-GSFit C style; see documentation/style_guide.md. Run: clang-format -i c/src/*.[ch] c/tests/*.[ch]
+# RT-GSFit C style; see documentation/style_guide.md. Run: clang-format -i c/src/*.[ch] c/tests/*.[ch] c/tools/*.c
 BasedOnStyle: LLVM
 IndentWidth: 4
 ColumnLimit: 100

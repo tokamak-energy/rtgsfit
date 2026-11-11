@@ -50,6 +50,7 @@ def test_weighted_target_is_distinct_from_physical_dof(analytic_results: Results
     assert sizes["N_FIT_TARGET"] != sizes["N_FIT_DOF"]
     assert results["FIT.DOF_VALUES"].shape == (len(results["TIME"]), sizes["N_FIT_DOF"])
     assert results["FIT.DOF_NAMES"] == preshot["FIT:DOF_NAMES"]
+    assert results["FIT.DOF_UNITS"] == preshot["FIT:DOF_UNITS"]
     assert len(results["FIT.DOF_UNITS"]) == sizes["N_FIT_DOF"]
     assert not {"COEFFICIENTS", "COEF_NAMES", "COEF_UNITS"} & results.nested["FIT"].keys()
 
@@ -128,6 +129,30 @@ def test_dof_units_must_match_dof_count(analytic_results: Results, analytic_pres
         validate_results(invalid, analytic_preshot)
 
 
+def test_dof_units_must_match_preshot(analytic_results: Results, analytic_preshot: Preshot) -> None:
+    from copy import deepcopy
+
+    from rtgsfit.results import validate_results
+
+    invalid = Results(deepcopy(analytic_results.nested))
+    invalid.nested["FIT"]["DOF_UNITS"][0] = "ampere"
+    with pytest.raises(ValueError, match=r"PRESHOT.FIT:DOF_UNITS"):
+        validate_results(invalid, analytic_preshot)
+
+
+@pytest.mark.parametrize(
+    ("dof", "expected"),
+    [
+        ("constant_current_density", "ampere / metre ** 2"),
+        ("eig_01", "ampere"),
+    ],
+)
+def test_gsfit_passive_dof_units(dof: str, expected: str) -> None:
+    from rtgsfit.database_readers.gsfit import _passive_dof_unit
+
+    assert _passive_dof_unit(dof) == expected
+
+
 @pytest.mark.parametrize(
     "info, bits",
     [
@@ -146,7 +171,8 @@ def test_lapack_status_classification(analytic_preshot: Preshot, info: int, bits
     from rtgsfit.library import Rtgsfit
 
     library = Rtgsfit.build(analytic_preshot)
-    function = ctypes.CDLL(str(library.library_path)).rtgsfit_status_from_lapack_info
+    # A separate CDLL would keep the old preshot loaded after Rtgsfit rebuilds it.
+    function = library._lib.rtgsfit_status_from_lapack_info
     function.argtypes = [ctypes.c_int32]
     function.restype = ctypes.c_int32
     assert function(info) == bits

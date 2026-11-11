@@ -45,9 +45,27 @@ LEGACY_PRESHOT_NAMES = {
     ("GRID", "INV_R"): "INV_MU0_R",
 }
 
+# The fit Greens functions were once named A_* and stored transposed, [source, N_FIT_TARGET].
+LEGACY_FIT_GREENS = {
+    ("FIT", "G_GRID"): "A_GRID",
+    ("FIT", "G_PASSIVE"): "A_PASSIVE",
+}
+
 
 def migrate_legacy_preshot(groups: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Convert earlier preshot names/basis contracts without changing the original mapping."""
+    groups = _migrate_legacy_names(groups)
+    if not any(old_name in groups.get("FIT", {}) for old_name in LEGACY_FIT_GREENS.values()):
+        return groups
+    groups = {group: dict(nodes) for group, nodes in groups.items()}
+    for (group, name), old_name in LEGACY_FIT_GREENS.items():
+        if old_name not in groups[group] or name in groups[group]:
+            raise PreshotError(f"ambiguous or incomplete fit Greens functions at {group}:{old_name}")
+        groups[group][name] = np.ascontiguousarray(np.asarray(groups[group].pop(old_name)).T)
+    return groups
+
+
+def _migrate_legacy_names(groups: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     if "N_FIT_COEF" in groups["SIZES"]:
         groups = {group: dict(nodes) for group, nodes in groups.items()}
         for group, old_name, name in (
@@ -101,6 +119,8 @@ class Preshot:
     def from_nested(cls, nested: dict[str, Any]) -> Preshot:
         groups = nested["PRESHOT"] if "PRESHOT" in nested else nested
         groups = migrate_legacy_preshot(groups)
+        if "DOF_UNITS" not in groups.get("FIT", {}):
+            raise PreshotError("PRESHOT.FIT:DOF_UNITS is missing; rebuild the preshot with the updated data dictionary")
         converted: dict[str, dict[str, Any]] = {}
         for node in dd.PRESHOT_NODES:
             _, group, name = node.path
@@ -427,6 +447,7 @@ class PreshotInputs:
     coil_names: list[str]
     g_grid_coil: FloatArray  # [N_GRID, N_COIL]
     passive_names: list[str]
+    passive_dof_units: list[str]
     g_grid_passive: FloatArray  # [N_GRID, N_PASSIVE]
     constraint_names: list[str]
     n_flux_loop: int
@@ -469,6 +490,8 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
 
     n_constraint = len(inputs.constraint_names)
     n_passive = len(inputs.passive_names)
+    if len(inputs.passive_dof_units) != n_passive:
+        raise PreshotError("passive DOF names and units must have the same length")
     n_reg = len(inputs.regularisation_names)
     if n_constraint != inputs.n_flux_loop + inputs.n_bp_probe + inputs.n_rogowski:
         raise PreshotError("constraint names do not match the number of flux loops, Bp probes and Rogowski coils")
@@ -476,14 +499,12 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
     n_fit_target = n_constraint + n_reg
 
     # Rows of fit_target are weighted; the regularisation rows only act on the passive dofs.
-    fit_matrix_grid = np.zeros((n_grid, n_fit_target))
-    fit_matrix_grid[:, :n_constraint] = (
-        (inputs.g_constraint_grid * inputs.constraint_weight[:, np.newaxis]).T * d_r * d_z
-    )
+    fit_g_grid = np.zeros((n_fit_target, n_grid))
+    fit_g_grid[:n_constraint] = inputs.g_constraint_grid * inputs.constraint_weight[:, np.newaxis] * d_r * d_z
     g_fit_target_passive = np.vstack([inputs.g_constraint_passive, inputs.regularisation]).reshape(
         n_fit_target, n_passive
     )
-    fit_matrix_passive = (g_fit_target_passive * weight[:, np.newaxis]).T
+    fit_g_passive = g_fit_target_passive * weight[:, np.newaxis]
 
     replacement, meas_names = replacement_matrix(inputs.constraint_names, inputs.sensor_replacements)
     fit_coefficient_names = [*PLASMA_DOF_NAMES, *inputs.passive_names]
@@ -524,7 +545,13 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
         "FIT": {
             "TARGET_NAMES": [*inputs.constraint_names, *inputs.regularisation_names],
             "DOF_NAMES": fit_coefficient_names,
-            "WEIGHT": weight, "A_GRID": fit_matrix_grid, "A_PASSIVE": fit_matrix_passive,
+            "DOF_UNITS": [
+                "ampere / metre ** 3",
+                "ampere / metre",
+                "ampere / metre",
+                *inputs.passive_dof_units,
+            ],
+            "WEIGHT": weight, "G_GRID": fit_g_grid, "G_PASSIVE": fit_g_passive,
         },
         "SETTINGS": {
             "XPT_FRACTION": f64(inputs.xpt_fraction), "TOLERANCE": f64(inputs.tolerance), "IP_MIN": f64(inputs.ip_min),

@@ -1,10 +1,11 @@
 /*
  * The preshot: every quantity RT-GSFit needs that can be computed before the pulse.
  *
- * The sizes are defined as enum constants in the generated `preshot_sizes.h` and the data in
- * the generated `preshot_data.c`. Both are written by `rtgsfit.database_writers.c_source` from
- * the same preshot that is stored in MDSplus under PRESHOT. The C name `GROUP_NODE` corresponds
- * to the MDSplus node `PRESHOT.GROUP:NODE`. See the manual for the definition of each quantity.
+ * The sizes are defined as enum constants in `preshot_sizes.h` and the data in `preshot_data.c`.
+ * Both are generated in this directory by c/tools/write_preshot.c (run by c/Makefile), from the
+ * preshot in MDSplus under PRESHOT or from a preshot file written by Python, and are not
+ * version-controlled. The C name `GROUP_NODE` corresponds to the MDSplus node
+ * `PRESHOT.GROUP:NODE`. See the manual for the definition of each quantity.
  *
  * Matrices are stored row-major, `[rows][columns]`, and flattened.
  */
@@ -20,6 +21,9 @@
 /* C forbids zero-length arrays, so optional dimensions are allocated at least one element. */
 #define PRESHOT_AT_LEAST_ONE(n) ((n) > 0 ? (n) : 1)
 
+/* CRC-32 of every size and node value (see write_preshot.c), to identify the compiled preshot */
+extern const uint32_t PRESHOT_CHECKSUM;
+
 /* GRID: the computational grid */
 extern const double GRID_R[N_R];                  /* [m] */
 extern const double GRID_Z[N_Z];                  /* [m] */
@@ -28,7 +32,7 @@ extern const double GRID_D_Z;                     /* [m] */
 extern const double GRID_R_FLAT[N_GRID];          /* [m] R at each grid point */
 extern const double GRID_Z_FLAT[N_GRID];          /* [m] Z at each grid point */
 extern const double GRID_INV_R[N_GRID];           /* [1/m] 1 / R */
-extern const int32_t GRID_MASK_LIMITER[N_GRID];   /* 1 inside the limiter, 0 on the edge */
+extern const int32_t GRID_MASK_LIMITER[N_GRID];   /* 1 in the allowed plasma region, 0 elsewhere */
 extern const double GRID_G_COIL[N_GRID * N_COIL]; /* psi per ampere of coil current */
 extern const double GRID_G_PASSIVE[N_GRID * PRESHOT_AT_LEAST_ONE(N_PASSIVE)];
 
@@ -57,8 +61,8 @@ extern const double CONSTRAINT_REPLACEMENT[N_CONSTRAINT * N_MEAS];
 
 /* FIT: the weighted least-squares problem, fit_matrix fit_dof = fit_target */
 extern const double FIT_WEIGHT[N_FIT_TARGET];
-extern const double FIT_A_GRID[N_GRID * N_FIT_TARGET];
-extern const double FIT_A_PASSIVE[PRESHOT_AT_LEAST_ONE(N_PASSIVE) * N_FIT_TARGET];
+extern const double FIT_G_GRID[N_FIT_TARGET * N_GRID]; /* includes FIT_WEIGHT and d_r d_z */
+extern const double FIT_G_PASSIVE[N_FIT_TARGET * PRESHOT_AT_LEAST_ONE(N_PASSIVE)];
 
 /* SETTINGS: scalar algorithm settings */
 extern const double SETTINGS_XPT_FRACTION;

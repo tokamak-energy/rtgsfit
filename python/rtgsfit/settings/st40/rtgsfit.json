@@ -11,8 +11,8 @@
         },
         "rtgsfit_mdsplus": {
             "pulse": 52014922,
-            "run_name": "RUN21",
-            "legacy_schema": true
+            "run_name": "RUN22",
+            "legacy_schema": false
         }
     },
     "signals": {
@@ -43,7 +43,7 @@
         "rtgsfit_mdsplus": {
             "enabled": false,
             "pulse": 52014922,
-            "run_name": "RUN21",
+            "run_name": "RUN22",
             "run_description": "RT-GSFit v2",
             "link_best": false
         }

@@ -4,7 +4,10 @@ This is the example of a machine other than ST40, and it needs no Tokamak Energy
 
 1. FreeGSNKE builds the machine from its pickles in `freegsnke/machine_dir` and solves a static
    free-boundary equilibrium with `ConstrainPaxisIp` profiles and the coil currents in
-   `freegsnke/currents_path`;
+   `freegsnke/currents_path`. Its current density is
+   `L (Beta0 R / Raxis + (1 - Beta0) Raxis / R) (1 - psi_norm^alpha_m)^alpha_n`, so with
+   `alpha_m = alpha_n = 1` (the bundled settings) p' and FF' are linear in `psi_norm`, as in
+   RT-GSFit's current model, and RT-GSFit can reproduce it exactly;
 2. GSFit (settings `gsfit/settings_path`, e.g. `mastu_with_synthetic_data_from_freegsnke`) reads the
    machine and the synthetic measurements from the FreeGSNKE equilibrium (GSFit stores them on
    the time base `[0, 1]`, so they are constant over the replay);
@@ -40,11 +43,21 @@ MACHINE_FILES = {
 }
 """`build_machine.tokamak` argument -> `<prefix><name>.pickle` in `freegsnke/machine_dir`."""
 
-_EQUILIBRIA: dict[str, Any] = {}
+_EQUILIBRIA: dict[str, tuple[Any, Any]] = {}
 
 
 def freegsnke_equilibrium(settings: Settings) -> Any:
     """Solve the FreeGSNKE equilibrium described by `settings["freegsnke"]` (cached)."""
+    return _solve(settings)[0]
+
+
+def freegsnke_profiles(settings: Settings) -> Any:
+    """The `ConstrainPaxisIp` profiles of `freegsnke_equilibrium(settings)`: `jtor` [A/m^2] on its
+    [n_r, n_z] grid and the coefficients `L`, `Beta0` and `Raxis` of the current density."""
+    return _solve(settings)[1]
+
+
+def _solve(settings: Settings) -> tuple[Any, Any]:
     if settings.json_text in _EQUILIBRIA:
         return _EQUILIBRIA[settings.json_text]
 
@@ -81,8 +94,8 @@ def freegsnke_equilibrium(settings: Settings) -> Any:
     tokamak.probes.initialise_setup(equilibrium)
 
     _EQUILIBRIA.clear()
-    _EQUILIBRIA[settings.json_text] = equilibrium
-    return equilibrium
+    _EQUILIBRIA[settings.json_text] = equilibrium, profiles
+    return equilibrium, profiles
 
 
 STATIC_TIME = np.array([0.0, 1.0])

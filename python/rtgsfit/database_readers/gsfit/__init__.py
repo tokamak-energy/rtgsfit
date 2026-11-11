@@ -74,6 +74,14 @@ def sensor_name(sensor: Sensor, style: str) -> str:
     raise ValueError(f"unknown gsfit/sensor_names {style!r}; use st40_pcs or gsfit")
 
 
+def _passive_dof_unit(dof: str) -> str:
+    if dof == "constant_current_density":
+        return "ampere / metre ** 2"
+    if dof.startswith("eig_"):
+        return "ampere"
+    raise ValueError(f"unsupported passive DOF type {dof!r}")
+
+
 # ----------------------------------------------------------------------------------------------
 # The GSFit controller
 # ----------------------------------------------------------------------------------------------
@@ -180,7 +188,12 @@ def limiter_mask(
     r_flat: np.ndarray, z_flat: np.ndarray, d_r: float, d_z: float,
     vessel_r: np.ndarray, vessel_z: np.ndarray, limiter_r: np.ndarray, limiter_z: np.ndarray,
 ) -> np.ndarray:  # fmt: skip
-    """Grid points inside the vessel, or within half a grid diagonal of a limiter point."""
+    """Fixed allowed-plasma region, not the instantaneous flux-derived plasma mask.
+
+    Include the vessel interior and points within half a grid diagonal of any limiter sample.
+    For ST40 the vessel contour comes from ELMAG via GSFit's first wall unit; other points
+    are excluded from carrying plasma current.
+    """
     import shapely
 
     vessel = shapely.geometry.Polygon(np.column_stack((vessel_r, vessel_z)))
@@ -256,11 +269,13 @@ def preshot_inputs(controller: Any, settings: Settings, source: str) -> PreshotI
 
     # Passive degrees of freedom, in the order of GSFit's `greens.pf_passive`
     passive_names: list[str] = []
+    passive_dof_units: list[str] = []
     g_grid_passive_columns: list[np.ndarray] = []
     passive_dofs: list[tuple[str, str]] = []
     for i_passive, passive in enumerate(passives.keys()):
         for i_dof, dof in enumerate(passives.keys([passive, "dof"])):
             passive_names.append(passive if dof == "constant_current_density" else f"{passive}_{dof.upper()}")
+            passive_dof_units.append(_passive_dof_unit(dof))
             passive_dofs.append((passive, dof))
             g_grid_passive_columns.append(np.ravel(plasma.get(ep.greens.pf_passive[i_passive].dof[i_dof].psi)))
     n_passive = len(passive_names)
@@ -347,6 +362,7 @@ def preshot_inputs(controller: Any, settings: Settings, source: str) -> PreshotI
         coil_names=list(groups),
         g_grid_coil=g_grid_coil,
         passive_names=passive_names,
+        passive_dof_units=passive_dof_units,
         g_grid_passive=g_grid_passive,
         constraint_names=[sensor_name(sensor, style) for sensor in sensors],
         n_flux_loop=sum(sensor.kind == "flux_loop" for sensor in sensors),

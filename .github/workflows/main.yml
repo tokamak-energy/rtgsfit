@@ -21,15 +21,17 @@ jobs:
         run: |
           dnf -y install dnf-plugins-core epel-release
           dnf config-manager --set-enabled powertools
-          dnf -y install gcc make openblas-devel python3.12 python3.12-pip
+          dnf -y install gcc make openblas-devel netcdf-devel tar
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Build and run the C unit tests
         run: make -C c test ARCH_FLAGS=
 
       - name: Install the Python package
         run: |
-          python3.12 -m venv .venv
-          .venv/bin/pip install -e ".[dev]"
+          uv venv --python 3.13 .venv
+          uv pip install -e ".[dev]"
 
       - name: Check Python formatting and lint
         run: |
@@ -37,7 +39,7 @@ jobs:
           .venv/bin/ruff check python tests
 
       - name: Check C formatting
-        run: .venv/bin/clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch]
+        run: .venv/bin/clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch] c/tools/*.c
 
       - name: Run the off-network tests (analytic replay, data dictionary, settings, I/O, CLI)
         run: .venv/bin/pytest

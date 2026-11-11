@@ -10,6 +10,7 @@ Names follow GSFit's object-then-property order: `current_centroid_r`, not `r_cu
 |---|---|
 | `c/src/` | Allocation-free reconstruction and its checked public/private interfaces |
 | `c/tests/` | Independent numerical and invalid-buffer tests; fixtures in `data/` |
+| `c/tools/` | `write_preshot.c`: generates the preshot C files from MDSplus or a preshot file, without Python |
 | `python/rtgsfit/` | Importable Python package; `python/` separates languages, `rtgsfit/` defines the import name |
 | `python/rtgsfit/settings/` | JSON loader, shared schema and named configurations; not Python runtime state |
 | `python/rtgsfit/database_readers/` | Machine/preshot builders and sources of recorded or synthetic input signals |
@@ -30,12 +31,13 @@ All paths in this table are relative to `python/rtgsfit/`.
 | File or package | Responsibility |
 |---|---|
 | `__init__.py`, `py.typed` | Package version and typed-package marker |
-| `__main__.py` | CLI commands: replay, preshot, dictionary and CSV generation |
+| `__main__.py` | CLI commands: replay, native-capture post-processing, preshot, dictionary and CSV generation |
 | `constants.py` | Physical constants, fixed model sizes and model coefficient labels |
 | `data_dictionary.py` | Single source of stored paths, units, shapes and generated CSV/manual tables |
 | `preshot.py` | Assemble/validate preshot matrices, initial state and generated C contract |
-| `library.py` | Build/cache the C library, check ctypes buffers, run one iteration, decode status |
+| `library.py` | Build the active C library with make, reload it when rebuilt, check ctypes buffers, run one iteration, decode status |
 | `replay.py` | Orchestrate input reading, iteration, offline collection, then output writers |
+| `capture.py` | ctypes bridge to the shared atomic C NetCDF writer, plus versioned solver-free readback |
 | `results.py` | Collect complete captured slices and validate the result dictionary |
 | `post_processing.py` | Offline fit diagnostics, poloidal fields, geometry and export-unit conversion |
 | `boundary.py` | Contour tracing and boundary shape; never part of the real-time solver |
@@ -55,7 +57,7 @@ All paths in this table are relative to `python/rtgsfit/`.
 | `database_readers/st40_mdsplus/__init__.py` | Read PCS-equivalent ST40 magnetic and PSU signals through mdsthin |
 | `database_writers/__init__.py` | Writer interfaces and dispatch |
 | `database_writers/local/__init__.py` | Write the same dictionary as a local NPZ archive |
-| `database_writers/c_source/__init__.py` | Emit preshot C arrays and compile-time size enums |
+| `database_writers/c_source/__init__.py` | Write the preshot file for the C generator and make it the active preshot; CRC-32 checksum |
 | `database_writers/rtgsfit_mdsplus/__init__.py` | Check CSV consistency and write via standard_utility with mdsthin explicitly selected |
 
 ## C modules

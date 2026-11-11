@@ -38,7 +38,7 @@ def post_process(nested: dict[str, Any], preshot: Preshot) -> None:
     target[:, :n_constraint] = (measured - coil_response) * weight[:n_constraint]
     prediction = np.zeros_like(target)
     prediction[:, :n_constraint] = (reconstructed - coil_response) * weight[:n_constraint]
-    prediction[:, n_constraint:] = fit["DOF_VALUES"][:, n_plasma:] @ preshot["FIT:A_PASSIVE"][:, n_constraint:]
+    prediction[:, n_constraint:] = fit["DOF_VALUES"][:, n_plasma:] @ preshot["FIT:G_PASSIVE"][n_constraint:].T
     prediction[~valid] = np.nan
     fit.update(
         TARGET_NAMES=list(preshot["FIT:TARGET_NAMES"]),
@@ -48,12 +48,7 @@ def post_process(nested: dict[str, Any], preshot: Preshot) -> None:
         CHI_SQ=(prediction - target) ** 2,
     )
     fit["FF_PRIME"] = np.where(valid, fit["DOF_VALUES"][:, 1] * float(preshot["INFO:MU0"]), np.nan)
-    fit["DOF_UNITS"] = [
-        "ampere / metre ** 3",
-        "ampere / metre",
-        "ampere / metre",
-        *(["ampere"] * sizes["N_PASSIVE"]),
-    ]
+    fit["DOF_UNITS"] = list(preshot["FIT:DOF_UNITS"])
     for name in family_names:
         values = constraints[name]["ALL"]
         residual = values["RECONSTRUCT"] - values["MEASURED"]
@@ -79,7 +74,7 @@ def post_process(nested: dict[str, Any], preshot: Preshot) -> None:
     profile["PSI"] *= flux_factor
     nested["GLOBAL"]["PSI_MAG_AXIS"] *= flux_factor
     nested["BOUNDARY"]["PSI"] *= flux_factor
-    nested["XPOINTS"]["ALL"]["PSI"] *= flux_factor
+    nested["XPT"]["ALL"]["PSI"] *= flux_factor
     flux_loops = constraints["FLUX_LOOP"]["ALL"]
     for name in ("MEASURED", "RECONSTRUCT", "RESIDUAL"):
         flux_loops[name] *= flux_factor
@@ -100,5 +95,5 @@ def post_process(nested: dict[str, Any], preshot: Preshot) -> None:
         volume[i_time] = np.pi / 3.0 * abs(np.sum((r + r_next) * cross))
         perimeter[i_time] = np.sum(np.hypot(r_next - r, z_next - z))
     nested["GLOBAL"].update(AREA=area, VOLUME=volume, LENGTH_POL=perimeter)
-    nested["INPUT"]["SCHEMA"] = "rtgsfit-4; DOF naming; exported flux in Wb; capture/preshot in native units"
+    nested["INPUT"]["SCHEMA"] = "rtgsfit-5; DOF naming; XPT; exported flux in Wb; capture/preshot in native units"
     nested["INPUT"]["COCOS"] = np.int32(13)

@@ -126,6 +126,7 @@ class AnalyticReader(PreshotReader, SignalsReader):
             coil_names=["COIL"],
             g_grid_coil=np.zeros((n_r * n_z, 1)),
             passive_names=[f"PASSIVE_{i}" for i in range(n_passive)],
+            passive_dof_units=["ampere"] * n_passive,
             g_grid_passive=greens.psi(r_flat[:, None], z_flat[:, None], passive_r[None, :], passive_z[None, :]),
             constraint_names=names,
             n_flux_loop=n_loop,

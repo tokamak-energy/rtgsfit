@@ -3,6 +3,8 @@
 Keys are `Node.key`, e.g. `GLOBAL.IP` or `PRESHOT.GRID.R`, so a local file has exactly the nodes of
 the MDSplus tree. Strings are stored as numpy unicode arrays, so the file can be read with
 `numpy.load(path)` without pickling; `rtgsfit.database_readers.local` converts them back.
+Relative writer paths are resolved under the build cache (by default the repository's `c/cache/`).
+Absolute paths are explicit exports and are used unchanged.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ import numpy as np
 
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_writers import DatabaseWriter
+from rtgsfit.library import cache_directory
 from rtgsfit.preshot import Preshot
 from rtgsfit.settings import Settings
 
@@ -38,18 +41,18 @@ def write_npz(path: str | Path, nested: dict[str, Any]) -> Path:
     return path if path.suffix == ".npz" else path.with_name(path.name + ".npz")
 
 
-def _output_path(settings: Settings, default_name: str) -> Path:
+def _output_path(settings: Settings, key: str, default_name: str) -> Path:
     local = settings.get("writers", {}).get("local", {})
-    return Path(local.get("path", default_name))
+    path = Path(local.get(key, default_name))
+    return path if path.is_absolute() else cache_directory() / path
 
 
 class LocalWriter(DatabaseWriter):
     def write_preshot(self, preshot: Preshot, settings: Settings) -> None:
-        local = settings.get("writers", {}).get("local", {})
-        path = Path(local.get("preshot_path", "rtgsfit_preshot.npz"))
+        path = _output_path(settings, "preshot_path", "rtgsfit_preshot.npz")
         written = write_npz(path, preshot.to_nested())
         print(f"Wrote the preshot to {written}")
 
     def write_results(self, results: Results, settings: Settings) -> None:
-        written = write_npz(_output_path(settings, "rtgsfit_results.npz"), results.nested)
+        written = write_npz(_output_path(settings, "path", "rtgsfit_results.npz"), results.nested)
         print(f"Wrote the results to {written}")
