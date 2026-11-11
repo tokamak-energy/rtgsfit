@@ -151,7 +151,7 @@ Provenance.
 
 | Node | C name | Shape | Type | Unit | Description |
 |---|---|---|---|---|---|
-| `PRESHOT.INFO:SETTINGS` |  | scalar | str | dimensionless | Archived settings that produced the preshot; JSON for new builds, legacy XML retained |
+| `PRESHOT.INFO:SETTINGS` |  | scalar | str | dimensionless | Archived JSON settings that produced the preshot |
 | `PRESHOT.INFO:MU0` |  | scalar | float64 | henry / metre | Permeability used for the current basis |
 | `PRESHOT.INFO:PSI_TO_WB` |  | scalar | float64 | dimensionless | Native-to-weber factor; 1 for all new preshots, 2 pi only for legacy analytic Wb/rad archives |
 | `PRESHOT.INFO:SOURCE` |  | scalar | str | dimensionless | Database reader and code version that produced the preshot |

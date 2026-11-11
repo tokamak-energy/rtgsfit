@@ -7,7 +7,9 @@ Settings:
 
 The signal names come from the preshot: `PRESHOT.MEAS:NAMES` are PCS names such as
 `PSI_FLOOP_007`, `B_BPPROBE_101` or `I_ROG_INIVC000`, and `PRESHOT.COIL:SIGNALS` are PCS names such as
-`I_SOL_PSU` or `I_ROG_MCWIRE`. Every signal is linearly interpolated onto the replay times.
+`I_SOL_PSU` or `I_ROG_MCWIRE`. Every signal is linearly interpolated onto the replay times. Replay
+times outside the time range recorded by every signal are dropped, rather than given the first or last
+recorded value, so a generous `replay/time_end` cannot replay made-up data.
 
 All reads use `mdsthin`; neither the native MDSplus bindings nor `st40_database` are needed.
 """
@@ -59,6 +61,7 @@ class St40MdsplusReader(SignalsReader):
             connection.openTree("ST40", pulse)
             root = f"\\MAG::TOP.{section.get('mag_run', 'BEST')}"
             mag_time = np.asarray(connection.get(f"dim_of({root}.BPPROBE.P101:B)").data(), dtype=np.float64)
+            recorded = (time >= mag_time[0]) & (time <= mag_time[-1])
 
             def from_mag(pcs_name: str) -> np.ndarray:
                 structure, _, quantity = mag_node(pcs_name).rpartition(".")
@@ -75,6 +78,12 @@ class St40MdsplusReader(SignalsReader):
                 path = psu_node(name)
                 value = np.asarray(connection.get(path).data(), dtype=np.float64)
                 value_time = np.asarray(connection.get(f"dim_of({path})").data(), dtype=np.float64)
+                recorded &= (time >= value_time[0]) & (time <= value_time[-1])
                 coil_signal[:, i] = np.interp(time, value_time, value)
 
-        return Signals(time=time, meas=meas, coil_signal=coil_signal)
+        if not recorded.any():
+            raise ValueError(
+                f"pulse {pulse} has no replay time from {time[0]} s to {time[-1]} s recorded by every MAG "
+                "and PSU signal"
+            )
+        return Signals(time=time[recorded], meas=meas[recorded], coil_signal=coil_signal[recorded])

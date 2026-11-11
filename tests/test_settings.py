@@ -169,11 +169,6 @@ def test_schema_hint_cannot_override_runtime_validation() -> None:
         parse_settings(json.dumps(values))
 
 
-def test_xml_input_has_an_explicit_migration_error(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="no longer supported"):
-        load_settings(tmp_path / "rtgsfit.xml")
-
-
 def test_replay_times_include_the_end() -> None:
     settings = load_settings("analytic").copy_with(
         {

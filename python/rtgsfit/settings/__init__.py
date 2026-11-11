@@ -139,8 +139,6 @@ def load_settings(name_or_path: str | Path) -> Settings:
     path = Path(name_or_path).expanduser()
     if path.suffix == ".json":
         return parse_settings(path.read_text(), name=str(path))
-    if path.suffix == ".xml":
-        raise ValueError("XML settings are no longer supported; use an rtgsfit.json configuration")
     resource = resources.files(__name__) / str(name_or_path) / "rtgsfit.json"
     if not resource.is_file():
         raise FileNotFoundError(f"no settings '{name_or_path}'; available: {', '.join(available_settings())}")

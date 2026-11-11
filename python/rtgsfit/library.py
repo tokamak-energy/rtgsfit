@@ -4,7 +4,7 @@ The preshot is compiled into the library. `build_library` writes it to `c/build/
 `make`, which generates `c/src/preshot_sizes.h` and `c/src/preshot_data.c` with the C generator
 `c/tools/write_preshot.c` and compiles `c/build/librtgsfit.so`. Make recompiles only what changed, so
 building the same preshot again is quick. There is one build, of the last preshot built, so build from
-one process at a time.
+one process at a time, or give each process its own copy of the C sources with `isolated_build()`.
 """
 
 from __future__ import annotations
@@ -12,7 +12,11 @@ from __future__ import annotations
 import _ctypes
 import ctypes
 import os
+import shutil
 import subprocess
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -86,6 +90,8 @@ def build_directory() -> Path:
 PRESHOT_FILE = "preshot.bin"
 """The preshot file that `build_library` writes into `build_directory()` for `make`."""
 LIBRARY = "librtgsfit.so"
+GENERATED_SOURCES = ("preshot_sizes.h", "preshot_data.c")
+"""Written into `c/src/` by `make` for the active preshot; not version-controlled."""
 
 
 @dataclass(frozen=True)
@@ -157,6 +163,45 @@ def _load_library(path: Path) -> _LoadedLibrary:
         _ctypes.dlclose(loaded.cdll._handle)
     _LOADED[path] = _LoadedLibrary(file_id, ctypes.CDLL(str(path), mode=ctypes.RTLD_LOCAL))
     return _LOADED[path]
+
+
+def _unload_libraries(directory: Path) -> None:
+    """Unload every library loaded from under `directory`; `Rtgsfit` objects that use one then raise."""
+    for path in [path for path in _LOADED if path.is_relative_to(directory)]:
+        loaded = _LOADED.pop(path)
+        loaded.unloaded = True
+        _ctypes.dlclose(loaded.cdll._handle)
+
+
+@contextmanager
+def isolated_build() -> Iterator[Path]:
+    """Build and load the library from a temporary copy of the C sources inside the `with` block.
+
+    Processes that share the C sources, such as PPAC jobs for different pulses, would otherwise overwrite
+    each other's active preshot. `$RTGSFIT_C_DIR` points at the copy inside the block, and
+    `$RTGSFIT_CACHE_DIR` at the usual cache, so cached outputs outlive the copy. On leaving the block the
+    library built there is unloaded and the copy deleted.
+    """
+    source = c_directory().resolve()
+    cache = cache_directory().resolve()
+    saved = {name: os.environ.get(name) for name in ("RTGSFIT_C_DIR", "RTGSFIT_CACHE_DIR")}
+    with tempfile.TemporaryDirectory(prefix="rtgsfit_") as temporary:
+        copy = Path(temporary).resolve() / "c"
+        copy.mkdir()
+        shutil.copy2(source / "Makefile", copy / "Makefile")
+        shutil.copytree(source / "src", copy / "src", ignore=shutil.ignore_patterns(*GENERATED_SOURCES))
+        shutil.copytree(source / "tools", copy / "tools")
+        os.environ["RTGSFIT_C_DIR"] = str(copy)
+        os.environ["RTGSFIT_CACHE_DIR"] = str(cache)
+        try:
+            yield copy
+        finally:
+            _unload_libraries(copy)
+            for name, value in saved.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
 
 
 @dataclass

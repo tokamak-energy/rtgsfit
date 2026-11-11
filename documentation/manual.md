@@ -523,6 +523,7 @@ python/rtgsfit/
 ├── preshot.py            Preshot, assemble_preshot(), validation
 ├── library.py            builds and loads librtgsfit.so (ctypes); Rtgsfit, describe_status()
 ├── replay.py             read preshot -> read signals -> call rtgsfit() -> collect -> write
+├── ppac.py               RtgsfitReplay: post-shot replay of one ST40 pulse for PPAC (section 7.5)
 ├── results.py            Results, and collect_results()
 ├── boundary.py           post-processed boundary outline and shape (section 4.11)
 ├── database_readers/     analytic, local, gsfit, freegsnke, rtgsfit_mdsplus, st40_mdsplus
@@ -539,9 +540,8 @@ python/rtgsfit/
     rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
     rtgsfit write-data-dictionary documentation/data_dictionary.md
 
-`rtgsfit` is `python -m rtgsfit`. `--set PATH=VALUE` overrides any setting; the type is that of the
-existing setting, or given explicitly as `PATH:TYPE=VALUE` for a new one (`int`, `float`, `bool`,
-`str`, `float_array`, `str_array`).
+`rtgsfit` is `python -m rtgsfit`. `--set PATH=VALUE` overrides any setting; the settings schema
+(section 8) gives its type.
 
 ### 7.2 From Python
 
@@ -579,7 +579,7 @@ or both.
 
 `st40_mdsplus` reads exactly the signals the PCS sees, by their PCS names (`PSI_FLOOP_007`,
 `I_SOL_PSU`, ...). Signals are linearly interpolated onto the replay times; the PSU currents use
-their own time base. All reads use `mdsthin` directly, without `st40_database` or the native
+their own time base. Replay times outside the range recorded by every signal are dropped. All reads use `mdsthin` directly, without `st40_database` or the native
 MDSplus Python bindings. MAG is opened through ST40 so its RAW_MAG links resolve; the shared MAG
 time base is `dim_of(BPPROBE.P101:B)`, matching the ST40 database template.
 
@@ -603,72 +603,94 @@ The low-level `write_npz(path, ...)` function uses its caller-supplied path unch
 Both tree creation and writing explicitly pass `use_mdsthin=True` to `standard_utility`.
 The MDSplus server remains the storage backend; no native MDSplus client installation is required.
 
-### 7.5 Historical ST40 replays for PPAC
+### 7.5 Post-shot replays in PPAC
 
-For a post-shot survey, build a fresh preshot for **each pulse**, then replay that pulse using
-MAG `BEST` and the PSU signals. There is no need to reuse the stored RUN22 preshot or run GSFit's
-inverse solver. Select `preshot/reader = gsfit`: changing only `preshot/builder` does **not** change
-which preshot a replay reads.
-
-Use GSFit's `st40_setup_for_rtgsfit` settings, with
-`GSFIT_code_settings.json` -> `database_reader/st40_mdsplus/workflow/mag/run_name = BEST`
-and `pulseNo = null` (the current settings). This selects the pulse's MAG `BEST` for building
-the preshot as well as for reading the signals below. Check this if using a different GSFit
-settings directory; `signals/st40_mdsplus/mag_run` does not override GSFit's own workflow.
-
-This example replays two pulses sequentially from 0 to 300 ms, including times before plasma
-formation or after termination. Nonzero solver statuses do not stop the replay. Change the pulses
-and extend the time window for the survey as appropriate for the archived signal coverage:
+`rtgsfit.RtgsfitReplay` (`ppac.py`) is the whole post-shot replay of one ST40 pulse, with the
+constructor PPAC calls (`neo_ppac/slurm_python_job.py`). It recomputes the pulse after the event,
+so it can scan old pulses. It does not import what the PCS computed during the pulse.
 
 ```python
-from datetime import datetime, timezone
+from rtgsfit import RtgsfitReplay
 
-from rtgsfit.library import cache_directory
-from rtgsfit.replay import run_replay
-from rtgsfit.settings import load_settings
-
-output = cache_directory().resolve() / "ppac" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-output.mkdir(parents=True, exist_ok=False)
-
-for pulse in (13343, 13345):
-    settings = load_settings("st40").copy_with({
-        "preshot/reader": "gsfit",
-        "gsfit/settings_path": "st40_setup_for_rtgsfit",
-        "gsfit/pulse": pulse,
-        "replay/pulse": pulse,
-        "replay/time_start": 0.0,
-        "replay/time_end": 0.3,
-        "replay/time_step": 0.001,
-        "replay/repeat": 1,
-        "replay/stop_on_status": False,
-        "replay/stop_below_ip": 0.0,
-        "signals/reader": "st40_mdsplus",
-        "signals/st40_mdsplus/mag_run": "BEST",
-        "capture/path": str(output / f"{pulse}.nc"),
-        "writers/names": ["local"],
-        "writers/local/path": str(output / f"{pulse}.npz"),
-    })
-    print(f"Replaying pulse {pulse}", flush=True)
-    results = run_replay(settings, verbose=False)
-    status = results["GLOBAL.STATUS"]
-    print(f"{pulse}: {(status != 0).sum()} / {len(status)} slices have nonzero status")
+controller = RtgsfitReplay(pulseNo=14922, run_name="RUN01_POST", run_description="...",
+                           pulseNo_write=14922, link_run_to_best=True)
+results = controller.run()
 ```
 
-Each pulse writes a native `.nc` capture before processing and a processed `.npz` result.
-Both contain the newly built preshot, input signals, settings and per-slice status.
-The timestamped directory keeps separate surveys from overwriting each other.
-The loop stops with an exception on a read/build failure, leaving earlier files intact; nonzero
-solver statuses are retained and reported, not silently treated as successful reconstructions.
-Run one replay at a time because all pulses share the active C build; do not run this loop alongside
-tests or another process that rebuilds that library.
+The run defaults to `RUN01_POST` of the `RTGSFIT` tree and is linked to `BEST`, making the replay
+available to downstream analyses that consume the preferred RT-GSFit result.
 
-Do not use failure as a detector of the end of recorded data: the current `st40_mdsplus` reader
-uses `numpy.interp`, which holds the first/last value outside a signal's recorded time range.
-A production PPAC runner needs an explicit signal-coverage check, not just a large `time_end`.
+`run()` uses no state from earlier pulses:
 
-Unlike the vs-GSFit test, this loop does **not** replace PSU signals with PSU2COIL currents.
-GSFit's preshot builder still initialises its own readers, so its configured ELMAG and PSU2COIL
-runs must exist even though PSU2COIL currents are not passed to the RT-GSFit replay.
+1. it builds a fresh preshot with GSFit (`preshot/reader = gsfit`, `gsfit/pulse`), so the machine
+   description and sensors are this pulse's. GSFit's inverse solver is not run;
+2. it reads this pulse's MAG `BEST` and PSU signals by their PCS names (`st40_mdsplus`);
+3. it compiles the preshot in a private temporary copy of `c/` (`library.isolated_build()`), so
+   concurrent jobs and the repository's active preshot (section 6.6) are untouched, and calls
+   `rtgsfit()` every millisecond over the PCS's window;
+4. it writes the results, which contain the preshot, settings and input signals, to the `RTGSFIT`
+   tree.
+
+All other settings come from the `st40` configuration. `write_to_mds=False` skips the MDSplus write,
+`settings=` changes the base configuration, and `overrides=` (slash-separated paths) is applied last.
+For example, a survey that keeps local files:
+
+```python
+for pulse in (13343, 13345):
+    RtgsfitReplay(pulseNo=pulse, write_to_mds=False, verbose=False, overrides={
+        "writers/names": ["local"],
+        "writers/local/path": f"ppac/{pulse}.npz",
+        "capture/path": f"ppac/{pulse}.nc",
+    }).run()
+```
+
+Relative paths are under `c/cache/` (section 7.4). The `.nc` capture is written before processing.
+
+**Time window.** The PCS enables RT-GSFit for PCS clock times 1.1055 s to 1.7 s
+(`RT_Diagnostics.c`; the PCS clock starts at pulse time `MDL_T_OFFSET_S` = −1.1 s). Each time it is
+enabled, it starts from the initial `psi_norm` and `mask`. `RtgsfitReplay` therefore replays 5.5 ms to
+600 ms every 1 ms, from the preshot's initial conditions. Do not start earlier: on
+pulse 14922 a replay from 0 ms locks onto a one-cell "plasma" (area 0.0006 m², χ²_MAG ≈ 2.5e4 against
+≈ 2.6e2) that keeps status 0 for the whole pulse. Replays from 4 ms or later all converge to the
+same equilibrium.
+
+**Status 0 is not proof of a plasma.** After the plasma ends, a slice can lock onto a tiny current
+filament with status 0. On 14922 the plasma's status-0 slices end at 266.5 ms. From 519.5 ms to
+599.5 ms, a 4–5 kA "plasma" of 0.001 m² at R = 0.83 m, Z = −0.57 m again returns status 0.
+Use `GLOBAL.AREA`, `GLOBAL.IP` and `CONSTRAINTS.CHI_SQ_MAG` together with `GLOBAL.STATUS`.
+The PCS has the same behaviour.
+
+**Signal coverage.** `st40_mdsplus` drops replay times outside the range recorded by every MAG and
+PSU signal, rather than holding a signal's first or last value, and fails if no time remains.
+
+**GSFit settings and dependencies.** The `st40` default `gsfit/settings_path` is GSFit's
+`st40_setup_for_rtgsfit`, whose `GSFIT_code_settings.json` sets
+`database_reader/st40_mdsplus/workflow/mag/run_name = BEST` and `pulseNo = null`. Check this if
+using another GSFit settings directory: `signals/st40_mdsplus/mag_run` does not change GSFit's own
+workflow. GSFit's preshot builder initialises all its readers, so the configured ELMAG and PSU2COIL
+runs must exist, although PSU2COIL currents are not passed to the replay (unlike the vs-GSFit
+test). In `ppac_scripts.py` the replay therefore depends on PSU2COIL. PPAC passes
+`link_run_to_best=True` to every Python package whose entry does not set it, which matches the
+replay's default:
+
+```python
+RTGSFIT_REPLAY=dict(
+    package_name="rtgsfit",
+    class_name="RtgsfitReplay",
+    dependencies=["PSU2COIL"],
+    chain=1,
+    tree=["RTGSFIT"],
+    engine="python_package",
+    run_name="RUN01_POST",
+    run_description="RT-GSFit post-shot replay",
+),
+```
+
+On pulse 14922 a run takes about 50 s, most of it building the GSFit preshot, and uses 1.5 GB.
+That is within PPAC's default 600 s and 4 GB.
+The PPAC environment needs rtgsfit installed from a checkout (it compiles `c/`), with gcc, OpenBLAS
+and the netCDF C library. It also needs GSFit with its ST40 extras, `mdsthin`, and a
+`standard_utility` whose `RTGSFIT.csv` matches the data dictionary (section 7.4).
 
 Rebuilding follows the pulse's geometry and sensor list, but MAG `BEST` is **not** an automatic
 dead-sensor mask. GSFit's `include` flags and weights, and RT-GSFit's coil mapping and sensor
@@ -781,8 +803,7 @@ not part of this capture change.
 
 Settings are ordinary JSON objects. `load_settings(name)` loads
 `python/rtgsfit/settings/<name>/rtgsfit.json`, or a supplied JSON file path.
-Numbers, booleans, strings and arrays use native JSON types; there are no `type` wrappers.
-Coil matrices are arrays of rows, not a flattened string of numbers.
+Numbers, booleans, strings and arrays use native JSON types, and coil matrices are arrays of rows.
 
 `settings/settings.schema.json` defines types, allowed values, descriptions and units once.
 The loader validates against the packaged schema, independent of the editor's `$schema` hint.
@@ -790,13 +811,12 @@ VS Code uses the same schema for completion, hover documentation and diagnostics
 duplicate keys, invalid types, nonfinite numbers and invalid ranges are rejected with an error.
 JSON comments and trailing commas are not supported.
 
-Each configuration is self-contained: XML `href` links are intentionally not carried over.
+Each configuration is self-contained.
 Effective JSON, including CLI overrides, is archived in `INPUT:SETTINGS` and, for newly built
 preshots, `PRESHOT.INFO:SETTINGS`. `Settings.json_text` validates and serialises current values.
-Older preshot archives retain their original XML provenance as text; it is not treated as new
-JSON input. GSFit's own settings are managed by GSFit and are not converted by this change.
+GSFit's own settings, selected by `gsfit/settings_path`, belong to GSFit and are not part of this schema.
 
-Override paths remain slash-separated. Values are JSON literals, with unquoted strings allowed:
+Override paths are slash-separated. Values are JSON literals, with unquoted strings allowed:
 
 ```sh
 rtgsfit replay analytic --set replay/time_step=0.002 --set build/timing=true
@@ -804,9 +824,8 @@ rtgsfit replay analytic --set 'writers/names=["local"]' --set writers/local/path
 rtgsfit replay path/to/run.json --set replay/pulse=13343
 ```
 
-Optional settings such as `build/debug` need no type suffix: the shared schema supplies the type.
-The old `path:type=value` syntax is removed, and `.xml` configuration paths give an explicit
-migration error. Use the bundled JSON presets as templates for private runs; copy the schema hint
+The shared schema supplies the type of every setting, including optional ones such as `build/debug`.
+Use the bundled JSON presets as templates for private runs; copy the schema hint
 with an adjusted relative path if needed, or use the workspace schema association.
 
 | Section | Contents |

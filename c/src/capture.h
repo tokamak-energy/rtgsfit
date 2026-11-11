@@ -37,8 +37,9 @@ struct rtgsfit_capture_variable
 /*
  * Write an rtgsfit-capture-2 NetCDF-4 file atomically. The writer sources compiled preshot nodes
  * from librtgsfit and accepts the other 14 preshot nodes in `variables`. It includes both the
- * solver CRC and a CRC over the complete embedded preshot. Returns 0 on success and -1 on failure;
- * call rtgsfit_capture_last_error().
+ * solver CRC and a CRC over the complete embedded preshot. Returns 0 on success,
+ * RTGSFIT_ERR_ARGUMENT_SIZE for a negative length or a null array with a positive length, and -1 on
+ * any other failure; call rtgsfit_capture_last_error().
  */
 int32_t rtgsfit_capture_write(const char *path,
                               const char *settings_json,
@@ -46,9 +47,9 @@ int32_t rtgsfit_capture_write(const char *path,
                               const char *code_version,
                               int32_t timing_enabled,
                               const struct rtgsfit_capture_dimension dimensions[],
-                              size_t n_dimensions,
+                              int32_t n_dimensions,
                               const struct rtgsfit_capture_variable variables[],
-                              size_t n_variables);
+                              int32_t n_variables);
 
 const char *rtgsfit_capture_last_error(void);
 

@@ -19,6 +19,7 @@ from rtgsfit.library import TIMING_SECTIONS
 from rtgsfit.library import SliceResult
 from rtgsfit.library import _load_library
 from rtgsfit.library import build_library
+from rtgsfit.library import describe_status
 from rtgsfit.preshot import Preshot
 from rtgsfit.results import Results
 from rtgsfit.results import collect_results
@@ -194,9 +195,9 @@ def write_capture(path: str | Path, capture: Capture, library_path: str | Path |
         ctypes.c_char_p,
         ctypes.c_int32,
         ctypes.POINTER(_CDimension),
-        ctypes.c_size_t,
+        ctypes.c_int32,
         ctypes.POINTER(_CVariable),
-        ctypes.c_size_t,
+        ctypes.c_int32,
     ]
     library.cdll.rtgsfit_capture_last_error.restype = ctypes.c_char_p
 
@@ -264,20 +265,12 @@ def write_capture(path: str | Path, capture: Capture, library_path: str | Path |
         capture.preshot_source.encode(),
         capture.code_version.encode(),
     )
-    if (
-        function(
-            encoded_path,
-            *metadata,
-            int(timed),
-            dimensions,
-            len(sizes),
-            c_variables,
-            len(variables),
-        )
-        != 0
-    ):
+    status = function(encoded_path, *metadata, int(timed), dimensions, len(sizes), c_variables, len(variables))
+    if status != 0:
         error = library.cdll.rtgsfit_capture_last_error()
-        raise OSError(error.decode("utf-8", errors="replace") if error else "C capture writer failed")
+        raise OSError(
+            error.decode("utf-8", errors="replace") if error else f"C capture writer failed: {describe_status(status)}"
+        )
     return path
 
 

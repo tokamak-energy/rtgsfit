@@ -357,7 +357,7 @@ def _preshot_nodes() -> list[Node]:
             "SETTINGS",
             "TEXT",
             "dimensionless",
-            "Archived settings that produced the preshot; JSON for new builds, legacy XML retained",
+            "Archived JSON settings that produced the preshot",
             (),
             "str",
             in_c=False,

@@ -35,8 +35,9 @@ All paths in this table are relative to `python/rtgsfit/`.
 | `constants.py` | Physical constants, fixed model sizes and model coefficient labels |
 | `data_dictionary.py` | Single source of stored paths, units, shapes and generated CSV/manual tables |
 | `preshot.py` | Assemble/validate preshot matrices, initial state and generated C contract |
-| `library.py` | Build the active C library with make, reload it when rebuilt, check ctypes buffers, run one iteration, decode status |
+| `library.py` | Build the active C library with make, reload it when rebuilt, check ctypes buffers, run one iteration, decode status; `isolated_build()` compiles in a private temporary copy of `c/` |
 | `replay.py` | Orchestrate input reading, iteration, offline collection, then output writers |
+| `ppac.py` | `RtgsfitReplay`: PPAC's post-shot replay of one ST40 pulse (GSFit preshot, MAG `BEST` replay over the PCS window, MDSplus write to `RUN01_POST`) |
 | `capture.py` | ctypes bridge to the shared atomic C NetCDF writer, plus versioned solver-free readback |
 | `results.py` | Collect complete captured slices and validate the result dictionary |
 | `post_processing.py` | Offline fit diagnostics, poloidal fields, geometry and export-unit conversion |

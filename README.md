@@ -72,6 +72,7 @@ creation and writing, with its `mdsthin` transport explicitly selected.
 | FreeGSNKE MAST-U-like replay (`rtgsfit replay freegsnke`) | ✅ | [GSFit](https://github.com/tokamak-energy/gsfit) and [FreeGSNKE](https://github.com/FusionComputingLab/freegsnke), with FreeGSNKE's example machine files |
 | ST40 preshot (`rtgsfit preshot st40`) | ❌ | GSFit and ST40 data in MDSplus |
 | ST40 replay (`rtgsfit replay st40`) | ❌ | `mdsthin` and access to the MAG/ST40 and RTGSFIT trees |
+| PPAC post-shot replay of one pulse (`rtgsfit.RtgsfitReplay`, [manual section 7.5](documentation/manual.md#75-post-shot-replays-in-ppac)) | ❌ | GSFit, `mdsthin`, ST40 data in MDSplus; `standard_utility` to write |
 | Build the PCS library from MDSplus (`make -C c SHOT=... RUN_NAME=...`) | ❌ | MDSplus |
 | Write to the `RTGSFIT` MDSplus tree | ❌ | MDSplus, `standard_utility`, write access |
 | ST40 tests and RT-GSFit vs GSFit (`pytest --te-network`) | ❌ | all of the above |

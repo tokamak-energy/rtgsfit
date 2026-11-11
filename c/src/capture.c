@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "argument_check.h"
 #include "preshot.h"
 #include "rtgsfit.h"
 
@@ -195,6 +196,7 @@ enum
     N_COMPILED_NODES = sizeof(compiled_nodes) / sizeof(compiled_nodes[0]),
     N_EXTRA_PRESHOT_NODES = sizeof(extra_preshot_nodes) / sizeof(extra_preshot_nodes[0]),
     N_PRESHOT_NODES = sizeof(preshot_node_order) / sizeof(preshot_node_order[0]),
+    N_ROOT_GROUPS = 3, /* PRESHOT, INPUT, OUTPUT */
 };
 _Static_assert(N_PRESHOT_NODES + RTGSFIT_SIZE_COUNT == 61,
                "capture preshot order must cover the complete data dictionary");
@@ -217,20 +219,25 @@ static uint32_t crc32_update(uint32_t crc, const void *data, const size_t size)
     return ~crc;
 }
 
-static int find_variable(const struct rtgsfit_capture_variable variables[],
-                         const size_t n_variables,
-                         const char *group,
-                         const char *name)
+/* Sets `*index` to the variable's index, or -1 if there is none. */
+static int32_t find_variable(const struct rtgsfit_capture_variable variables[],
+                             const int32_t n_variables,
+                             const char *group,
+                             const char *name,
+                             int32_t *index)
 {
-    for (size_t i = 0; i < n_variables; i++)
+    RTGSFIT_CHECK_ARRAY(variables, n_variables);
+    *index = -1;
+    for (int32_t i = 0; i < n_variables; i++)
     {
         if (variables[i].group != NULL && variables[i].name != NULL &&
             strcmp(variables[i].group, group) == 0 && strcmp(variables[i].name, name) == 0)
         {
-            return (int)i;
+            *index = i;
+            break;
         }
     }
-    return -1;
+    return RTGSFIT_OK;
 }
 
 static uint32_t checksum_variable(uint32_t checksum,
@@ -260,28 +267,35 @@ static uint32_t checksum_variable(uint32_t checksum,
     return checksum;
 }
 
-static uint32_t checksum_preshot(const struct rtgsfit_capture_variable variables[],
-                                 const size_t n_variables)
+/* Sets `*result` to the CRC over the complete preshot, or 0 if a preshot node is missing. */
+static int32_t checksum_preshot(const struct rtgsfit_capture_variable variables[],
+                                const int32_t n_variables,
+                                uint32_t *result)
 {
+    RTGSFIT_CHECK_ARRAY(variables, n_variables);
+    *result = 0;
     uint32_t checksum = 0;
     char key[128];
     for (size_t i = 0; i < RTGSFIT_SIZE_COUNT; i++)
     {
-        const int index = find_variable(variables, n_variables, "PRESHOT/SIZES", size_names[i]);
-        if (index < 0)
+        int32_t index;
+        const int32_t status =
+            find_variable(variables, n_variables, "PRESHOT/SIZES", size_names[i], &index);
+        if (status != RTGSFIT_OK || index < 0)
         {
-            return 0;
+            return status;
         }
         snprintf(key, sizeof(key), "PRESHOT.SIZES.%s", size_names[i]);
         checksum = checksum_variable(checksum, &variables[index], key);
     }
     for (size_t i = 0; i < N_PRESHOT_NODES; i++)
     {
-        const int index = find_variable(variables, n_variables, preshot_node_order[i].group,
-                                        preshot_node_order[i].name);
-        if (index < 0)
+        int32_t index;
+        const int32_t status = find_variable(variables, n_variables, preshot_node_order[i].group,
+                                             preshot_node_order[i].name, &index);
+        if (status != RTGSFIT_OK || index < 0)
         {
-            return 0;
+            return status;
         }
         snprintf(key, sizeof(key), "%s.%s", preshot_node_order[i].group,
                  preshot_node_order[i].name);
@@ -294,7 +308,8 @@ static uint32_t checksum_preshot(const struct rtgsfit_capture_variable variables
         }
         checksum = checksum_variable(checksum, &variables[index], key);
     }
-    return checksum;
+    *result = checksum;
+    return RTGSFIT_OK;
 }
 
 const char *rtgsfit_capture_last_error(void)
@@ -322,9 +337,11 @@ static int valid_group(const char *group)
 }
 
 static int get_variable_group(const int root_groups[],
+                              const int32_t n_root_groups,
                               const struct rtgsfit_capture_variable *variable,
                               int *group_id)
 {
+    RTGSFIT_CHECK_SIZE(n_root_groups, N_ROOT_GROUPS);
     if (strcmp(variable->group, "INPUT") == 0)
     {
         *group_id = root_groups[1];
@@ -345,13 +362,14 @@ static int get_variable_group(const int root_groups[],
 }
 
 static int find_dimension(const struct rtgsfit_capture_dimension dimensions[],
-                          const size_t n_dimensions,
+                          const int32_t n_dimensions,
                           const int root,
                           const char *name,
                           int *dimension_id,
                           size_t *size)
 {
-    for (size_t i = 0; i < n_dimensions; i++)
+    RTGSFIT_CHECK_ARRAY(dimensions, n_dimensions);
+    for (int32_t i = 0; i < n_dimensions; i++)
     {
         if (strcmp(dimensions[i].name, name) == 0)
         {
@@ -364,8 +382,9 @@ static int find_dimension(const struct rtgsfit_capture_dimension dimensions[],
 
 static int validate_variable(const struct rtgsfit_capture_variable *variable,
                              const struct rtgsfit_capture_dimension dimensions[],
-                             const size_t n_dimensions)
+                             const int32_t n_dimensions)
 {
+    RTGSFIT_CHECK_ARRAY(dimensions, n_dimensions);
     if (variable->group == NULL || variable->group[0] == '\0' || variable->name == NULL ||
         variable->name[0] == '\0' || !valid_group(variable->group) || variable->n_dimensions > 8 ||
         (variable->n_dimensions != 0 && variable->dimensions == NULL))
@@ -388,7 +407,7 @@ static int validate_variable(const struct rtgsfit_capture_variable *variable,
         {
             return set_error("capture variable is missing a dimension name");
         }
-        for (size_t j = 0; j < n_dimensions; j++)
+        for (int32_t j = 0; j < n_dimensions; j++)
         {
             if (strcmp(variable->dimensions[i], dimensions[j].name) == 0)
             {
@@ -474,18 +493,21 @@ int32_t rtgsfit_capture_write(const char *path,
                               const char *code_version,
                               const int32_t timing_enabled,
                               const struct rtgsfit_capture_dimension dimensions[],
-                              const size_t n_dimensions,
+                              const int32_t n_dimensions,
                               const struct rtgsfit_capture_variable variables[],
-                              size_t n_variables)
+                              int32_t n_variables)
 {
     capture_error[0] = '\0';
+    RTGSFIT_CHECK_ARRAY(dimensions, n_dimensions);
+    RTGSFIT_CHECK_ARRAY(variables, n_variables);
     if (path == NULL || path[0] == '\0' || settings_json == NULL || preshot_source == NULL ||
         code_version == NULL || dimensions == NULL || n_dimensions == 0 || variables == NULL ||
-        n_variables == 0 || (timing_enabled != 0 && timing_enabled != 1))
+        n_variables == 0 || n_variables > INT32_MAX - RTGSFIT_SIZE_COUNT - N_COMPILED_NODES ||
+        (timing_enabled != 0 && timing_enabled != 1))
     {
         return set_error("invalid capture arguments");
     }
-    for (size_t i = 0; i < n_dimensions; i++)
+    for (int32_t i = 0; i < n_dimensions; i++)
     {
         if (dimensions[i].name == NULL || dimensions[i].name[0] == '\0')
         {
@@ -495,10 +517,10 @@ int32_t rtgsfit_capture_write(const char *path,
 
     int status;
     int root = -1;
-    int groups[3] = {-1, -1, -1};
+    int groups[N_ROOT_GROUPS] = {-1, -1, -1};
     char *temporary = NULL;
     struct rtgsfit_capture_variable *combined_variables = NULL;
-    const char *group_names[3] = {"PRESHOT", "INPUT", "OUTPUT"};
+    const char *group_names[N_ROOT_GROUPS] = {"PRESHOT", "INPUT", "OUTPUT"};
     int32_t compiled_sizes[RTGSFIT_SIZE_COUNT];
     struct rtgsfit_capture_variable size_variables[RTGSFIT_SIZE_COUNT];
 
@@ -509,7 +531,7 @@ int32_t rtgsfit_capture_write(const char *path,
     for (size_t size_index = 0; size_index < RTGSFIT_SIZE_COUNT; size_index++)
     {
         int found_size = 0;
-        for (size_t j = 0; j < n_dimensions; j++)
+        for (int32_t j = 0; j < n_dimensions; j++)
         {
             if (strcmp(dimensions[j].name, size_names[size_index]) == 0)
             {
@@ -545,7 +567,7 @@ int32_t rtgsfit_capture_write(const char *path,
          derived_index++)
     {
         int found_derived = 0;
-        for (size_t j = 0; j < n_dimensions; j++)
+        for (int32_t j = 0; j < n_dimensions; j++)
         {
             if (strcmp(dimensions[j].name, derived_dimensions[derived_index].name) == 0)
             {
@@ -568,7 +590,7 @@ int32_t rtgsfit_capture_write(const char *path,
     }
 
     size_t extra_count = 0;
-    for (size_t i = 0; i < n_variables; i++)
+    for (int32_t i = 0; i < n_variables; i++)
     {
         if (variables[i].group != NULL && strncmp(variables[i].group, "PRESHOT/", 8) == 0)
         {
@@ -601,7 +623,7 @@ int32_t rtgsfit_capture_write(const char *path,
             return set_error("invalid internal preshot node table");
         }
         const size_t group_length = (size_t)(separator - extra_preshot_nodes[i]);
-        for (size_t j = 0; j < n_variables; j++)
+        for (int32_t j = 0; j < n_variables; j++)
         {
             if (variables[j].group != NULL && variables[j].name != NULL &&
                 strlen(variables[j].group) == group_length &&
@@ -620,8 +642,8 @@ int32_t rtgsfit_capture_write(const char *path,
         }
     }
 
-    const size_t total_variables = n_variables + RTGSFIT_SIZE_COUNT + N_COMPILED_NODES;
-    combined_variables = calloc(total_variables, sizeof(*combined_variables));
+    const int32_t total_variables = n_variables + RTGSFIT_SIZE_COUNT + N_COMPILED_NODES;
+    combined_variables = calloc((size_t)total_variables, sizeof(*combined_variables));
     if (combined_variables == NULL)
     {
         return set_error("out of memory preparing compiled preshot variables");
@@ -641,7 +663,7 @@ int32_t rtgsfit_capture_write(const char *path,
     }
     memcpy(combined_variables + RTGSFIT_SIZE_COUNT, compiled_nodes, sizeof(compiled_nodes));
     memcpy(combined_variables + RTGSFIT_SIZE_COUNT + N_COMPILED_NODES, variables,
-           n_variables * sizeof(*variables));
+           (size_t)n_variables * sizeof(*variables));
     for (size_t i = 0; i < RTGSFIT_SIZE_COUNT + N_COMPILED_NODES; i++)
     {
         struct rtgsfit_capture_variable *variable = &combined_variables[i];
@@ -649,7 +671,7 @@ int32_t rtgsfit_capture_write(const char *path,
         for (size_t j = 0; j < variable->n_dimensions; j++)
         {
             size_t dimension_size = 0;
-            for (size_t k = 0; k < n_dimensions; k++)
+            for (int32_t k = 0; k < n_dimensions; k++)
             {
                 if (strcmp(variable->dimensions[j], dimensions[k].name) == 0)
                 {
@@ -663,7 +685,7 @@ int32_t rtgsfit_capture_write(const char *path,
     }
     variables = combined_variables;
     n_variables = total_variables;
-    for (size_t i = 0; i < n_variables; i++)
+    for (int32_t i = 0; i < n_variables; i++)
     {
         if (validate_variable(&variables[i], dimensions, n_dimensions) != 0)
         {
@@ -671,7 +693,12 @@ int32_t rtgsfit_capture_write(const char *path,
             return -1;
         }
     }
-    const uint32_t full_preshot_checksum = checksum_preshot(variables, n_variables);
+    uint32_t full_preshot_checksum;
+    if (checksum_preshot(variables, n_variables, &full_preshot_checksum) != RTGSFIT_OK)
+    {
+        free(combined_variables);
+        return set_error("cannot checksum the capture preshot");
+    }
 
     if (make_temporary_path(path, &temporary) != 0)
     {
@@ -725,14 +752,14 @@ int32_t rtgsfit_capture_write(const char *path,
         goto failed;
     }
 
-    for (size_t i = 0; i < n_dimensions; i++)
+    for (int32_t i = 0; i < n_dimensions; i++)
     {
         if (dimensions[i].name == NULL || dimensions[i].name[0] == '\0')
         {
             set_error("capture dimension has no name");
             goto failed;
         }
-        for (size_t j = 0; j < i; j++)
+        for (int32_t j = 0; j < i; j++)
         {
             if (strcmp(dimensions[i].name, dimensions[j].name) == 0)
             {
@@ -750,7 +777,7 @@ int32_t rtgsfit_capture_write(const char *path,
         }
     }
 
-    for (size_t i = 0; i < 3; i++)
+    for (int32_t i = 0; i < N_ROOT_GROUPS; i++)
     {
         status = nc_def_grp(root, group_names[i], &groups[i]);
         if (status != NC_NOERR)
@@ -760,9 +787,9 @@ int32_t rtgsfit_capture_write(const char *path,
         }
     }
 
-    int *variable_ids = calloc(n_variables, sizeof(*variable_ids));
-    int **dimension_ids = calloc(n_variables, sizeof(*dimension_ids));
-    int *variable_groups = calloc(n_variables, sizeof(*variable_groups));
+    int *variable_ids = calloc((size_t)n_variables, sizeof(*variable_ids));
+    int **dimension_ids = calloc((size_t)n_variables, sizeof(*dimension_ids));
+    int *variable_groups = calloc((size_t)n_variables, sizeof(*variable_groups));
     if (variable_ids == NULL || dimension_ids == NULL || variable_groups == NULL)
     {
         free(variable_ids);
@@ -772,7 +799,7 @@ int32_t rtgsfit_capture_write(const char *path,
         goto failed;
     }
 
-    for (size_t i = 0; i < n_variables; i++)
+    for (int32_t i = 0; i < n_variables; i++)
     {
         const struct rtgsfit_capture_variable *variable = &variables[i];
         if (variable->group == NULL || variable->name == NULL ||
@@ -780,11 +807,11 @@ int32_t rtgsfit_capture_write(const char *path,
             !valid_group(variable->group) || variable->n_dimensions > 8 ||
             (variable->n_dimensions != 0 && variable->dimensions == NULL))
         {
-            snprintf(capture_error, sizeof(capture_error), "invalid capture variable at index %zu",
-                     i);
+            snprintf(capture_error, sizeof(capture_error), "invalid capture variable at index %d",
+                     (int)i);
             goto variable_failed;
         }
-        status = get_variable_group(groups, variable, &variable_groups[i]);
+        status = get_variable_group(groups, N_ROOT_GROUPS, variable, &variable_groups[i]);
         if (status != NC_NOERR)
         {
             set_netcdf_error("cannot define capture subgroup", status);
@@ -864,7 +891,7 @@ int32_t rtgsfit_capture_write(const char *path,
         goto variable_failed;
     }
 
-    for (size_t i = 0; i < n_variables; i++)
+    for (int32_t i = 0; i < n_variables; i++)
     {
         const struct rtgsfit_capture_variable *variable = &variables[i];
         if (variable->n_values == 0)
@@ -892,7 +919,7 @@ int32_t rtgsfit_capture_write(const char *path,
         }
     }
 
-    for (size_t i = 0; i < n_variables; i++)
+    for (int32_t i = 0; i < n_variables; i++)
     {
         free(dimension_ids[i]);
     }
@@ -917,7 +944,7 @@ int32_t rtgsfit_capture_write(const char *path,
     return 0;
 
 variable_failed:
-    for (size_t i = 0; i < n_variables; i++)
+    for (int32_t i = 0; i < n_variables; i++)
     {
         free(dimension_ids[i]);
     }
