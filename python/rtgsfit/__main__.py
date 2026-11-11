@@ -7,11 +7,13 @@ rtgsfit replay analytic --set capture/path=analytic.nc
 rtgsfit post-process c/cache/analytic.nc                  # no solver or database reads
 rtgsfit preshot st40                                      # build a new preshot, then run the writers
 rtgsfit write-c-preshot st40                              # make the replay preshot the active one in c/src
-rtgsfit write-c-preshot --pulse 52014922 --run-name RUN22 # the same, read from MDSplus
+rtgsfit write-c-preshot --pulse 99000230 --run-name RUN19 # read the PCS preshot from MDSplus
 rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
 rtgsfit write-data-dictionary documentation/data_dictionary.md
 rtgsfit list-settings
 ```
+
+The PCS example assumes preshot 99000230 RUN19 has been regenerated in the v2 schema.
 """
 
 from __future__ import annotations

@@ -43,7 +43,7 @@ from rtgsfit.settings import Settings
 
 
 def preshot_location(settings: Settings, section: str = "preshot", key: str = "reader") -> str:
-    """Where the preshot comes from, e.g. `rtgsfit_mdsplus {"pulse": 52014922, "run_name": "RUN22"}`."""
+    """Where the preshot comes from, e.g. `rtgsfit_mdsplus {"pulse": 52000230, "run_name": "TEST03"}`."""
     name = str(settings[section][key])
     options = settings[section].get(name, {})
     return f"{name} {json.dumps(options, default=str)}" if options else name

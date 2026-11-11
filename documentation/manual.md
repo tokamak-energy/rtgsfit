@@ -363,17 +363,21 @@ matrices, interpolation stencils, ...) in one place, and `Preshot` checks every 
 data dictionary and every size relation (the same relations as the `_Static_assert`s in
 `c/src/preshot.h`).
 
-**Making a preshot for ST40** (TE network):
+**Making a test preshot for ST40** (TE network):
 
-Choose an unused run name (`RUN_NEW` below); do not overwrite the bundled `RUN22` reference:
+Use private development pulse space, not the shared PCS preshot at 99000230 `RUN19`.
+The notebook and C-generator test use 52000230 `TEST03`; choose an unused test run (`TEST_NEW`
+below) rather than overwriting that fixture. Adapt the pulse number to your own allocated private
+space when using this example.
 
-    python -m rtgsfit preshot st40 --set writers/names=rtgsfit_mdsplus \
-        --set writers/rtgsfit_mdsplus/enabled=true --set writers/rtgsfit_mdsplus/run_name=RUN_NEW
+    python -m rtgsfit preshot st40 --set 'writers/names=["rtgsfit_mdsplus"]' \
+        --set writers/rtgsfit_mdsplus/pulse=52000230 \
+        --set writers/rtgsfit_mdsplus/enabled=true --set writers/rtgsfit_mdsplus/run_name=TEST_NEW
 
 This runs GSFit with the `st40_setup_for_rtgsfit` settings (`preshot/builder = gsfit`) and writes
-`PRESHOT` to the `RTGSFIT` tree. The PCS build then reads it, without Python:
+`PRESHOT` to the `RTGSFIT` tree. Test the C-only build with that private preshot:
 
-    make -C c SHOT=52014922 RUN_NAME=RUN_NEW
+    make -C c SHOT=52000230 RUN_NAME=TEST_NEW
 
 which runs the C generator `c/tools/write_preshot.c` (section 6.6). It reads `PRESHOT` with the MDSplus
 C library, writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c`, and compiles `c/build/librtgsfit.so`.
@@ -472,12 +476,18 @@ x86 workstation (one OpenBLAS thread):
 
 ### 6.6 Building
 
-    make -C c SHOT=52014922 RUN_NAME=RUN22     # read the preshot from MDSplus, then compile (the PCS)
+    make -C c SHOT=99000230 RUN_NAME=RUN19     # campaign preshot, after regeneration in the v2 schema
     make -C c PRESHOT_FILE=<path>              # read the preshot from a file written by Python, then compile
     make -C c                                  # compile the active preshot in c/src
     make -C c test                             # C unit tests; no preshot needed
     make -C c DEBUG=1 TIMING=1 ARCH_FLAGS=...
     make -C c clean                            # remove c/build and the generated preshot
+
+PCS examples use preshot `RTGSFIT` 99000230, `RUN19`. Existing v1 data under that run must be
+regenerated in the v2 schema first. The bundled `st40` replay/test reference remains 52014922
+`RUN22`. The notebook and C-generator test use private pulse 52000230 `TEST03`, not a run on
+the shared 99000230 pulse. Publishing a campaign preshot is a separate deployment action, never
+a test or tutorial side effect.
 
 The code is C11 and compiles without warnings with
 `-Wall -Wextra -Wpedantic -Wshadow -Wvla -Wstrict-prototypes`. `-Wvla` guarantees that no
@@ -536,12 +546,12 @@ python/rtgsfit/
     rtgsfit replay analytic
     rtgsfit replay st40 --set replay/pulse=13343 --set replay/time_end=0.2
     rtgsfit preshot st40
-    rtgsfit write-c-preshot --pulse 52014922 --run-name RUN22
+    rtgsfit write-c-preshot --pulse 99000230 --run-name RUN19
     rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
     rtgsfit write-data-dictionary documentation/data_dictionary.md
 
 `rtgsfit` is `python -m rtgsfit`. `--set PATH=VALUE` overrides any setting; the settings schema
-(section 8) gives its type.
+(section 8) gives its type. The PCS preshot example has the same v2-schema prerequisite as section 6.6.
 
 ### 7.2 From Python
 

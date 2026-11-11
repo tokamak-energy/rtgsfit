@@ -228,9 +228,10 @@ def test_c_source_is_only_rewritten_when_it_changes(analytic_preshot: Preshot, t
 def test_mdsplus_generator_reads_what_python_reads(tmp_path: Path) -> None:
     """`make SHOT=... RUN_NAME=...` (the PCS, no Python) generates the same C as the preshot file route.
 
-    Uses RTGSFIT 99000230 TEST03, written by examples/example_01_run_full_pipeline_st40.
+    Reads the private RTGSFIT 52000230 TEST03 fixture, also used by the ST40 example.
+    This test never writes to MDSplus or reads the shared PCS preshot.
     """
-    pulse, run_name = 99000230, "TEST03"
+    pulse, run_name = 52_000_230, "TEST03"
     nodes = tuple(node for node in dd.PRESHOT_NODES if node.c_name is not None or node.path[1:] == ("INFO", "SOURCE"))
     groups = read_mdsplus_nodes(pulse, run_name, nodes)["PRESHOT"]
 

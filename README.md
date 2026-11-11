@@ -185,10 +185,16 @@ The C build itself needs no Python. The generator `c/tools/write_preshot.c` read
 either from MDSplus or from a file that Python writes:
 
 ```sh
-make -C c SHOT=99000230 RUN_NAME=TEST03   # read RTGSFIT 99000230 TEST03 from MDSplus, then compile (the PCS)
+make -C c SHOT=99000230 RUN_NAME=RUN19   # campaign preshot, after regeneration in the v2 schema
 rtgsfit write-c-preshot analytic          # a preshot that is only in Python (analytic, FreeGSNKE, ...)
 make -C c                                 # compile the active preshot
 ```
+
+The PCS example uses preshot `RTGSFIT` 99000230, `RUN19`. Existing v1 data under that run must be
+regenerated in the v2 schema first. The bundled `st40` replay preset still uses the separate
+52014922 `RUN22` reference. The notebook and generator test use private pulse 52000230 `TEST03`,
+not the shared 99000230 pulse. Tutorial writes use private development destinations; adapt them
+to your own allocated pulse range.
 
 `write-c-preshot` writes `c/build/preshot.bin` and runs `make PRESHOT_FILE=c/build/preshot.bin preshot`.
 Replace `analytic` with `st40` on the TE network to read the configured stored ST40 preshot.

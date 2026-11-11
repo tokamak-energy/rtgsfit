@@ -18,8 +18,12 @@ The notebook writes two runs to the `RTGSFIT` tree on the MDSplus server `smaug`
 
 | `RTGSFIT` pulse | Run | Contents | Description (`\RTGSFIT::TOP.TEST03:HELP`) |
 |---|---|---|---|
-| 99000230 | `TEST03` | The preshot | Testing example_01 for rtgsfit_v2: preshot built by GSFit for ST40 pulse 14926 |
-| 52014926 | `TEST03` | The replay of ST40 pulse 14926 | Testing example_01 for rtgsfit_v2: replay of ST40 pulse 14926 with the preshot from RTGSFIT 99000230 TEST03 |
+| 52000230 | `TEST03` | The preshot | Testing example_01 for rtgsfit_v2: preshot built by GSFit for ST40 pulse 14926 |
+| 52014926 | `TEST03` | The replay of ST40 pulse 14926 | Testing example_01 for rtgsfit_v2: replay of ST40 pulse 14926 with the preshot from RTGSFIT 52000230 TEST03 |
+
+Both destinations are in private development pulse space, not the shared PCS preshot at
+99000230 `RUN19`. Use your own allocated private pulse range when adapting this example.
+The network C-generator test reads 52000230 `TEST03`; it does not write to MDSplus.
 
 The notebook stops before writing anything if either run already exists. To run it again, change
 `RUN_NAME` in section 1, or set `OVERWRITE = True` to write over the existing runs. It never changes
