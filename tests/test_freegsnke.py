@@ -35,14 +35,17 @@ DOF_RTOL = 1e-2
 
 
 @pytest.fixture(scope="module")
-def settings():  # type: ignore[no-untyped-def]
+def settings(request: pytest.FixtureRequest):  # type: ignore[no-untyped-def]
     settings = load_settings("freegsnke")
     section = settings["freegsnke"]
     if (
         not Path(section["machine_dir"]).expanduser().is_dir()
         or not Path(section["currents_path"]).expanduser().is_file()
     ):
-        pytest.skip("needs the FreeGSNKE repository (machine pickles and example currents)")
+        reason = "needs the FreeGSNKE repository (machine pickles and example currents)"
+        if request.config.getoption("--require-freegsnke"):
+            pytest.fail(f"{reason} at {section['machine_dir']} and {section['currents_path']}")
+        pytest.skip(reason)
     return settings
 
 

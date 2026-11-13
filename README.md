@@ -86,7 +86,7 @@ work too.
     uv venv --python 3.13 && . .venv/bin/activate
     uv pip install -e ".[dev]"       # add [freegsnke] or [te] for those readers
     make -C c test                   # C unit tests
-    pytest                           # off-network tests; TE and FreeGSNKE tests are skipped
+    pytest                           # off-network tests; TE tests are skipped, FreeGSNKE ones too without [freegsnke]
     pytest --figures -m figures      # draw what the analytic and FreeGSNKE tests compare: tests/figures/<UTC time>/
     rtgsfit replay analytic          # writes the results to c/cache/rtgsfit_analytic.npz
 

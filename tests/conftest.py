@@ -2,7 +2,9 @@
 
 * Tests marked `te_network` need the Tokamak Energy network (MDSplus, GSFit's ST40 readers) and are
   skipped unless `--te-network` is given.
-* Tests marked `freegsnke` are skipped when GSFit or FreeGSNKE cannot be imported.
+* Tests marked `freegsnke` are skipped when GSFit or FreeGSNKE cannot be imported, or the FreeGSNKE
+  repository (machine pickles, example currents) is missing. `--require-freegsnke` (used by CI)
+  makes those cases fail instead.
 * Tests marked `timing` (the ST40 timing benchmark) are skipped unless `--timing` is given.
 * Tests marked `figures` draw diagnostic figures (see `plotting.py`) and are skipped unless
   `--figures` is given. Each run writes them to a new `tests/figures/<UTC time>/`.
@@ -41,10 +43,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--figures", action="store_true", help="draw diagnostic figures into a new tests/figures/<UTC time>/"
     )
+    parser.addoption(
+        "--require-freegsnke",
+        action="store_true",
+        help="fail, rather than skip, the FreeGSNKE tests if GSFit, FreeGSNKE or the FreeGSNKE repository is missing",
+    )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     have_freegsnke = all(importlib.util.find_spec(name) is not None for name in ("gsfit", "freegsnke"))
+    if config.getoption("--require-freegsnke") and not have_freegsnke:
+        raise pytest.UsageError("--require-freegsnke: gsfit and freegsnke must be importable")
     for item in items:
         # Markers, not `item.keywords`: keywords include parametrize ids such as `[freegsnke]`.
         if item.get_closest_marker("te_network") is not None and not config.getoption("--te-network"):
