@@ -60,6 +60,8 @@ class AnalyticPlasma:
 
     def psi_norm(self, r: FloatArray, z: FloatArray) -> FloatArray:
         rho = self.rho(r, z)
+        if self.axis_psi == self.boundary_psi:  # no current, so no magnetic axis: undefined inside
+            return np.asarray(np.where(rho <= self.rho_b, np.nan, 1.0))
         psi_norm = (self.axis_psi - self.psi(r, z)) / (self.axis_psi - self.boundary_psi)
         return np.asarray(np.where(rho <= self.rho_b, psi_norm, 1.0))
 
@@ -72,6 +74,8 @@ class AnalyticPlasma:
         return np.asarray(np.where(rho <= self.rho_b, inside, outside) / (2.0 * np.pi))
 
     def j_phi(self, r: FloatArray, z: FloatArray) -> FloatArray:
+        if self.axis_psi == self.boundary_psi:
+            return np.zeros(np.broadcast(np.asarray(r), np.asarray(z)).shape)
         amplitude = A_STAR * self.ip * self.r_0 / (2.0 * np.pi * J1_A_STAR * self.rho_b**2)
         return np.asarray(amplitude * (1.0 - self.psi_norm(r, z)) / np.asarray(r))
 

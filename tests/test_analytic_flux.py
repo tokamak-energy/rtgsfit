@@ -5,9 +5,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from numpy.testing import assert_array_equal
 from rtgsfit.constants import MU_0
 from rtgsfit.database_readers.analytic import analytic_plasma
 from rtgsfit.database_readers.analytic import greens
+from rtgsfit.database_readers.analytic.solution import AnalyticPlasma
 from rtgsfit.preshot import Preshot
 from rtgsfit.replay import read_signals
 from rtgsfit.settings import load_settings
@@ -54,3 +56,11 @@ def test_reference_total_flux_satisfies_poisson_equation() -> None:
         - 4 * centre
     ) / step**2
     assert_allclose(laplacian, -2 * np.pi * MU_0 * r * plasma.j_phi(r, z), rtol=1e-5)
+
+
+def test_zero_current_reference_has_no_axis_and_no_current() -> None:
+    plasma = AnalyticPlasma(r_0=0.5, z_0=0.0, rho_b=0.15, ip=0.0)
+    r, z = np.array([0.5, 0.55, 0.8]), np.zeros(3)  # axis, inside, outside
+    with np.errstate(all="raise"):
+        assert_array_equal(plasma.psi_norm(r, z), [np.nan, np.nan, 1.0])
+        assert_array_equal(plasma.j_phi(r, z), 0.0)
