@@ -57,6 +57,37 @@ def test_preshot_round_trip(analytic_preshot: Preshot, tmp_path: Path) -> None:
     assert again["FIT:TARGET_NAMES"] == analytic_preshot["FIT:TARGET_NAMES"]
 
 
+def test_local_reader_expands_home_path(
+    analytic_preshot: Preshot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    write_npz(home / "preshot.npz", analytic_preshot.to_nested())
+
+    assert read_preshot("~/preshot.npz").content_hash() == analytic_preshot.content_hash()
+
+
+def test_local_writer_expands_home_path(
+    analytic_results: Results,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    cache = tmp_path / "cache"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("RTGSFIT_CACHE_DIR", str(cache))
+    settings = load_settings("analytic").copy_with({"writers/local/path": "~/results.npz"})
+
+    LocalWriter().write_results(analytic_results, settings)
+
+    assert (home / "results.npz").is_file()
+    assert not (cache / "~" / "results.npz").exists()
+
+
 def test_cache_directory_is_repository_local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RTGSFIT_CACHE_DIR", raising=False)
     monkeypatch.delenv("RTGSFIT_C_DIR", raising=False)
@@ -266,6 +297,50 @@ def test_c_source_is_only_rewritten_when_it_changes(analytic_preshot: Preshot, t
     assert _generate(analytic_preshot, tmp_path).count("is unchanged") == 2
     assert [path.stat().st_mtime_ns for path in files] == mtimes
     assert sorted(path.name for path in tmp_path.iterdir()) == ["preshot.bin", "preshot_data.c", "preshot_sizes.h"]
+
+
+def test_generator_accepts_long_non_ascii_source(
+    analytic_preshot: Preshot,
+    tmp_path: Path,
+) -> None:
+    preshot = Preshot(_modified(analytic_preshot, "INFO:SOURCE", "gsfit " + "é" * 300))
+
+    _generate(preshot, tmp_path)
+
+    source_line = (tmp_path / "preshot.bin").read_bytes().splitlines()[1]
+    assert len(source_line) < 512
+    assert "gsfit " in (tmp_path / "preshot_data.c").read_text()
+
+
+def test_generator_rejects_unterminated_long_source_line(
+    analytic_preshot: Preshot,
+    tmp_path: Path,
+) -> None:
+    preshot_file = write_preshot_file(analytic_preshot, tmp_path / "preshot.bin")
+    first_line, remaining = preshot_file.read_bytes().split(b"\n", maxsplit=1)
+    _, node_data = remaining.split(b"\n", maxsplit=1)
+    preshot_file.write_bytes(first_line + b"\nSOURCE " + b"x" * 600 + b"\n" + node_data)
+    process = subprocess.run(
+        [str(_generator()), "--file", str(preshot_file), str(tmp_path)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert process.returncode != 0
+    assert "SOURCE line is too long" in process.stderr
+
+
+def test_generator_writes_to_long_output_directory(analytic_preshot: Preshot, tmp_path: Path) -> None:
+    directory = tmp_path
+    for index in range(6):
+        directory /= f"{index}-{'x' * 180}"
+        directory.mkdir()
+    assert len(str(directory).encode()) > 1024
+
+    _generate(analytic_preshot, directory)
+
+    assert (directory / "preshot_sizes.h").is_file()
+    assert (directory / "preshot_data.c").is_file()
 
 
 @pytest.mark.te_network

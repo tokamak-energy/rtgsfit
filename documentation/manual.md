@@ -625,7 +625,8 @@ A results file or tree contains the whole preshot, the effective settings JSON, 
 
 For the `local` writer, relative `path` and `preshot_path` values are resolved under the repository's
 gitignored `c/cache/`, or `~/.cache/rtgsfit/outputs/` for a package installed without a checkout
-(`RTGSFIT_CACHE_DIR` overrides both), not the working directory. For example, the
+(`RTGSFIT_CACHE_DIR` overrides both), not the working directory. A leading `~` in configured paths
+is expanded to the user's home directory before resolving relative paths. For example, the
 analytic preset writes `c/cache/rtgsfit_analytic.npz`. Absolute paths remain explicit exports and are
 used unchanged.
 The low-level `write_npz(path, ...)` function uses its caller-supplied path unchanged.

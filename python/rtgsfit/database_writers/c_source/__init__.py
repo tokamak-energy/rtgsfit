@@ -28,8 +28,7 @@ if TYPE_CHECKING:
     from rtgsfit.results import Results
 
 PRESHOT_FILE_VERSION = 1
-_MAX_SOURCE_LENGTH = 400
-"""The generator reads lines of up to 511 characters."""
+_MAX_SOURCE_BYTES = 400
 
 
 def _c_values(preshot: Preshot) -> Iterator[tuple[dd.Node, np.ndarray]]:
@@ -52,9 +51,11 @@ def write_preshot_file(preshot: Preshot, path: str | Path) -> Path:
     """Write the values compiled into C to `path`, for `make PRESHOT_FILE=<path>`."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    source = " ".join(str(preshot["INFO:SOURCE"]).split())[:_MAX_SOURCE_LENGTH]
+    source = " ".join(str(preshot["INFO:SOURCE"]).split()).encode("utf-8")[:_MAX_SOURCE_BYTES]
+    source = source.decode("utf-8", errors="ignore").encode("utf-8")
     with open(path, "wb") as file:
-        file.write(f"RTGSFIT PRESHOT {PRESHOT_FILE_VERSION}\nSOURCE {source}\n".encode())
+        file.write(f"RTGSFIT PRESHOT {PRESHOT_FILE_VERSION}\n".encode())
+        file.write(b"SOURCE " + source + b"\n")
         for node, values in _c_values(preshot):
             file.write(f"{node.path[1]}:{node.path[2]} {node.dtype} {values.size}\n".encode())
             file.write(values.tobytes())

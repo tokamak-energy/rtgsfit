@@ -412,8 +412,18 @@ static void read_preshot_file(const char *path, struct preshot *preshot)
     {
         fail("%s: the second line must be SOURCE <INFO:SOURCE>", path);
     }
-    line[strcspn(line, "\n")] = '\0';
-    snprintf(preshot->source, sizeof(preshot->source), "%s", line + 7);
+    char *newline = strchr(line, '\n');
+    if (newline == NULL)
+    {
+        fail("%s: SOURCE line is too long", path);
+    }
+    *newline = '\0';
+    const size_t source_length = strlen(line + 7);
+    if (source_length >= sizeof(preshot->source))
+    {
+        fail("%s: SOURCE value is too long", path);
+    }
+    memcpy(preshot->source, line + 7, source_length + 1);
     read_preshot(&source, preshot);
     if (fgets(line, sizeof(line), source.file) == NULL || strcmp(line, "END\n") != 0 ||
         fgetc(source.file) != EOF)
@@ -541,9 +551,18 @@ static void write_if_changed(const char *directory,
                              void (*write)(FILE *, const struct preshot *),
                              const struct preshot *preshot)
 {
-    char path[MAX_TEXT * 2], temporary[MAX_TEXT * 2 + 8];
-    snprintf(path, sizeof(path), "%s/%s", directory, name);
-    snprintf(temporary, sizeof(temporary), "%s/.%s.tmp", directory, name);
+    const size_t directory_length = strlen(directory);
+    const size_t name_length = strlen(name);
+    char *path = malloc(directory_length + name_length + 2);
+    char *temporary = malloc(directory_length + name_length + 8);
+    if (path == NULL || temporary == NULL)
+    {
+        free(path);
+        free(temporary);
+        fail("out of memory creating output path");
+    }
+    snprintf(path, directory_length + name_length + 2, "%s/%s", directory, name);
+    snprintf(temporary, directory_length + name_length + 8, "%s/.%s.tmp", directory, name);
     FILE *out = fopen(temporary, "w");
     if (out == NULL)
     {
@@ -567,6 +586,8 @@ static void write_if_changed(const char *directory,
     {
         printf("Wrote %s\n", path);
     }
+    free(path);
+    free(temporary);
 }
 
 static void list_nodes(void)

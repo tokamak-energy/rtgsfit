@@ -21,7 +21,9 @@
                 "local": {
                     "type": "object",
                     "additionalProperties": false,
-                    "properties": {"path": {"type": "string", "minLength": 1}}
+                    "properties": {
+                        "path": {"type": "string", "minLength": 1, "description": "Local NPZ preshot file; `~` is expanded."}
+                    }
                 },
                 "rtgsfit_mdsplus": {
                     "type": "object",
@@ -89,7 +91,7 @@
                 "path": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "Optional native NetCDF capture, written before offline processing. Relative paths use c/cache/; contains the exact preshot and C inputs/outputs."
+                    "description": "Optional native NetCDF capture, written before offline processing. Relative paths use c/cache/; `~` is expanded. Contains the exact preshot and C inputs/outputs."
                 }
             }
         },
@@ -107,8 +109,8 @@
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                        "path": {"type": "string", "minLength": 1, "description": "Results NPZ path, relative to c/cache/ by default. Absolute paths are used unchanged."},
-                        "preshot_path": {"type": "string", "minLength": 1, "description": "Preshot NPZ path, relative to c/cache/ by default. Absolute paths are used unchanged."}
+                        "path": {"type": "string", "minLength": 1, "description": "Results NPZ path, relative to c/cache/ by default. `~` is expanded; absolute paths are used unchanged."},
+                        "preshot_path": {"type": "string", "minLength": 1, "description": "Preshot NPZ path, relative to c/cache/ by default. `~` is expanded; absolute paths are used unchanged."}
                     }
                 },
                 "c_source": {

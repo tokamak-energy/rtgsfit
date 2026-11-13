@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import json
 import time as wall_clock
-from pathlib import Path
 
 import numpy as np
 
@@ -37,6 +36,7 @@ from rtgsfit.library import Rtgsfit
 from rtgsfit.library import SliceResult
 from rtgsfit.library import cache_directory
 from rtgsfit.library import describe_status
+from rtgsfit.paths import resolve_output_path
 from rtgsfit.preshot import Preshot
 from rtgsfit.results import Results
 from rtgsfit.settings import Settings
@@ -140,9 +140,7 @@ def replay(
     logged = Signals(signals.time[:n_time], signals.meas[:n_time], signals.coil_signal[:n_time])
     capture = Capture(preshot, logged, slices, settings.json_text, source)
     if "capture" in settings:
-        path = Path(settings["capture"]["path"]).expanduser()
-        if not path.is_absolute():
-            path = cache_directory() / path
+        path = resolve_output_path(settings["capture"]["path"], cache_directory())
         written = write_capture(path, capture, library_path=rtgsfit.library_path)
         if verbose:
             print(f"Wrote native capture to {written}")

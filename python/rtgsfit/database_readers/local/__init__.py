@@ -26,7 +26,7 @@ _LIST_NODES = {node.key for node in dd.ALL_NODES if node.dtype == "str" and node
 def read_npz(path: str | Path) -> dict[str, Any]:
     """The nested dictionary stored by `rtgsfit.database_writers.local.write_npz`."""
     flat: dict[str, Any] = {}
-    with np.load(Path(path), allow_pickle=False) as data:
+    with np.load(Path(path).expanduser(), allow_pickle=False) as data:
         for key in data.files:
             value = data[key]
             if key in _LIST_NODES:

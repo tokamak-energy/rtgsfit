@@ -4,7 +4,8 @@ Keys are `Node.key`, e.g. `GLOBAL.IP` or `PRESHOT.GRID.R`, so a local file has e
 the MDSplus tree. Strings are stored as numpy unicode arrays, so the file can be read with
 `numpy.load(path)` without pickling; `rtgsfit.database_readers.local` converts them back.
 Relative writer paths are resolved under `rtgsfit.library.cache_directory()`: the repository's `c/cache/`,
-or `~/.cache/rtgsfit/outputs/` for a package installed without a checkout.
+or `~/.cache/rtgsfit/outputs/` for a package installed without a checkout. A leading `~` is expanded
+to the user's home directory.
 Absolute paths are explicit exports and are used unchanged.
 """
 
@@ -19,6 +20,7 @@ import numpy as np
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_writers import DatabaseWriter
 from rtgsfit.library import cache_directory
+from rtgsfit.paths import resolve_output_path
 from rtgsfit.preshot import Preshot
 from rtgsfit.settings import Settings
 
@@ -44,8 +46,7 @@ def write_npz(path: str | Path, nested: dict[str, Any]) -> Path:
 
 def _output_path(settings: Settings, key: str, default_name: str) -> Path:
     local = settings.get("writers", {}).get("local", {})
-    path = Path(local.get(key, default_name))
-    return path if path.is_absolute() else cache_directory() / path
+    return resolve_output_path(local.get(key, default_name), cache_directory())
 
 
 class LocalWriter(DatabaseWriter):
