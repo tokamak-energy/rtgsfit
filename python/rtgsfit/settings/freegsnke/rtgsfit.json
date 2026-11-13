@@ -1,0 +1,66 @@
+{
+    "$schema": "../settings.schema.json",
+    "preshot": {
+        "reader": "freegsnke",
+        "boundary": {
+            "xpt_fraction": 0.999,
+            "tolerance": 1e-10,
+            "ip_min": 1000.0,
+            "n_xpt_max": 50
+        }
+    },
+    "signals": {
+        "reader": "freegsnke"
+    },
+    "replay": {
+        "pulse": 0,
+        "time_start": 0.0,
+        "time_end": 0.019,
+        "time_step": 0.001,
+        "repeat": 1,
+        "stop_on_status": false,
+        "stop_below_ip": 0.0
+    },
+    "build": {
+        "timing": true,
+        "arch_flags": "-march=native"
+    },
+    "writers": {
+        "names": ["local"],
+        "local": {
+            "path": "rtgsfit_freegsnke.npz",
+            "preshot_path": "rtgsfit_freegsnke_preshot.npz"
+        }
+    },
+    "freegsnke": {
+        "machine_dir": "~/github/freegsnke/machine_configs/MAST-U",
+        "machine_prefix": "MAST-U_like_",
+        "currents_path": "~/github/freegsnke/examples/data/simple_diverted_currents_PaxisIp.pk",
+        "grid": {
+            "r_min": 0.1,
+            "r_max": 2.0,
+            "z_min": -2.2,
+            "z_max": 2.2,
+            "n_r": 65,
+            "n_z": 129
+        },
+        "profile": {
+            "p_axis": 8000.0,
+            "ip": 600000.0,
+            "f_vacuum": 0.5,
+            "alpha_m": 1.0,
+            "alpha_n": 1.0
+        },
+        "tolerance": 1e-09
+    },
+    "gsfit": {
+        "settings_path": "mastu_with_synthetic_data_from_freegsnke",
+        "sensor_names": "gsfit",
+        "initial": {
+            "source": "cosine_bump",
+            "r": 0.9,
+            "z": 0.0,
+            "radius": 0.4
+        }
+    }
+}

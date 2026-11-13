@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rtgsfit"
+version = "0.2.0"
+description = "RT-GSFit: real-time Grad-Shafranov equilibrium reconstruction"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "contourpy>=1.2",
+    "jsonschema>=4.18",
+    "netCDF4>=1.6",
+]
+
+[project.optional-dependencies]
+# Tokamak Energy internal packages. They are not on PyPI; install them from TE's GitLab.
+# GSFit's ST40 reader, used to build the ST40 preshot, needs its with_st40_mdsplus extra.
+te = ["gsfit[with_st40_mdsplus]", "mdsthin", "standard_utility"]
+# FreeGSNKE synthetic data. GSFit computes the preshot (Green's functions) for the FreeGSNKE machine.
+freegsnke = ["gsfit", "freegsnke"]
+dev = ["pytest>=8", "ruff>=0.5", "clang-format==21.1.8", "matplotlib"]
+
+[project.scripts]
+rtgsfit = "rtgsfit.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/rtgsfit"]
+
+# Puts the C sources, which rtgsfit compiles for each preshot, into the wheel as rtgsfit/_c.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Dash (a dependency of st40-database) registers a pytest plugin that RT-GSFit does not use.
+addopts = "-p no:dash"
+markers = [
+    "te_network: needs the Tokamak Energy network (MDSplus); run with --te-network",
+    "freegsnke: needs FreeGSNKE and GSFit installed",
+    "timing: ST40 timing benchmark; run with --te-network --timing",
+    "figures: diagnostic figures, written to a new tests/figures/<UTC time>/; run with --figures",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # Greek letters are used deliberately in docstrings
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.mypy]
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["gsfit.*", "gsfit_rs.*", "freegsnke.*", "mdsthin.*", "standard_utility.*", "shapely.*"]
+ignore_missing_imports = true

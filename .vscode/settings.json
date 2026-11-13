@@ -1,12 +1,22 @@
 {
+  "clang-format.executable": "${workspaceFolder}/.venv/bin/clang-format",
+  "json.schemas": [
+    {
+      "fileMatch": ["/python/rtgsfit/settings/*/rtgsfit.json"],
+      "url": "./python/rtgsfit/settings/settings.schema.json"
+    }
+  ],
   "[c]": {
-    "editor.tabSize": 2,
+    "editor.tabSize": 4,
     "editor.insertSpaces": true,
-    "editor.detectIndentation": false
+    "editor.detectIndentation": false,
+    "editor.rulers": [100],
+    "editor.defaultFormatter": "xaver.clang-format",
+    "editor.formatOnSave": true
   },
-  "[cpp]": {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": true,
-    "editor.detectIndentation": false
+  "[python]": {
+    "editor.rulers": [120],
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true
   }
 }
