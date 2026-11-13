@@ -8,7 +8,17 @@
 #ifndef RTGSFIT_H
 #define RTGSFIT_H
 
+#include <float.h>
+#include <limits.h>
 #include <stdint.h>
+
+/*
+ * The C API uses double for float64 data and requires the binary64 representation used by
+ * LAPACK/NetCDF on supported PCS targets.
+ */
+_Static_assert(sizeof(double) * CHAR_BIT == 64 && FLT_RADIX == 2 && DBL_MANT_DIG == 53 &&
+                   DBL_MIN_EXP == -1021 && DBL_MAX_EXP == 1024,
+               "RT-GSFit requires binary64 double");
 
 /*
  * Status flags returned by `rtgsfit()`. They are powers of two, so several can be reported at

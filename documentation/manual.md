@@ -489,7 +489,9 @@ regenerated in the v2 schema first. The bundled `st40` replay/test reference rem
 the shared 99000230 pulse. Publishing a campaign preshot is a separate deployment action, never
 a test or tutorial side effect.
 
-The code is C11 and compiles without warnings with
+The code is C11 and requires `double` to have the binary64 format used by the C API and LAPACK; the
+public `rtgsfit.h` checks its size, radix, precision and exponent range at compile time. It compiles
+without warnings with
 `-Wall -Wextra -Wpedantic -Wshadow -Wvla -Wstrict-prototypes`. `-Wvla` guarantees that no
 variable-length arrays are used.
 
