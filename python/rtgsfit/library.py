@@ -5,14 +5,17 @@ The preshot is compiled into the library. `build_library` writes it to `c/build/
 `c/tools/write_preshot.c` and compiles `c/build/librtgsfit.so`. Make recompiles only what changed, so
 building the same preshot again is quick. There is one build, of the last preshot built, so build from
 one process at a time, or give each process its own copy of the C sources with `isolated_build()`.
+`c/` is the checkout's; a normal install builds from a copy of its packaged sources (`c_directory()`).
 """
 
 from __future__ import annotations
 
 import _ctypes
 import ctypes
+import hashlib
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 from collections.abc import Iterator
@@ -65,21 +68,71 @@ def describe_status(status: int) -> str:
     return " | ".join(names)
 
 
+def _checkout_c_directory() -> Path | None:
+    """`c/` beside the Python sources, as in a checkout or an editable install."""
+    path = Path(__file__).resolve().parents[2] / "c"
+    return path if (path / "Makefile").is_file() else None
+
+
+PACKAGED_C_DIRECTORY = Path(__file__).resolve().parent / "_c"
+"""The C sources in a non-editable install (see hatch_build.py). `make` writes into its C directory and
+the installation may be read-only or shared, so they are built from a copy (`c_directory`)."""
+
+
+def user_cache_directory() -> Path:
+    """`$XDG_CACHE_HOME/rtgsfit`, by default `~/.cache/rtgsfit`, where an installed package builds and writes."""
+    base = os.environ.get("XDG_CACHE_HOME")
+    return (Path(base) if base else Path.home() / ".cache") / "rtgsfit"
+
+
+def _writable_copy(packaged: Path) -> Path:
+    """A copy of `packaged` under `user_cache_directory()`, named by a hash of its contents, so that
+    every installed version builds from its own sources. Concurrent processes may create it at once."""
+    digest = hashlib.sha256()
+    for path in sorted(path for path in packaged.rglob("*") if path.is_file()):
+        digest.update(path.relative_to(packaged).as_posix().encode() + b"\0" + path.read_bytes() + b"\0")
+    target = user_cache_directory() / f"c-{digest.hexdigest()[:16]}"
+    if (target / "Makefile").is_file():
+        return target
+    target.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f"{target.name}.", dir=target.parent))
+    shutil.copytree(packaged, staging, dirs_exist_ok=True)
+    for path in [staging, *staging.rglob("*")]:  # the installation may be read-only
+        path.chmod(path.stat().st_mode | stat.S_IWUSR)
+    try:
+        staging.rename(target)
+    except OSError:
+        shutil.rmtree(staging)
+        if not (target / "Makefile").is_file():
+            raise
+    return target
+
+
 def c_directory() -> Path:
-    """The `c/` directory holding the Makefile and sources (`$RTGSFIT_C_DIR` overrides)."""
+    """The `c/` directory holding the Makefile and sources, where `make` builds.
+
+    `$RTGSFIT_C_DIR` if set; otherwise the checkout's `c/` (also for editable installs); otherwise, for a
+    normal install, a copy of the packaged C sources under `user_cache_directory()`.
+    """
     if "RTGSFIT_C_DIR" in os.environ:
         return Path(os.environ["RTGSFIT_C_DIR"])
-    path = Path(__file__).resolve().parents[2] / "c"
-    if not (path / "Makefile").is_file():
-        raise FileNotFoundError(f"cannot find the C sources at {path}; set RTGSFIT_C_DIR")
-    return path
+    checkout = _checkout_c_directory()
+    if checkout is not None:
+        return checkout
+    if (PACKAGED_C_DIRECTORY / "Makefile").is_file():
+        return _writable_copy(PACKAGED_C_DIRECTORY)
+    raise FileNotFoundError(f"cannot find the C sources in a checkout or at {PACKAGED_C_DIRECTORY}; set RTGSFIT_C_DIR")
 
 
 def cache_directory() -> Path:
-    """Generated outputs live beside the C sources, independent of the working directory."""
+    """Where relative local-writer paths go, independent of the working directory: `$RTGSFIT_CACHE_DIR` if
+    set; `c/cache` beside the C sources of a checkout or `$RTGSFIT_C_DIR`; otherwise, for a normal
+    install, `user_cache_directory()/outputs`, which outlives upgrades."""
     if "RTGSFIT_CACHE_DIR" in os.environ:
         return Path(os.environ["RTGSFIT_CACHE_DIR"])
-    return c_directory().resolve() / "cache"
+    if "RTGSFIT_C_DIR" in os.environ or _checkout_c_directory() is not None:
+        return c_directory().resolve() / "cache"
+    return user_cache_directory() / "outputs"
 
 
 def build_directory() -> Path:

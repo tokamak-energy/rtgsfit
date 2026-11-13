@@ -3,7 +3,8 @@
 Keys are `Node.key`, e.g. `GLOBAL.IP` or `PRESHOT.GRID.R`, so a local file has exactly the nodes of
 the MDSplus tree. Strings are stored as numpy unicode arrays, so the file can be read with
 `numpy.load(path)` without pickling; `rtgsfit.database_readers.local` converts them back.
-Relative writer paths are resolved under the build cache (by default the repository's `c/cache/`).
+Relative writer paths are resolved under `rtgsfit.library.cache_directory()`: the repository's `c/cache/`,
+or `~/.cache/rtgsfit/outputs/` for a package installed without a checkout.
 Absolute paths are explicit exports and are used unchanged.
 """
 

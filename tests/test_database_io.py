@@ -5,12 +5,14 @@ from __future__ import annotations
 import copy
 import re
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 from rtgsfit import data_dictionary as dd
+from rtgsfit import library
 from rtgsfit.database_readers.local import read_preshot
 from rtgsfit.database_readers.local import read_results
 from rtgsfit.database_readers.rtgsfit_mdsplus import read_mdsplus_nodes
@@ -71,6 +73,48 @@ def test_cache_directory_follows_explicit_c_sources(tmp_path: Path, monkeypatch:
 def test_cache_directory_can_be_explicitly_overridden(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RTGSFIT_CACHE_DIR", str(tmp_path / "export"))
     assert cache_directory() == tmp_path / "export"
+
+
+@pytest.fixture
+def installed_package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """A normal (non-editable) install: no checkout, and read-only C sources inside the package."""
+    packaged = tmp_path / "site-packages" / "rtgsfit" / "_c"
+    (packaged / "src").mkdir(parents=True)
+    (packaged / "Makefile").write_text("all:\n")
+    (packaged / "src" / "rtgsfit.c").write_text("int x;\n")
+    paths = [packaged / "Makefile", packaged / "src" / "rtgsfit.c", packaged / "src", packaged]
+    for path in paths:
+        path.chmod(0o555 if path.is_dir() else 0o444)
+    monkeypatch.setattr(library, "_checkout_c_directory", lambda: None)
+    monkeypatch.setattr(library, "PACKAGED_C_DIRECTORY", packaged)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.delenv("RTGSFIT_C_DIR", raising=False)
+    monkeypatch.delenv("RTGSFIT_CACHE_DIR", raising=False)
+    yield packaged
+    for path in paths:
+        path.chmod(0o755 if path.is_dir() else 0o644)
+
+
+def test_installed_package_builds_from_a_writable_copy(installed_package: Path, tmp_path: Path) -> None:
+    c = c_directory()
+    assert c.parent == tmp_path / "xdg" / "rtgsfit"
+    assert (c / "src" / "rtgsfit.c").read_text() == "int x;\n"
+    (c / "src" / "preshot_data.c").write_text("")  # make writes the active preshot here
+    (c / "build").mkdir()
+    assert c_directory() == c
+    assert sorted(path.name for path in installed_package.rglob("*")) == ["Makefile", "rtgsfit.c", "src"]
+    assert cache_directory() == tmp_path / "xdg" / "rtgsfit" / "outputs"
+
+
+def test_installed_package_with_other_sources_builds_from_another_copy(installed_package: Path) -> None:
+    before = c_directory()
+    source = installed_package / "src" / "rtgsfit.c"
+    for path in (installed_package, source.parent, source):
+        path.chmod(0o755 if path.is_dir() else 0o644)
+    source.write_text("int y;\n")
+    after = c_directory()
+    assert after != before
+    assert (after / "src" / "rtgsfit.c").read_text() == "int y;\n"
 
 
 def test_build_writes_the_active_preshot_and_reuses_it(analytic_preshot: Preshot) -> None:

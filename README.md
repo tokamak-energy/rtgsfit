@@ -172,7 +172,9 @@ rtgsfit replay analytic
 ```
 
 There is one active preshot: the last one built. The replay writes it into `c/src/` and compiles
-`c/build/librtgsfit.so`, inside this repository whatever the working directory. Make recompiles only
+`c/build/librtgsfit.so`, inside this repository whatever the working directory (an installed package
+uses a copy in its user cache; see [Installing without a checkout](#installing-without-a-checkout)).
+Make recompiles only
 what changed, so replaying the same preshot again does not recompile; another preshot replaces it.
 Run one build at a time. The library holds a CRC-32 of its preshot, and Python refuses a library
 built from a different one.
@@ -202,9 +204,28 @@ To calculate a new ST40 preshot using GSFit instead, add `--set preshot/reader=g
 These commands generate local files; they do not write to the shared database.
 The generated files are machine/preshot-specific, not universal constants.
 
+## Installing without a checkout
+
+To use RT-GSFit as a Python package, for example in the PPAC environment, install a release tag
+directly from GitHub (it is not published on PyPI):
+
+```sh
+pip install "git+https://github.com/tokamak-energy/rtgsfit@v0.2.0"
+pip install "rtgsfit[te] @ git+https://github.com/tokamak-energy/rtgsfit@v0.2.0"   # with extras
+```
+
+The package still compiles the C library for each preshot, so the host needs gcc, make, `cmp`
+(diffutils), OpenBLAS with LAPACKE, and the netCDF C library; pip cannot install these. The package
+carries the C sources (as `rtgsfit/_c`) but never builds inside its installation, which may be
+read-only or shared. On first use it copies them to `~/.cache/rtgsfit/c-<hash>/` and builds there,
+one copy per version of the sources. Relative local-writer paths go under `~/.cache/rtgsfit/outputs/` instead of
+`c/cache/`. `$XDG_CACHE_HOME` replaces `~/.cache`; `RTGSFIT_C_DIR` and `RTGSFIT_CACHE_DIR` override
+both directories. The PCS does not use this: it builds from the release sources with `make -C c`.
+
 ## Status
 
-RT-GSFit v2 is a rewrite of the code that ran on ST40. The reconstructed equilibria are preserved:
+RT-GSFit v2 (release v0.2.0) is a rewrite of the code that ran on ST40, v1 (releases up to v0.1.2).
+The reconstructed equilibria are preserved:
 the tests compare v2 with v1, with GSFit, with FreeGSNKE and with an analytic solution. All names
 and the PCS interface have changed. The [manual](documentation/manual.md#11-migrating-from-v1) lists
 every change.

@@ -21,7 +21,7 @@ jobs:
         run: |
           dnf -y install dnf-plugins-core epel-release
           dnf config-manager --set-enabled powertools
-          dnf -y install gcc make diffutils git openblas-devel netcdf-devel tar
+          dnf -y install gcc make diffutils findutils git openblas-devel netcdf-devel tar
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
@@ -43,11 +43,25 @@ jobs:
 
       - name: Check Python formatting and lint
         run: |
-          .venv/bin/ruff format --check python tests
-          .venv/bin/ruff check python tests
+          .venv/bin/ruff format --check python tests hatch_build.py
+          .venv/bin/ruff check python tests hatch_build.py
 
       - name: Check C formatting
         run: .venv/bin/clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch] c/tools/*.c
 
       - name: Run the off-network tests (analytic and FreeGSNKE replays, data dictionary, settings, I/O, CLI)
         run: .venv/bin/pytest --require-freegsnke
+
+      # As `pip install "git+https://github.com/tokamak-energy/rtgsfit@<tag>"` does, build the sdist and
+      # then the wheel from it, install that without the checkout, and replay. The wheel carries the C
+      # sources and builds from a copy in the user cache, so nothing may be written into the installation.
+      - name: Replay from a normal (non-editable) install
+        run: |
+          uv build --out-dir /tmp/dist
+          uv venv --python 3.13 /tmp/installed
+          uv pip install --python /tmp/installed/bin/python /tmp/dist/rtgsfit-*.whl
+          package=$(/tmp/installed/bin/python -c "import pathlib, rtgsfit; print(pathlib.Path(rtgsfit.__file__).parent)")
+          find "$package" -name __pycache__ -prune -o -print | sort > /tmp/installed-files.txt
+          (cd /tmp && XDG_CACHE_HOME=/tmp/rtgsfit-cache /tmp/installed/bin/rtgsfit replay analytic)
+          find "$package" -name __pycache__ -prune -o -print | sort | diff /tmp/installed-files.txt -
+          test -f /tmp/rtgsfit-cache/rtgsfit/outputs/rtgsfit_analytic.npz

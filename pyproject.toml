@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=69"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
 
 [project]
 name = "rtgsfit"
-version = "2.0.0"
+version = "0.2.0"
 description = "RT-GSFit: real-time Grad-Shafranov equilibrium reconstruction"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -28,11 +28,12 @@ dev = ["pytest>=8", "ruff>=0.5", "clang-format==21.1.8", "matplotlib"]
 [project.scripts]
 rtgsfit = "rtgsfit.__main__:main"
 
-[tool.setuptools.packages.find]
-where = ["python"]
+[tool.hatch.build.targets.wheel]
+packages = ["python/rtgsfit"]
 
-[tool.setuptools.package-data]
-rtgsfit = ["settings/*/*.json", "settings/settings.schema.json", "py.typed"]
+# Puts the C sources, which rtgsfit compiles for each preshot, into the wheel as rtgsfit/_c.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

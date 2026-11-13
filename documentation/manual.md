@@ -545,6 +545,19 @@ python/rtgsfit/
 └── database_writers/     local, c_source, rtgsfit_mdsplus
 ```
 
+**Installation.** Developers install a checkout in editable mode (`uv pip install -e ".[dev]"`) and
+build in its `c/`. Elsewhere, for example in PPAC, install a release tag without a checkout; it is not
+on PyPI:
+
+    pip install "git+https://github.com/tokamak-energy/rtgsfit@v0.2.0"
+
+The wheel carries the C sources as `rtgsfit/_c`. The installation may be read-only or shared, so it
+is never built in: on first use the package copies them to `~/.cache/rtgsfit/c-<hash>/`
+(`$XDG_CACHE_HOME/rtgsfit/` if set), one copy per version of the sources, and builds there. Either
+way the host needs gcc, make, diffutils, OpenBLAS with LAPACKE and the netCDF C library (section 6.6),
+which pip cannot install. `RTGSFIT_C_DIR` selects another C directory. CI installs the wheel built
+from the sdist, as pip does from GitHub, and replays from it without writing into the installation.
+
 ### 7.1 Command line
 
     rtgsfit list-settings
@@ -574,7 +587,8 @@ results.nested["CONSTRAINTS"]["BP_PROBE"]["ALL"]["RECONSTRUCT"]
 `replay(settings, preshot=..., signals=...)` replaces the readers, for example to replay modified
 measurements. `run_replay(settings)` also runs the writers. The replay makes its preshot the active
 one (section 6.6): it writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c` and compiles
-`c/build/librtgsfit.so`, in the repository whatever the working directory. Replaying the same preshot
+`c/build/librtgsfit.so`, in the repository (for an installed package, in its cache copy; section 7)
+whatever the working directory. Replaying the same preshot
 again compiles nothing. From Python, `build_library(preshot)` does the same and returns the library
 path, and `Rtgsfit.build(preshot)` also loads it.
 
@@ -610,7 +624,8 @@ A results file or tree contains the whole preshot, the effective settings JSON, 
 `meas` and `coil_signal`, so every replay can be reproduced from its own output.
 
 For the `local` writer, relative `path` and `preshot_path` values are resolved under the repository's
-gitignored `c/cache/` (`RTGSFIT_CACHE_DIR` overrides it), not the working directory. For example, the
+gitignored `c/cache/`, or `~/.cache/rtgsfit/outputs/` for a package installed without a checkout
+(`RTGSFIT_CACHE_DIR` overrides both), not the working directory. For example, the
 analytic preset writes `c/cache/rtgsfit_analytic.npz`. Absolute paths remain explicit exports and are
 used unchanged.
 The low-level `write_npz(path, ...)` function uses its caller-supplied path unchanged.
@@ -703,8 +718,10 @@ RTGSFIT_REPLAY=dict(
 
 On pulse 14922 a run takes about 50 s, most of it building the GSFit preshot, and uses 1.5 GB.
 That is within PPAC's default 600 s and 4 GB.
-The PPAC environment needs rtgsfit installed from a checkout (it compiles `c/`), with gcc, OpenBLAS
-and the netCDF C library. It also needs GSFit with its ST40 extras, `mdsthin`, and a
+The PPAC environment needs rtgsfit installed, normally with
+`pip install "git+https://github.com/tokamak-energy/rtgsfit@v0.2.0"` (section 7), and gcc, make,
+diffutils, OpenBLAS and the netCDF C library, because each run compiles its pulse's preshot in a
+private copy of the C sources (`isolated_build`). It also needs GSFit with its ST40 extras, `mdsthin`, and a
 `standard_utility` whose `RTGSFIT.csv` matches the data dictionary (section 7.4).
 
 Rebuilding follows the pulse's geometry and sensor list, but MAG `BEST` is **not** an automatic
@@ -955,6 +972,8 @@ ill-conditioned along `P_PRIME` and `DELTA_Z`, which amplifies this to 0.03 % in
 rebuilds v1's rounded measurements, and then agrees with v1 to 1e-4 on every output.
 
 ## 11. Migrating from v1
+
+v1 is the code released up to v0.1.2; v2 is release v0.2.0 onwards.
 
 ### 11.1 Repository
 

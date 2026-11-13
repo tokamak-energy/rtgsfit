@@ -4,7 +4,7 @@ from typing import Any
 
 from rtgsfit.settings import load_settings
 
-__version__ = "2.0.0"
+__version__ = "0.2.0"
 
 __all__ = ["RtgsfitReplay", "__version__", "load_settings"]
 
