@@ -62,7 +62,7 @@ def _to_mdsplus(data: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             converted[key] = _to_mdsplus(value)
         elif isinstance(value, (list, tuple)):
-            converted[key] = np.array([str(item) for item in value])
+            converted[key] = np.array([str(item) for item in value], dtype=np.str_)
         else:
             converted[key] = value
     return converted

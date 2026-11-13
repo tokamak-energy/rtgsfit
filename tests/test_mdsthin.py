@@ -37,9 +37,13 @@ def test_writer_explicitly_uses_mdsthin(monkeypatch: pytest.MonkeyPatch, tmp_pat
         ),
     )
     settings = load_settings("st40").copy_with({"writers/rtgsfit_mdsplus/enabled": True})
-    write_to_mdsplus({"TIME": np.array([0.0])}, settings)
+    write_to_mdsplus({"TIME": np.array([0.0]), "PASSIVE": {"NAMES": []}, "COIL": {"NAMES": ["SOL"]}}, settings)
     assert len(calls) == 2
     assert all(call["use_mdsthin"] is True for call in calls)
+    data = calls[1]["data_to_write"]
+    assert data["PASSIVE"]["NAMES"].dtype.kind == "U"
+    assert data["PASSIVE"]["NAMES"].shape == (0,)
+    assert_array_equal(data["COIL"]["NAMES"], ["SOL"])
 
 
 def _fake_st40(
