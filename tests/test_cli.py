@@ -16,7 +16,7 @@ from rtgsfit.results import Results
 
 def test_list_settings(capsys: pytest.CaptureFixture[str]) -> None:
     main(["list-settings"])
-    assert {"analytic", "freegsnke", "st40"} <= set(capsys.readouterr().out.split())
+    assert {"analytic", "freegsnke", "st40_magrun16", "st40_tepcs"} <= set(capsys.readouterr().out.split())
 
 
 def test_write_csv(tmp_path: Path) -> None:

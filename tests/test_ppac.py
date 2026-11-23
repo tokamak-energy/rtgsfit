@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from collections.abc import Iterator
@@ -42,10 +43,8 @@ def test_ppac_constructs_and_runs_it_as_slurm_python_job_does() -> None:
     assert callable(controller.run)
     settings = controller.settings
     assert settings.get_path("replay/pulse") == 13343
-    assert settings.get_path("gsfit/pulse") == 13343
     assert settings.get_path("preshot/reader") == "gsfit"
-    assert settings.get_path("signals/reader") == "st40_mdsplus"
-    assert settings.get_path("signals/st40_mdsplus/mag_run") == "BEST"
+    assert settings.get_path("signals/reader") == "st40_magrun16"
     assert settings.get_path("writers/names") == ["rtgsfit_mdsplus"]
     assert settings.get_path("writers/rtgsfit_mdsplus") == {
         "enabled": True, "pulse": 13343, "run_name": "RUN01_POST", "run_description": "PPAC run", "link_best": True,
@@ -58,10 +57,10 @@ def test_ppac_replay_defaults_to_run01_post_linked_to_best() -> None:
     assert settings.get_path("writers/rtgsfit_mdsplus/link_best") is True
 
 
-def test_ppac_replays_the_pcs_window() -> None:
+def test_ppac_replays_from_the_pcs_start_until_after_the_plasma() -> None:
     settings = ppac.RtgsfitReplay(pulseNo=13343).settings
     assert settings.get_path("replay/time_start") == 0.0055
-    assert settings.get_path("replay/time_end") == 0.6
+    assert settings.get_path("replay/time_end") == 0.35
     assert settings.get_path("replay/time_step") == 0.001
 
 
@@ -94,6 +93,8 @@ def test_ppac_run_builds_privately_and_writes_to_mdsplus(
             __file__=str(package / "__init__.py"),
             create_script_nodes=lambda **kwargs: calls.append(kwargs),
             write_script_data=lambda **kwargs: calls.append(kwargs),
+            create_write_nodes_from_csv_file=lambda *args, **kwargs: calls.append(kwargs),
+            link_BEST_direct=lambda *args, **kwargs: calls.append({"link": args}),
         ),
     )
     copies: list[Path] = []
@@ -126,8 +127,29 @@ def test_ppac_run_builds_privately_and_writes_to_mdsplus(
     assert len(copies) == 1 and not copies[0].exists()
     assert (shared_library.stat().st_mtime_ns if shared_library.exists() else None) == shared_before
     assert {name: os.environ.get(name) for name in environment} == environment
-    create, write = calls
+    create, write, quality, link = calls
     assert create["pulseNo_write"] == write["pulseNo_write"] == 45_000_000
     assert create["run_name"] == write["run_name"] == "RUN02_POST"
-    assert create["link_best"] is True
+    assert create["link_best"] is False
     assert create["use_mdsthin"] is write["use_mdsthin"] is True
+    assert quality["data_to_write"]["SCORE"] == 0
+    assert json.loads(quality["data_to_write"]["RESULTS"])["completed"] is True
+    assert link["link"] == (45_000_000, "RTGSFIT.RUN02_POST")
+
+
+def test_missing_input_writes_quality_only_and_propagates_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    from rtgsfit.database_readers import InputDataError
+
+    calls = []
+
+    def fail(*args: Any, **kwargs: Any) -> Results:
+        raise InputDataError("missing MAG RUN16 signal")
+
+    monkeypatch.setattr(ppac, "replay", fail)
+    monkeypatch.setattr(ppac, "write_quality_only", lambda quality, settings: calls.append(quality))
+    monkeypatch.setattr(ppac, "write_results", lambda *args: pytest.fail("no results should be written"))
+    controller = ppac.RtgsfitReplay(pulseNo=14894, verbose=False)
+    with pytest.raises(InputDataError, match="missing MAG RUN16 signal"):
+        controller.run()
+    assert calls[0]["SCORE"] == 0
+    assert json.loads(calls[0]["RESULTS"]) == {"completed": False, "input_error": "missing MAG RUN16 signal"}

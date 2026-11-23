@@ -14,10 +14,15 @@ A *preshot reader* returns the `Preshot`; a *signals reader* returns the `Signal
 |-------------------|---------|---------|--------------------------------------------|
 | `analytic`        | yes     | yes     | nothing                                    |
 | `local`           | yes     |         | a file written by the `local` writer       |
-| `gsfit`           | yes     | yes     | GSFit (and MDSplus for ST40)               |
+| `gsfit`           | yes     |         | GSFit (and MDSplus for ST40)               |
 | `freegsnke`       | yes     | yes     | GSFit and FreeGSNKE (no TE network)        |
 | `rtgsfit_mdsplus` | yes     |         | the TE network                             |
-| `st40_mdsplus`    |         | yes     | the TE network                             |
+| `st40_magrun16`   |         | yes     | processed MAG RUN16 and PSU2COIL (TE network) |
+| `st40_tepcs`      |         | yes     | TEPCS counts and per-pulse PSS (TE network) |
+
+ST40 is replayed in one of two ways, each a packaged settings file named after its signals reader:
+`st40_magrun16` feeds RT-GSFit what GSFit's post-shot reconstructions (GSFIT RUN04) fit, and
+`st40_tepcs` reconstructs what the PCS sees in an experiment.
 
 Readers are imported lazily, so that optional dependencies are only needed when used.
 """
@@ -28,6 +33,7 @@ import importlib
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from dataclasses import field
 
 import numpy as np
 import numpy.typing as npt
@@ -38,6 +44,10 @@ from rtgsfit.settings import Settings
 FloatArray = npt.NDArray[np.float64]
 
 
+class InputDataError(ValueError):
+    """The recorded data of a pulse cannot support a replay (e.g. a missing or inconsistent signal)."""
+
+
 @dataclass
 class Signals:
     """The inputs to `rtgsfit()` at every time slice, before the coil matrix is applied."""
@@ -45,6 +55,7 @@ class Signals:
     time: FloatArray  # [N_TIME]
     meas: FloatArray  # [N_TIME, N_MEAS], ordered as PRESHOT.MEAS:NAMES
     coil_signal: FloatArray  # [N_TIME, N_COIL_SIGNAL], ordered as PRESHOT.COIL:SIGNALS
+    input_quality: dict[str, str] = field(default_factory=dict)
 
     def validate(self, preshot: Preshot) -> None:
         n_time = len(self.time)
@@ -63,6 +74,7 @@ class Signals:
             time=np.repeat(self.time, n_repeat),
             meas=np.repeat(self.meas, n_repeat, axis=0),
             coil_signal=np.repeat(self.coil_signal, n_repeat, axis=0),
+            input_quality=self.input_quality.copy(),
         )
 
     def coil_current(self, preshot: Preshot) -> FloatArray:
@@ -91,9 +103,9 @@ _PRESHOT_READERS = {
 }
 _SIGNALS_READERS = {
     "analytic": "rtgsfit.database_readers.analytic:AnalyticReader",
-    "gsfit": "rtgsfit.database_readers.gsfit:GsfitReader",
     "freegsnke": "rtgsfit.database_readers.freegsnke:FreegsnkeReader",
-    "st40_mdsplus": "rtgsfit.database_readers.st40_mdsplus:St40MdsplusReader",
+    "st40_magrun16": "rtgsfit.database_readers.st40_magrun16:St40Magrun16Reader",
+    "st40_tepcs": "rtgsfit.database_readers.st40_tepcs:St40TepcsReader",
 }
 
 

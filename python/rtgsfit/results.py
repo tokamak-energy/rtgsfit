@@ -23,11 +23,17 @@ from rtgsfit.library import TIMING_SECTIONS
 from rtgsfit.library import SliceResult
 from rtgsfit.post_processing import post_process
 from rtgsfit.preshot import Preshot
+from rtgsfit.separatrix import Leg
+from rtgsfit.separatrix import Limiter
+from rtgsfit.separatrix import Separatrix
+from rtgsfit.separatrix import leg_size
+from rtgsfit.separatrix import separatrix
 
 
 @dataclass
 class Results:
     nested: dict[str, Any] = field(default_factory=dict)
+    input_quality: dict[str, str] = field(default_factory=dict)
 
     @property
     def flat(self) -> dict[str, Any]:
@@ -119,6 +125,21 @@ def collect_results(
     def shape(name: str, dtype: type = np.float64) -> np.ndarray:
         return np.array([getattr(item, name) for item in shapes], dtype=dtype)
 
+    n_limiter = sizes["N_LIMITER"]
+    limiter = Limiter(
+        np.asarray(preshot["LIMITER:R"], dtype=np.float64),
+        np.asarray(preshot["LIMITER:Z"], dtype=np.float64),
+        np.reshape(preshot["LIMITER:GRID_INDEX"], (n_limiter, -1)),
+        np.reshape(preshot["LIMITER:GRID_WEIGHT"], (n_limiter, -1)),
+    )
+    separatrices = [
+        separatrix(r, z, item.psi.reshape(n_z, n_r), limiter, axis_r=item.axis_r, axis_z=item.axis_z,
+                   axis_psi=item.axis_psi, xpt_r=item.xpt_r, xpt_z=item.xpt_z, xpt_n=item.xpt_n,
+                   xpt_diverted=item.xpt_diverted)
+        if item.status == 0 else Separatrix.empty(leg_size(n_r, n_z))
+        for item in slices
+    ]  # fmt: skip
+
     timing = np.zeros((n_time, len(TIMING_SECTIONS)))
     for i, item in enumerate(slices):
         if item.timing is not None:
@@ -143,7 +164,13 @@ def collect_results(
             "TRIANG": shape("triangularity"),
             "TRIANG_U": shape("triangularity_upper"),
             "TRIANG_L": shape("triangularity_lower"),
+            "BOUNDING": {
+                "R": np.array([item.bounding_r for item in separatrices]),
+                "Z": np.array([item.bounding_z for item in separatrices]),
+            },
         },
+        "SOL": {name: _legs([item.sol[name] for item in separatrices]) for name in dd.SOL_LEGS},
+        "SEC_XPT": {name: _legs([item.sec_xpt[name] for item in separatrices]) for name in dd.SEC_XPT_LEGS},
         "CONSTRAINTS": constraints,
         "PROFILES_2D": {
             "R_Z": {
@@ -177,12 +204,28 @@ def collect_results(
     return results
 
 
+def _legs(legs: list[Leg]) -> dict[str, Any]:
+    """The nodes of one separatrix branch over time."""
+    return {
+        "CONTOUR": {
+            "N": np.array([leg.n for leg in legs], dtype=np.int32),
+            "R": np.array([leg.r for leg in legs]),
+            "Z": np.array([leg.z for leg in legs]),
+        },
+        "STRIKE_POINT": {
+            "R": np.array([leg.strike_r for leg in legs]),
+            "Z": np.array([leg.strike_z for leg in legs]),
+        },
+    }
+
+
 def validate_results(results: Results, preshot: Preshot) -> None:
     """Check that the results have exactly the nodes, shapes and dtypes of the data dictionary."""
     sizes = preshot.symbolic_sizes()
     sizes["N_TIME"] = results.n_time
     sizes["N_TIMING"] = len(TIMING_SECTIONS)
     sizes["N_OUTLINE"] = outline_size(sizes["N_R"], sizes["N_Z"])
+    sizes["N_LEG"] = leg_size(sizes["N_R"], sizes["N_Z"])
     flat = results.flat
     expected = {node.key for node in dd.ALL_NODES}
     if set(flat) != expected:

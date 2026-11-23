@@ -12,7 +12,7 @@ __all__ = ["RtgsfitReplay", "__version__", "load_settings"]
 def __getattr__(name: str) -> Any:
     # Imported on first use, so that `import rtgsfit` does not load the replay machinery.
     if name == "RtgsfitReplay":
-        from rtgsfit.ppac import RtgsfitReplay
+        from rtgsfit import ppac
 
-        return RtgsfitReplay
+        return getattr(ppac, name)
     raise AttributeError(f"module 'rtgsfit' has no attribute {name!r}")

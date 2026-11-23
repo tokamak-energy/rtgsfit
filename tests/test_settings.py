@@ -21,7 +21,7 @@ from rtgsfit.settings import replay_times
 
 
 def test_shipped_settings() -> None:
-    assert {"analytic", "freegsnke", "st40"} <= set(available_settings())
+    assert {"analytic", "freegsnke", "st40_magrun16", "st40_tepcs"} <= set(available_settings())
 
 
 @pytest.mark.parametrize("name", available_settings())
@@ -35,7 +35,7 @@ def test_shipped_settings_load_and_name_known_readers(name: str) -> None:
 
 
 def test_native_json_types() -> None:
-    settings = load_settings("st40")
+    settings = load_settings("st40_tepcs")
     assert type(settings["replay"]["pulse"]) is int
     assert type(settings.get_path("replay/time_step")) is float
     assert type(settings["build"]["timing"]) is bool

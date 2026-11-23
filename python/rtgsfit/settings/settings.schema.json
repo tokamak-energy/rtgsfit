@@ -45,12 +45,19 @@
             "additionalProperties": false,
             "required": ["reader"],
             "properties": {
-                "reader": {"enum": ["analytic", "gsfit", "freegsnke", "st40_mdsplus"]},
-                "st40_mdsplus": {
+                "reader": {"enum": ["analytic", "freegsnke", "st40_magrun16", "st40_tepcs"]},
+                "st40_magrun16": {
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                        "mag_run": {"type": "string", "minLength": 1},
+                        "psu2coil_run": {"type": "string", "minLength": 1, "description": "PSU2COIL run of the coil currents; BEST, as GSFIT RUN04 used, by default."},
+                        "server": {"type": "string", "minLength": 1}
+                    }
+                },
+                "st40_tepcs": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
                         "server": {"type": "string", "minLength": 1}
                     }
                 }
@@ -167,7 +174,7 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "settings_path": {"type": "string", "minLength": 1, "description": "GSFit's own settings name or directory; not an RT-GSFit configuration."},
+                "settings_path": {"type": "string", "minLength": 1, "description": "GSFit settings: a directory of RT-GSFit's packaged settings (e.g. st40_magrun16/gsfit), or GSFit's own settings name or directory."},
                 "pulse": {"type": "integer", "minimum": 0},
                 "grid": {"$ref": "#/$defs/grid"},
                 "sensor_names": {"enum": ["st40_pcs", "gsfit"]},

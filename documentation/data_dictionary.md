@@ -31,6 +31,7 @@ of time slices. See [manual.md](manual.md) for the definitions of the symbols.
 | `N_INTERP` | 4, the points of a bilinear interpolation stencil |
 | `N_R_PLUS_2` | N_R + 2 |
 | `N_OUTLINE` | Number of points stored for the boundary outline (Python only) |
+| `N_LEG` | Number of points stored for each SOL and SEC_XPT contour (Python only) |
 | `N_TIMING` | Number of timed sections of `rtgsfit()` |
 
 ## Preshot
@@ -235,6 +236,15 @@ Plasma boundary.
 | `BOUNDARY:TRIANG_U` |  | [N_TIME] | float64 | dimensionless | (GEO_AXIS:R - R(Z_max)) / MINOR_RADIUS |
 | `BOUNDARY:TRIANG_L` |  | [N_TIME] | float64 | dimensionless | (GEO_AXIS:R - R(Z_min)) / MINOR_RADIUS |
 
+### `BOUNDARY.BOUNDING`
+
+Point that bounds the plasma: the active x-point XPT.ALL[0] or the limiter point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `BOUNDARY.BOUNDING:R` |  | [N_TIME] | float64 | metre | Major radius of the active x-point if diverted, else of the limiter point; post-processed |
+| `BOUNDARY.BOUNDING:Z` |  | [N_TIME] | float64 | metre | Height of the active x-point if diverted, else of the limiter point; post-processed |
+
 ### `CONSTRAINTS`
 
 Measurements used to constrain the equilibrium and their reconstructed values.
@@ -344,6 +354,120 @@ All x-points that were found.
 | `XPT.ALL:R` |  | [N_TIME, N_XPT_MAX] | float64 | metre | Major radius of the x-points, sorted by psi; NaN padded |
 | `XPT.ALL:Z` |  | [N_TIME, N_XPT_MAX] | float64 | metre | Height of the x-points; NaN padded |
 | `XPT.ALL:PSI` |  | [N_TIME, N_XPT_MAX] | float64 | weber | Poloidal flux at the x-points; NaN padded |
+
+### `SOL.HFS.CONTOUR`
+
+Points from the x-point to the strike point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SOL.HFS.CONTOUR:N` |  | [N_TIME] | int32 | dimensionless | Number of contour points; 0 if not traced |
+| `SOL.HFS.CONTOUR:R` |  | [N_TIME, N_LEG] | float64 | metre | Major radius of the contour, starting at the x-point; NaN padded; post-processed |
+| `SOL.HFS.CONTOUR:Z` |  | [N_TIME, N_LEG] | float64 | metre | Height of the contour, starting at the x-point; NaN padded; post-processed |
+
+### `SOL.HFS.STRIKE_POINT`
+
+Where the contour first meets the vessel.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SOL.HFS.STRIKE_POINT:R` |  | [N_TIME] | float64 | metre | Major radius where the contour meets the vessel; else NaN |
+| `SOL.HFS.STRIKE_POINT:Z` |  | [N_TIME] | float64 | metre | Height where the contour meets the vessel; else NaN |
+
+### `SOL.LFS.CONTOUR`
+
+Points from the x-point to the strike point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SOL.LFS.CONTOUR:N` |  | [N_TIME] | int32 | dimensionless | Number of contour points; 0 if not traced |
+| `SOL.LFS.CONTOUR:R` |  | [N_TIME, N_LEG] | float64 | metre | Major radius of the contour, starting at the x-point; NaN padded; post-processed |
+| `SOL.LFS.CONTOUR:Z` |  | [N_TIME, N_LEG] | float64 | metre | Height of the contour, starting at the x-point; NaN padded; post-processed |
+
+### `SOL.LFS.STRIKE_POINT`
+
+Where the contour first meets the vessel.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SOL.LFS.STRIKE_POINT:R` |  | [N_TIME] | float64 | metre | Major radius where the contour meets the vessel; else NaN |
+| `SOL.LFS.STRIKE_POINT:Z` |  | [N_TIME] | float64 | metre | Height where the contour meets the vessel; else NaN |
+
+### `SEC_XPT.HFS_LOWER.CONTOUR`
+
+Points from the x-point to the strike point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.HFS_LOWER.CONTOUR:N` |  | [N_TIME] | int32 | dimensionless | Number of contour points; 0 if not traced |
+| `SEC_XPT.HFS_LOWER.CONTOUR:R` |  | [N_TIME, N_LEG] | float64 | metre | Major radius of the contour, starting at the x-point; NaN padded; post-processed |
+| `SEC_XPT.HFS_LOWER.CONTOUR:Z` |  | [N_TIME, N_LEG] | float64 | metre | Height of the contour, starting at the x-point; NaN padded; post-processed |
+
+### `SEC_XPT.HFS_LOWER.STRIKE_POINT`
+
+Where the contour first meets the vessel.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.HFS_LOWER.STRIKE_POINT:R` |  | [N_TIME] | float64 | metre | Major radius where the contour meets the vessel; else NaN |
+| `SEC_XPT.HFS_LOWER.STRIKE_POINT:Z` |  | [N_TIME] | float64 | metre | Height where the contour meets the vessel; else NaN |
+
+### `SEC_XPT.HFS_UPPER.CONTOUR`
+
+Points from the x-point to the strike point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.HFS_UPPER.CONTOUR:N` |  | [N_TIME] | int32 | dimensionless | Number of contour points; 0 if not traced |
+| `SEC_XPT.HFS_UPPER.CONTOUR:R` |  | [N_TIME, N_LEG] | float64 | metre | Major radius of the contour, starting at the x-point; NaN padded; post-processed |
+| `SEC_XPT.HFS_UPPER.CONTOUR:Z` |  | [N_TIME, N_LEG] | float64 | metre | Height of the contour, starting at the x-point; NaN padded; post-processed |
+
+### `SEC_XPT.HFS_UPPER.STRIKE_POINT`
+
+Where the contour first meets the vessel.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.HFS_UPPER.STRIKE_POINT:R` |  | [N_TIME] | float64 | metre | Major radius where the contour meets the vessel; else NaN |
+| `SEC_XPT.HFS_UPPER.STRIKE_POINT:Z` |  | [N_TIME] | float64 | metre | Height where the contour meets the vessel; else NaN |
+
+### `SEC_XPT.LFS_LOWER.CONTOUR`
+
+Points from the x-point to the strike point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.LFS_LOWER.CONTOUR:N` |  | [N_TIME] | int32 | dimensionless | Number of contour points; 0 if not traced |
+| `SEC_XPT.LFS_LOWER.CONTOUR:R` |  | [N_TIME, N_LEG] | float64 | metre | Major radius of the contour, starting at the x-point; NaN padded; post-processed |
+| `SEC_XPT.LFS_LOWER.CONTOUR:Z` |  | [N_TIME, N_LEG] | float64 | metre | Height of the contour, starting at the x-point; NaN padded; post-processed |
+
+### `SEC_XPT.LFS_LOWER.STRIKE_POINT`
+
+Where the contour first meets the vessel.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.LFS_LOWER.STRIKE_POINT:R` |  | [N_TIME] | float64 | metre | Major radius where the contour meets the vessel; else NaN |
+| `SEC_XPT.LFS_LOWER.STRIKE_POINT:Z` |  | [N_TIME] | float64 | metre | Height where the contour meets the vessel; else NaN |
+
+### `SEC_XPT.LFS_UPPER.CONTOUR`
+
+Points from the x-point to the strike point.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.LFS_UPPER.CONTOUR:N` |  | [N_TIME] | int32 | dimensionless | Number of contour points; 0 if not traced |
+| `SEC_XPT.LFS_UPPER.CONTOUR:R` |  | [N_TIME, N_LEG] | float64 | metre | Major radius of the contour, starting at the x-point; NaN padded; post-processed |
+| `SEC_XPT.LFS_UPPER.CONTOUR:Z` |  | [N_TIME, N_LEG] | float64 | metre | Height of the contour, starting at the x-point; NaN padded; post-processed |
+
+### `SEC_XPT.LFS_UPPER.STRIKE_POINT`
+
+Where the contour first meets the vessel.
+
+| Node | C name | Shape | Type | Unit | Description |
+|---|---|---|---|---|---|
+| `SEC_XPT.LFS_UPPER.STRIKE_POINT:R` |  | [N_TIME] | float64 | metre | Major radius where the contour meets the vessel; else NaN |
+| `SEC_XPT.LFS_UPPER.STRIKE_POINT:Z` |  | [N_TIME] | float64 | metre | Height where the contour meets the vessel; else NaN |
 
 ### `FIT`
 

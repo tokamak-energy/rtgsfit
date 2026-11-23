@@ -35,9 +35,10 @@ enum
 };
 
 /*
- * All intermediate arrays. They are static rather than on the stack, because for large grids
- * they would not fit on a real-time thread's stack, and the real-time path must not allocate.
- * As a consequence `rtgsfit()` is not re-entrant: call it from one thread at a time.
+ * Solver workspace: reusable memory for intermediate calculations, not state carried between
+ * calls. The arrays are static rather than on the stack, because for large grids they would not
+ * fit on a real-time thread's stack, and the real-time path must not allocate.
+ * Sharing this workspace makes `rtgsfit()` non-reentrant: call it from one thread at a time.
  */
 static struct
 {
@@ -56,7 +57,7 @@ static struct
     double poisson_work[POISSON_WORK_SIZE];
     int32_t xpt_keep[N_XPT_MAX];
     int32_t flood_fill_queue[N_GRID];
-} work;
+} workspace;
 
 static void enable_flush_to_zero(void)
 {
@@ -127,10 +128,10 @@ uint32_t rtgsfit_get_preshot_checksum(void)
 static void build_fit_matrix(void)
 {
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, N_PLASMA, N_FIT_TARGET, N_GRID, 1.0,
-                work.basis, N_GRID, FIT_G_GRID, N_GRID, 0.0, work.fit_matrix, N_FIT_TARGET);
+                workspace.basis, N_GRID, FIT_G_GRID, N_GRID, 0.0, workspace.fit_matrix, N_FIT_TARGET);
     for (int32_t i_passive = 0; i_passive < N_PASSIVE; i_passive++)
     {
-        double *column = &work.fit_matrix[(N_PLASMA + i_passive) * N_FIT_TARGET];
+        double *column = &workspace.fit_matrix[(N_PLASMA + i_passive) * N_FIT_TARGET];
         for (int32_t i_fit_target = 0; i_fit_target < N_FIT_TARGET; i_fit_target++)
         {
             column[i_fit_target] = FIT_G_PASSIVE[i_fit_target * N_PASSIVE + i_passive];
@@ -151,7 +152,7 @@ static int32_t compute_plasma_current(const double fit_dof[],
     RTGSFIT_CHECK_SIZE(n_j_phi, N_GRID);
     RTGSFIT_CHECK_ARRAY(fit_dof, n_fit_dof);
     RTGSFIT_CHECK_ARRAY(j_phi, n_j_phi);
-    cblas_dgemv(CblasRowMajor, CblasTrans, N_PLASMA, N_GRID, 1.0, work.basis, N_GRID, fit_dof, 1,
+    cblas_dgemv(CblasRowMajor, CblasTrans, N_PLASMA, N_GRID, 1.0, workspace.basis, N_GRID, fit_dof, 1,
                 0.0, j_phi, 1);
 
     double j_phi_sum = 0.0;
@@ -190,19 +191,19 @@ static int32_t compute_fit_residual(const double fit_dof[],
     RTGSFIT_CHECK_SIZE(n_constraint_reconstructed, N_CONSTRAINT);
     RTGSFIT_CHECK_ARRAY(fit_dof, n_fit_dof);
     RTGSFIT_CHECK_ARRAY(constraint_reconstructed, n_constraint_reconstructed);
-    cblas_dgemv(CblasRowMajor, CblasTrans, N_FIT_DOF, N_FIT_TARGET, 1.0, work.fit_matrix,
-                N_FIT_TARGET, fit_dof, 1, 0.0, work.fit_prediction, 1);
+    cblas_dgemv(CblasRowMajor, CblasTrans, N_FIT_DOF, N_FIT_TARGET, 1.0, workspace.fit_matrix,
+                N_FIT_TARGET, fit_dof, 1, 0.0, workspace.fit_prediction, 1);
 
     double chi_sq = 0.0;
     for (int32_t i = 0; i < N_CONSTRAINT; i++)
     {
-        const double residual = work.fit_target[i] - work.fit_prediction[i];
+        const double residual = workspace.fit_target[i] - workspace.fit_prediction[i];
         chi_sq += residual * residual;
     }
     *chi_sq_magnetic = chi_sq;
     for (int32_t i = N_CONSTRAINT; i < N_FIT_TARGET; i++)
     {
-        const double residual = work.fit_target[i] - work.fit_prediction[i];
+        const double residual = workspace.fit_target[i] - workspace.fit_prediction[i];
         chi_sq += residual * residual;
     }
     *chi_sq_total = chi_sq;
@@ -210,7 +211,7 @@ static int32_t compute_fit_residual(const double fit_dof[],
     for (int32_t i = 0; i < N_CONSTRAINT; i++)
     {
         constraint_reconstructed[i] =
-            work.constraint_coil[i] + work.fit_prediction[i] / FIT_WEIGHT[i];
+            workspace.constraint_coil[i] + workspace.fit_prediction[i] / FIT_WEIGHT[i];
     }
     return RTGSFIT_OK;
 }
@@ -234,17 +235,17 @@ static int32_t compute_total_psi(const double coil_current[],
     if (N_PASSIVE > 0)
     {
         cblas_dgemv(CblasRowMajor, CblasNoTrans, N_GRID, N_PASSIVE, 1.0, GRID_G_PASSIVE, N_PASSIVE,
-                    x_passive, 1, 0.0, work.psi_passive, 1);
+                    x_passive, 1, 0.0, workspace.psi_passive, 1);
         for (int32_t i = 0; i < N_GRID; i++)
         {
-            psi[i] += work.psi_plasma[i] + work.psi_passive[i];
+            psi[i] += workspace.psi_plasma[i] + workspace.psi_passive[i];
         }
     }
     else
     {
         for (int32_t i = 0; i < N_GRID; i++)
         {
-            psi[i] += work.psi_plasma[i];
+            psi[i] += workspace.psi_plasma[i];
         }
     }
     return RTGSFIT_OK;
@@ -338,7 +339,8 @@ int32_t rtgsfit(const double meas[],
     status = measurement_processing_prepare(
         meas, n_meas, coil_current, n_coil_current, CONSTRAINT_REPLACEMENT, N_CONSTRAINT * N_MEAS,
         CONSTRAINT_G_COIL, N_CONSTRAINT * N_COIL, FIT_WEIGHT, N_FIT_TARGET, constraint_measured,
-        n_constraint_measured, work.constraint_coil, N_CONSTRAINT, work.fit_target, N_FIT_TARGET);
+        n_constraint_measured, workspace.constraint_coil, N_CONSTRAINT, workspace.fit_target,
+        N_FIT_TARGET);
     if (status != RTGSFIT_OK)
     {
         goto finish;
@@ -347,7 +349,7 @@ int32_t rtgsfit(const double meas[],
 
     /* 2. Current basis functions, from the previous psi_norm and mask. */
     status = current_basis_compute(&grid, psi_norm, N_GRID, mask, N_GRID, GRID_MASK_LIMITER, N_GRID,
-                                   GRID_R_FLAT, N_GRID, GRID_INV_R, N_GRID, work.basis,
+                                   GRID_R_FLAT, N_GRID, GRID_INV_R, N_GRID, workspace.basis,
                                    N_PLASMA * N_GRID);
     if (status != RTGSFIT_OK)
     {
@@ -360,18 +362,18 @@ int32_t rtgsfit(const double meas[],
     start_ns = timing_accumulate(RTGSFIT_TIMER_FIT_MATRIX, start_ns);
 
     /* 4. Least squares: fit_matrix fit_dof = fit_target. */
-    memcpy(work.fit_matrix_lapack, work.fit_matrix, sizeof(work.fit_matrix));
-    memcpy(work.fit_target_lapack, work.fit_target, sizeof(work.fit_target));
+    memcpy(workspace.fit_matrix_lapack, workspace.fit_matrix, sizeof(workspace.fit_matrix));
+    memcpy(workspace.fit_target_lapack, workspace.fit_target, sizeof(workspace.fit_target));
     int32_t rank = 0;
-    status = least_squares_solve(N_FIT_TARGET, N_FIT_DOF, work.fit_matrix_lapack,
-                                 N_FIT_DOF * N_FIT_TARGET, work.fit_target_lapack, N_FIT_TARGET,
-                                 work.singular_values, N_FIT_DOF, work.least_squares_work,
+    status = least_squares_solve(N_FIT_TARGET, N_FIT_DOF, workspace.fit_matrix_lapack,
+                                 N_FIT_DOF * N_FIT_TARGET, workspace.fit_target_lapack, N_FIT_TARGET,
+                                 workspace.singular_values, N_FIT_DOF, workspace.least_squares_work,
                                  LEAST_SQUARES_WORK_SIZE, -1.0, &rank, lapack_info);
     if (status != RTGSFIT_OK)
     {
         goto finish;
     }
-    memcpy(fit_dof, work.fit_target_lapack, sizeof(double) * N_FIT_DOF);
+    memcpy(fit_dof, workspace.fit_target_lapack, sizeof(double) * N_FIT_DOF);
     start_ns = timing_accumulate(RTGSFIT_TIMER_LEAST_SQUARES, start_ns);
 
     /* 5. Plasma current. */
@@ -395,10 +397,10 @@ int32_t rtgsfit(const double meas[],
     /* 7. Plasma flux; RHS_SCALE includes 2 pi for total flux and the d_z^2 stencil scaling. */
     for (int32_t i = 0; i < N_GRID; i++)
     {
-        work.poisson_rhs[i] = -POISSON_RHS_SCALE[i] * j_phi[i];
+        workspace.poisson_rhs[i] = -POISSON_RHS_SCALE[i] * j_phi[i];
     }
-    status = poisson_solve_free_boundary(&poisson, work.poisson_rhs, N_GRID, work.psi_plasma,
-                                         N_GRID, work.poisson_work, POISSON_WORK_SIZE);
+    status = poisson_solve_free_boundary(&poisson, workspace.poisson_rhs, N_GRID, workspace.psi_plasma,
+                                         N_GRID, workspace.poisson_work, POISSON_WORK_SIZE);
     if (status != RTGSFIT_OK)
     {
         goto finish;
@@ -429,7 +431,7 @@ int32_t rtgsfit(const double meas[],
         goto finish;
     }
     status = magnetic_nulls_filter_xpts(*axis_r, *axis_z, xpt_r, N_XPT_MAX, xpt_z, N_XPT_MAX,
-                                        xpt_psi, N_XPT_MAX, xpt_n, work.xpt_keep, N_XPT_MAX);
+                                        xpt_psi, N_XPT_MAX, xpt_n, workspace.xpt_keep, N_XPT_MAX);
     if (status != RTGSFIT_OK)
     {
         goto finish;
@@ -465,7 +467,7 @@ int32_t rtgsfit(const double meas[],
     /* 11. Plasma core mask. */
     status = plasma_boundary_flood_fill(
         &grid, psi, N_GRID, GRID_MASK_LIMITER, N_GRID, *boundary_psi, *axis_r, *axis_z, xpt_r,
-        N_XPT_MAX, xpt_z, N_XPT_MAX, *xpt_n, mask, N_GRID, work.flood_fill_queue, N_GRID);
+        N_XPT_MAX, xpt_z, N_XPT_MAX, *xpt_n, mask, N_GRID, workspace.flood_fill_queue, N_GRID);
     if (status != RTGSFIT_OK)
     {
         goto finish;

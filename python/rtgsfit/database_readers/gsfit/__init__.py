@@ -1,12 +1,15 @@
-"""Build the preshot, and optionally read the signals, from a GSFit controller.
+"""Build the preshot from a GSFit controller.
 
 GSFit reads the machine description (coils, passives, sensors, wall) and calculates every Greens
 function; this reader rearranges them into an RT-GSFit preshot. It replaces GSFit's old
 `rtgsfit_mdsplus` writer, so that everything RT-GSFit needs is defined in this repository.
+GSFit's measurements are not a signals reader: ST40 signals come from `st40_magrun16` or
+`st40_tepcs`, which always read `replay/pulse`. `gsfit_signals` is what the FreeGSNKE reader uses.
 
 Settings, all under `<gsfit>`:
 
-* `settings_path`: GSFit settings, e.g. `st40_setup_for_rtgsfit`;
+* `settings_path`: a directory of RT-GSFit's packaged settings (`st40_magrun16/gsfit`), or GSFit's own
+  settings (e.g. `st40_setup_for_rtgsfit`);
 * `pulse` (optional, default `replay/pulse`): the pulse GSFit reads the machine description from;
 * `grid/{n_r, n_z, r_min, r_max, z_min, z_max}` (optional): overrides GSFit's grid;
 * `sensor_names`: `st40_pcs` (`L007` -> `PSI_FLOOP_007`, `P101` -> `B_BPPROBE_101`,
@@ -26,14 +29,16 @@ Units are those of GSFit: psi in Wb (not Wb/rad), hence the 2 pi in the Poisson 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import resources
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from rtgsfit.constants import MU_0
+from rtgsfit.database_readers import InputDataError
 from rtgsfit.database_readers import PreshotReader
 from rtgsfit.database_readers import Signals
-from rtgsfit.database_readers import SignalsReader
 from rtgsfit.preshot import Preshot
 from rtgsfit.preshot import PreshotInputs
 from rtgsfit.preshot import SensorReplacement
@@ -88,11 +93,21 @@ def _passive_dof_unit(dof: str) -> str:
 _CONTROLLERS: dict[tuple[Any, ...], Any] = {}
 
 
+def gsfit_settings_path(settings: Settings) -> str:
+    """`gsfit/settings_path` for GSFit: a directory of RT-GSFit's packaged settings (`st40_magrun16/gsfit`)
+    if there is one, otherwise a directory or the name of GSFit's own settings (`st40_setup_for_rtgsfit`)."""
+    value = str(settings["gsfit"]["settings_path"])
+    packaged = resources.files("rtgsfit.settings").joinpath(value)
+    if packaged.is_dir():
+        return str(packaged)
+    return str(Path(value).expanduser())
+
+
 def gsfit_controller(settings: Settings, **gsfit_kwargs: Any) -> Any:
     """A GSFit controller with every object and Greens function set up, but not run.
 
     `gsfit_kwargs` are passed to GSFit's database reader (e.g. `freegsnke_eqs` and `time`).
-    Controllers are cached on the settings, so the preshot and signals readers share one.
+    Controllers are cached on the settings, so a preshot and the FreeGSNKE signals share one.
     """
     section = settings["gsfit"]
     pulse = int(section.get("pulse", settings["replay"]["pulse"]))
@@ -103,7 +118,9 @@ def gsfit_controller(settings: Settings, **gsfit_kwargs: Any) -> Any:
 
     from gsfit import Gsfit
 
-    controller = Gsfit(pulseNo=pulse, run_name="RTGSFIT", settings_path=section["settings_path"], write_to_mds=False)
+    controller = Gsfit(
+        pulseNo=pulse, run_name="RTGSFIT", settings_path=gsfit_settings_path(settings), write_to_mds=False
+    )
     code_settings = controller.settings["GSFIT_code_settings.json"]
     code_settings["timeslices"]["method"] = "user_defined"
     code_settings["timeslices"]["user_defined"] = [float(t) for t in time]
@@ -111,7 +128,13 @@ def gsfit_controller(settings: Settings, **gsfit_kwargs: Any) -> Any:
         code_settings["grid"][name] = value
     controller.set_environment_variables()
     controller.setup_timeslices()
-    controller.setup_objects(**gsfit_kwargs)
+    try:
+        controller.setup_objects(**gsfit_kwargs)
+    except Exception as exc:
+        # GSFit reads the pulse's data (e.g. PSU2COIL) here; a missing node is a fault of the pulse's data.
+        if type(exc).__module__.startswith("mdsthin"):
+            raise InputDataError(f"pulse {pulse}: GSFit could not read its inputs: {type(exc).__name__}") from exc
+        raise
     controller.calculate_greens()
     _CONTROLLERS.clear()
     _CONTROLLERS[key] = controller
@@ -422,7 +445,7 @@ def gsfit_signals(controller: Any, settings: Settings, preshot: Preshot) -> Sign
     meas = np.zeros((len(time), preshot.sizes["N_MEAS"]))
     for i, name in enumerate(preshot["MEAS:NAMES"]):
         if name not in by_name:
-            raise ValueError(f"GSFit has no measurement {name!r}; sensor replacements need the st40_mdsplus reader")
+            raise ValueError(f"GSFit has no measurement {name!r}; sensor replacements need raw signals")
         sensor = by_name[name]
         meas[:, i] = _experimental(
             _sensor_objects(controller, sensor.kind), [sensor.name, _QUANTITY[sensor.kind]], time
@@ -433,11 +456,8 @@ def gsfit_signals(controller: Any, settings: Settings, preshot: Preshot) -> Sign
     return Signals(time=time, meas=meas, coil_signal=coil_signal)
 
 
-class GsfitReader(PreshotReader, SignalsReader):
+class GsfitReader(PreshotReader):
     def read_preshot(self, settings: Settings) -> Preshot:
         controller = gsfit_controller(settings)
         source = f"gsfit {settings['gsfit']['settings_path']} pulse {controller.pulseNo}"
         return assemble_preshot(preshot_inputs(controller, settings, source))
-
-    def read_signals(self, settings: Settings, preshot: Preshot) -> Signals:
-        return gsfit_signals(gsfit_controller(settings), settings, preshot)

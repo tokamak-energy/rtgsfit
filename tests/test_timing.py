@@ -28,7 +28,7 @@ from rtgsfit.settings import load_settings
 
 pytestmark = [pytest.mark.te_network, pytest.mark.timing]
 
-CASES = [(pulse, time) for pulse in (13343, 13345, 13346) for time in (0.030, 0.100)]  # as test_st40.py
+CASES = [(pulse, time) for pulse in (13343, 13345, 13346) for time in (0.030, 0.100)]
 N_WARM_UP = 10
 N_CALLS = 1_000
 STATISTICS = ("mean", "median", "std", "min", "max", "p95", "p99")
@@ -56,7 +56,7 @@ def timing_csv() -> Path:
 
 @pytest.mark.parametrize(("pulse", "time"), CASES, ids=[f"{pulse}@{time}" for pulse, time in CASES])
 def test_timing(pulse: int, time: float, timing_csv: Path, git_commit: str, capsys: pytest.CaptureFixture[str]) -> None:
-    settings = load_settings("st40").copy_with({
+    settings = load_settings("st40_tepcs").copy_with({
         "build/timing": True,
         "replay/pulse": pulse,
         "replay/time_start": time,

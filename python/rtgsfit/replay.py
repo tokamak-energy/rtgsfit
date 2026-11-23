@@ -144,7 +144,9 @@ def replay(
         written = write_capture(path, capture, library_path=rtgsfit.library_path)
         if verbose:
             print(f"Wrote native capture to {written}")
-    return capture.to_results()
+    results = capture.to_results()
+    results.input_quality = signals.input_quality.copy()
+    return results
 
 
 def write_results(results: Results, settings: Settings) -> None:

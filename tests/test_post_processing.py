@@ -68,6 +68,25 @@ def test_exported_field_and_geometry(analytic_results: Results) -> None:
     assert results["GLOBAL.LENGTH_POL"][-1] == pytest.approx(2 * np.pi * radius, rel=0.02)
 
 
+def test_limited_bounding_point_is_the_limiter_point_of_the_c_code(
+    analytic_results: Results, analytic_preshot: Preshot
+) -> None:
+    """The analytic limiter is not a closed vessel, so no SOL or SEC_XPT branches are traced."""
+    results, preshot = analytic_results, analytic_preshot
+    assert np.all(results["GLOBAL.STATUS"] == 0)
+    n_limiter = len(preshot["LIMITER:R"])
+    index = np.reshape(preshot["LIMITER:GRID_INDEX"], (n_limiter, -1))
+    weight = np.reshape(preshot["LIMITER:GRID_WEIGHT"], (n_limiter, -1))
+    for i_time, psi in enumerate(results["PROFILES_2D.R_Z.PSI"]):
+        point = (results["BOUNDARY.BOUNDING.R"][i_time], results["BOUNDARY.BOUNDING.Z"][i_time])
+        i_limiter = np.flatnonzero((preshot["LIMITER:R"] == point[0]) & (preshot["LIMITER:Z"] == point[1]))
+        assert len(i_limiter) == 1, point
+        psi_limiter = np.sum(np.ravel(psi)[index[i_limiter[0]]] * weight[i_limiter[0]])
+        assert psi_limiter == pytest.approx(results["BOUNDARY.PSI"][i_time], rel=1e-12)
+    for leg in ("SOL.HFS", "SOL.LFS", "SEC_XPT.HFS_LOWER", "SEC_XPT.LFS_UPPER"):
+        assert np.all(results[f"{leg}.CONTOUR.N"] == 0), leg
+
+
 def test_failed_slices_do_not_acquire_plausible_derived_values(analytic_zero_results: Results) -> None:
     for key in (
         "FIT.PREDICTION",
@@ -78,8 +97,12 @@ def test_failed_slices_do_not_acquire_plausible_derived_values(analytic_zero_res
         "GLOBAL.LENGTH_POL",
         "PROFILES_2D.R_Z.B_FIELD_R",
         "CONSTRAINTS.CHI_SQ_REG",
+        "BOUNDARY.BOUNDING.R",
+        "SOL.HFS.CONTOUR.R",
+        "SEC_XPT.LFS_UPPER.STRIKE_POINT.R",
     ):
         assert np.all(np.isnan(analytic_zero_results[key])), key
+    assert np.all(analytic_zero_results["SOL.HFS.CONTOUR.N"] == 0)
 
 
 def test_logged_outputs_can_be_processed_without_running_the_solver(

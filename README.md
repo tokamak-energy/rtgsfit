@@ -70,8 +70,9 @@ creation and writing, with its `mdsthin` transport explicitly selected.
 | Local preshot and results files (`.npz`), C preshot from a local file | ✅ | |
 | Native NetCDF capture and offline post-processing | ✅ | `netCDF4` plus NetCDF-C development/runtime library for the shared C writer; no compiler needed for readback |
 | FreeGSNKE MAST-U-like replay (`rtgsfit replay freegsnke`) | ✅ | [GSFit](https://github.com/tokamak-energy/gsfit) and [FreeGSNKE](https://github.com/FusionComputingLab/freegsnke), with FreeGSNKE's example machine files |
-| ST40 preshot (`rtgsfit preshot st40`) | ❌ | GSFit and ST40 data in MDSplus |
-| ST40 replay (`rtgsfit replay st40`) | ❌ | `mdsthin` and access to the MAG/ST40 and RTGSFIT trees |
+| ST40 replay like GSFit (`rtgsfit replay st40_magrun16`) | ❌ | GSFit, `mdsthin`, and MAG RUN16 and PSU2COIL in MDSplus |
+| ST40 replay like the PCS (`rtgsfit replay st40_tepcs`) | ❌ | `mdsthin` and access to the TEPCS, PSS and RTGSFIT trees |
+| ST40 preshot (`rtgsfit preshot st40_tepcs`) | ❌ | GSFit and ST40 data in MDSplus |
 | PPAC post-shot replay of one pulse (`rtgsfit.RtgsfitReplay`, [manual section 7.5](documentation/manual.md#75-post-shot-replays-in-ppac)) | ❌ | GSFit, `mdsthin`, ST40 data in MDSplus; `standard_utility` to write |
 | Build the PCS library from MDSplus (`make -C c SHOT=... RUN_NAME=...`) | ❌ | MDSplus |
 | Write to the `RTGSFIT` MDSplus tree | ❌ | MDSplus, `standard_utility`, write access |
@@ -92,7 +93,8 @@ work too.
 
 On the TE network:
 
-    rtgsfit replay st40 --set replay/pulse=13343 --set replay/time_end=0.2
+    rtgsfit replay st40_magrun16 --set replay/pulse=14211 --set replay/time_end=0.2
+    rtgsfit replay st40_tepcs --set replay/pulse=13343 --set replay/time_end=0.2
     pytest --te-network
     pytest --te-network --figures -m figures            # the figures of every suite, ST40 vs GSFit too
     pytest --te-network --timing tests/test_timing.py   # rtgsfit() timing: c/cache/timing/*.csv
@@ -100,8 +102,12 @@ On the TE network:
 The figures are only drawn when asked for, never in CI. Each run writes PNG and PDF files to a new
 directory, so earlier figures are kept; see the manual's Verification section.
 
-The ST40 default reads the current-schema preshot from `RTGSFIT` pulse 52014922, `RUN22`.
-The older `RUN21` lacks `PRESHOT.FIT:DOF_UNITS` and cannot be used with the current schema.
+ST40 has two modes ([manual section 7.3](documentation/manual.md#73-database-readers)), each with
+its settings and a test file of the same name. `st40_magrun16`, the default and the one PPAC uses,
+builds the pulse's preshot with GSFit and fits the processed MAG RUN16 signals and PSU2COIL
+currents that GSFit fits. `st40_tepcs` fits the TEPCS signals the PCS sees, calibrated as the PCS
+does, with the campaign preshot from `RTGSFIT` pulse 99000230, `PRESHOT04`, the one the PCS
+compiles.
 
 Configurations are in `python/rtgsfit/settings/<name>/rtgsfit.json`; a path to a custom JSON
 file also works. VS Code provides completion, descriptions and validation through the shared
@@ -187,19 +193,19 @@ The C build itself needs no Python. The generator `c/tools/write_preshot.c` read
 either from MDSplus or from a file that Python writes:
 
 ```sh
-make -C c SHOT=99000230 RUN_NAME=RUN19   # campaign preshot, after regeneration in the v2 schema
-rtgsfit write-c-preshot analytic          # a preshot that is only in Python (analytic, FreeGSNKE, ...)
-make -C c                                 # compile the active preshot
+make -C c SHOT=99000230 RUN_NAME=PRESHOT04  # campaign preshot
+rtgsfit write-c-preshot analytic             # a preshot that is only in Python (analytic, FreeGSNKE, ...)
+make -C c                                    # compile the active preshot
 ```
 
-The PCS example uses preshot `RTGSFIT` 99000230, `RUN19`. Existing v1 data under that run must be
-regenerated in the v2 schema first. The bundled `st40` replay preset still uses the separate
-52014922 `RUN22` reference. The notebook and generator test use private pulse 52000230 `TEST03`,
-not the shared 99000230 pulse. Tutorial writes use private development destinations; adapt them
+The campaign preshot `RTGSFIT` 99000230, `PRESHOT04` (v2 schema, MCVC coil era) is the one the PCS
+compiles and the `st40_tepcs` replays use. The older v1 runs there, such as `RUN19`, cannot be read.
+The notebook and generator test use private pulse 52000230 `TEST03`, and nothing here writes to the
+shared 99000230 pulse. Tutorial writes use private development destinations; adapt them
 to your own allocated pulse range.
 
 `write-c-preshot` writes `c/build/preshot.bin` and runs `make PRESHOT_FILE=c/build/preshot.bin preshot`.
-Replace `analytic` with `st40` on the TE network to read the configured stored ST40 preshot.
+Replace `analytic` with `st40_tepcs` on the TE network to read the configured stored ST40 preshot.
 To calculate a new ST40 preshot using GSFit instead, add `--set preshot/reader=gsfit`.
 These commands generate local files; they do not write to the shared database.
 The generated files are machine/preshot-specific, not universal constants.

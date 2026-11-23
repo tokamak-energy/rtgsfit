@@ -95,5 +95,7 @@ def post_process(nested: dict[str, Any], preshot: Preshot) -> None:
         volume[i_time] = np.pi / 3.0 * abs(np.sum((r + r_next) * cross))
         perimeter[i_time] = np.sum(np.hypot(r_next - r, z_next - z))
     nested["GLOBAL"].update(AREA=area, VOLUME=volume, LENGTH_POL=perimeter)
-    nested["INPUT"]["SCHEMA"] = "rtgsfit-5; DOF naming; XPT; exported flux in Wb; capture/preshot in native units"
+    nested["INPUT"]["SCHEMA"] = (
+        "rtgsfit-6; DOF naming; XPT; SOL and SEC_XPT; exported flux in Wb; capture/preshot in native units"
+    )
     nested["INPUT"]["COCOS"] = np.int32(13)

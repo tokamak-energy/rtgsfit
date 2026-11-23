@@ -2,18 +2,16 @@
 
 ```
 rtgsfit replay analytic                                   # replay, then run the writers
-rtgsfit replay st40 --set replay/pulse=13343 --set writers/local/path=13343.npz
+rtgsfit replay st40_magrun16 --set replay/pulse=14211 --set writers/local/path=14211.npz
 rtgsfit replay analytic --set capture/path=analytic.nc
 rtgsfit post-process c/cache/analytic.nc                  # no solver or database reads
-rtgsfit preshot st40                                      # build a new preshot, then run the writers
-rtgsfit write-c-preshot st40                              # make the replay preshot the active one in c/src
-rtgsfit write-c-preshot --pulse 99000230 --run-name RUN19 # read the PCS preshot from MDSplus
+rtgsfit preshot st40_tepcs                                # build a new preshot, then run the writers
+rtgsfit write-c-preshot st40_tepcs                        # make the replay preshot the active one in c/src
+rtgsfit write-c-preshot --pulse 99000230 --run-name PRESHOT04 # read the PCS preshot from MDSplus
 rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
 rtgsfit write-data-dictionary documentation/data_dictionary.md
 rtgsfit list-settings
 ```
-
-The PCS example assumes preshot 99000230 RUN19 has been regenerated in the v2 schema.
 """
 
 from __future__ import annotations
@@ -141,7 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
         "write-c-preshot",
         help="write c/src/preshot_sizes.h and c/src/preshot_data.c (the PCS uses make SHOT=... instead)",
     )
-    with_settings(c_preshot, default="st40")
+    with_settings(c_preshot, default="st40_tepcs")
     c_preshot.add_argument("--pulse", type=int, help="read the preshot from this RTGSFIT MDSplus pulse")
     c_preshot.add_argument("--run-name", default="BEST", help="with --pulse: the MDSplus run")
     c_preshot.set_defaults(func=_write_c_preshot)

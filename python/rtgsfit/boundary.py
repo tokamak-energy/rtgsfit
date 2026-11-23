@@ -52,7 +52,7 @@ class BoundaryShape:
         return cls(np.full(n_outline, np.nan), np.full(n_outline, np.nan), 0)
 
 
-def _contains(r_line: FloatArray, z_line: FloatArray, r: float, z: float) -> bool:
+def polygon_contains(r_line: FloatArray, z_line: FloatArray, r: float, z: float) -> bool:
     """Even-odd rule: is (r, z) inside the closed polygon?"""
     r_next, z_next = np.roll(r_line, -1), np.roll(z_line, -1)
     crosses = (z_line > z) != (z_next > z)
@@ -86,7 +86,7 @@ def boundary_shape(
 
     lines = contourpy.contour_generator(x=r, y=z, z=field).lines(boundary_psi)
     closed = [line for line in lines if len(line) > 3 and np.allclose(line[0], line[-1])]
-    around_axis = [line for line in closed if _contains(line[:, 0], line[:, 1], axis_r, axis_z)]
+    around_axis = [line for line in closed if polygon_contains(line[:, 0], line[:, 1], axis_r, axis_z)]
     candidates = around_axis or closed
     if not candidates:
         return BoundaryShape.empty(n_outline)

@@ -37,7 +37,7 @@ All paths in this table are relative to `python/rtgsfit/`.
 | `preshot.py` | Assemble/validate preshot matrices, initial state and generated C contract |
 | `library.py` | Build the active C library with make, reload it when rebuilt, check ctypes buffers, run one iteration, decode status; `isolated_build()` compiles in a private temporary copy of `c/` |
 | `replay.py` | Orchestrate input reading, iteration, offline collection, then output writers |
-| `ppac.py` | `RtgsfitReplay`: PPAC's post-shot replay of one ST40 pulse (GSFit preshot, MAG `BEST` replay over the PCS window, MDSplus write to `RUN01_POST`) |
+| `ppac.py` | `RtgsfitReplay`: PPAC's post-shot replay of one ST40 pulse (GSFit preshot, `st40_magrun16` signals over the PCS window, MDSplus write to `RUN01_POST`) |
 | `capture.py` | ctypes bridge to the shared atomic C NetCDF writer, plus versioned solver-free readback |
 | `results.py` | Collect complete captured slices and validate the result dictionary |
 | `post_processing.py` | Offline fit diagnostics, poloidal fields, geometry and export-unit conversion |
@@ -45,17 +45,20 @@ All paths in this table are relative to `python/rtgsfit/`.
 | `settings/__init__.py` | Strict JSON parsing, schema validation, effective settings serialisation and overrides |
 | `settings/settings.schema.json` | Types, allowed values, descriptions and units shared by runtime validation and VS Code |
 | `settings/analytic/rtgsfit.json` | Self-contained circular analytic replay |
-| `settings/st40/rtgsfit.json` | TE-network replay and GSFit preshot builder |
+| `settings/st40_magrun16/rtgsfit.json` | ST40 replay like GSFit: GSFit preshot and MAG RUN16/PSU2COIL signals (default, PPAC) |
+| `settings/st40_magrun16/gsfit/` | GSFit's settings for the preshot: GSFIT RUN04's, with one p' and one FF' degree of freedom |
+| `settings/st40_tepcs/rtgsfit.json` | ST40 replay like the PCS: stored preshot and calibrated TEPCS signals; GSFit preshot builder |
 | `settings/freegsnke/rtgsfit.json` | FreeGSNKE example machine settings |
 | `database_readers/__init__.py` | Reader interfaces, registration and `Signals` contract |
 | `database_readers/analytic/__init__.py` | Synthetic inputs and analytic preshot assembly |
 | `database_readers/analytic/solution.py` | Independent analytic equilibrium reference |
 | `database_readers/analytic/greens.py` | Large-aspect-ratio filament response functions |
-| `database_readers/gsfit/__init__.py` | Use GSFit machine descriptions to build a preshot |
+| `database_readers/gsfit/__init__.py` | Use GSFit machine descriptions to build a preshot; GSFit's fitted signals for the tests |
 | `database_readers/freegsnke/__init__.py` | Adapt FreeGSNKE machine data via the GSFit builder |
 | `database_readers/local/__init__.py` | Read a local NPZ archive |
 | `database_readers/rtgsfit_mdsplus/__init__.py` | Read RTGSFIT preshots through mdsthin, including explicit legacy-schema mode |
-| `database_readers/st40_mdsplus/__init__.py` | Read PCS-equivalent ST40 magnetic and PSU signals through mdsthin |
+| `database_readers/st40_magrun16/__init__.py` | Read the processed MAG RUN16 signals and PSU2COIL currents that GSFit fits, through mdsthin |
+| `database_readers/st40_tepcs/__init__.py` | Read TEPCS counts and calibrate them with the pulse's PSS, as the PCS does, through mdsthin |
 | `database_writers/__init__.py` | Writer interfaces and dispatch |
 | `database_writers/local/__init__.py` | Write the same dictionary as a local NPZ archive |
 | `database_writers/c_source/__init__.py` | Write the preshot file for the C generator and make it the active preshot; CRC-32 checksum |

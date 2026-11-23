@@ -139,7 +139,7 @@ def test_legacy_thin_reader_requests_only_original_nodes(
 
     monkeypatch.setitem(sys.modules, "MDSplus", None)
     monkeypatch.setitem(sys.modules, "mdsthin", SimpleNamespace(Connection=Connection))
-    settings = load_settings("st40").copy_with({
+    settings = load_settings("st40_tepcs").copy_with({
         "preshot/rtgsfit_mdsplus/run_name": "RUN21",
         "preshot/rtgsfit_mdsplus/legacy_schema": True,
     })  # fmt: skip

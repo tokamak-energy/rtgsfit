@@ -10,16 +10,13 @@
             "n_xpt_max": 50
         },
         "rtgsfit_mdsplus": {
-            "pulse": 52014922,
-            "run_name": "RUN22",
+            "pulse": 99000230,
+            "run_name": "PRESHOT04",
             "legacy_schema": false
         }
     },
     "signals": {
-        "reader": "st40_mdsplus",
-        "st40_mdsplus": {
-            "mag_run": "BEST"
-        }
+        "reader": "st40_tepcs"
     },
     "replay": {
         "pulse": 14922,
@@ -37,8 +34,8 @@
     "writers": {
         "names": ["local"],
         "local": {
-            "path": "rtgsfit_st40.npz",
-            "preshot_path": "rtgsfit_st40_preshot.npz"
+            "path": "rtgsfit_st40_tepcs.npz",
+            "preshot_path": "rtgsfit_st40_tepcs_preshot.npz"
         },
         "rtgsfit_mdsplus": {
             "enabled": false,

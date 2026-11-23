@@ -34,6 +34,14 @@ DataType = Literal["float64", "int32", "str"]
 TREE_NAME = "RTGSFIT"
 TIME_DIM = "<>:TIME"
 
+SOL_LEGS: tuple[str, ...] = ("HFS", "LFS")
+SEC_XPT_LEGS: tuple[str, ...] = ("HFS_LOWER", "HFS_UPPER", "LFS_LOWER", "LFS_UPPER")
+SEPARATRIX_LEGS: tuple[tuple[str, str], ...] = (
+    *(("SOL", name) for name in SOL_LEGS),
+    *(("SEC_XPT", name) for name in SEC_XPT_LEGS),
+)
+"""Structures of the separatrix contours, as in GSFit; computed by `rtgsfit.separatrix`."""
+
 
 @dataclass(frozen=True)
 class Node:
@@ -434,6 +442,16 @@ def _results_nodes() -> list[Node]:
         s(("BOUNDARY", "TRIANG"), "dimensionless", "Mean of the upper and lower triangularity"),
         s(("BOUNDARY", "TRIANG_U"), "dimensionless", "(GEO_AXIS:R - R(Z_max)) / MINOR_RADIUS"),
         s(("BOUNDARY", "TRIANG_L"), "dimensionless", "(GEO_AXIS:R - R(Z_min)) / MINOR_RADIUS"),
+        s(
+            ("BOUNDARY", "BOUNDING", "R"),
+            "metre",
+            "Major radius of the active x-point if diverted, else of the limiter point; post-processed",
+        ),
+        s(
+            ("BOUNDARY", "BOUNDING", "Z"),
+            "metre",
+            "Height of the active x-point if diverted, else of the limiter point; post-processed",
+        ),
         s(("CONSTRAINTS", "CHI_SQ_MAG"), "dimensionless", "Weighted squared residual of the magnetic constraints"),
         s(("CONSTRAINTS", "CHI_SQ_TOTAL"), "dimensionless", "Weighted squared residual including regularisation"),
         s(("CONSTRAINTS", "CHI_SQ_REG"), "dimensionless", "Regularisation contribution; not a reduced chi-square"),
@@ -507,6 +525,26 @@ def _results_nodes() -> list[Node]:
         s(("XPT", "ALL", "R"), "metre", "Major radius of the x-points, sorted by psi; NaN padded", ("N_XPT_MAX",)),
         s(("XPT", "ALL", "Z"), "metre", "Height of the x-points; NaN padded", ("N_XPT_MAX",)),
         s(("XPT", "ALL", "PSI"), "weber", "Poloidal flux at the x-points; NaN padded", ("N_XPT_MAX",)),
+    ]
+    for leg in SEPARATRIX_LEGS:
+        nodes += [
+            s((*leg, "CONTOUR", "N"), "dimensionless", "Number of contour points; 0 if not traced", (), "int32"),
+            s(
+                (*leg, "CONTOUR", "R"),
+                "metre",
+                "Major radius of the contour, starting at the x-point; NaN padded; post-processed",
+                ("N_LEG",),
+            ),
+            s(
+                (*leg, "CONTOUR", "Z"),
+                "metre",
+                "Height of the contour, starting at the x-point; NaN padded; post-processed",
+                ("N_LEG",),
+            ),
+            s((*leg, "STRIKE_POINT", "R"), "metre", "Major radius where the contour meets the vessel; else NaN"),
+            s((*leg, "STRIKE_POINT", "Z"), "metre", "Height where the contour meets the vessel; else NaN"),
+        ]
+    nodes += [
         s(
             ("FIT", "DOF_VALUES"),
             "mixed",
@@ -587,6 +625,23 @@ STRUCTURE_DESCRIPTIONS: dict[tuple[str, ...], str] = {
     ("BOUNDARY",): "Plasma boundary",
     ("BOUNDARY", "OUTLINE"): "Contour psi = boundary_psi around the magnetic axis",
     ("BOUNDARY", "GEO_AXIS"): "Geometric axis",
+    ("BOUNDARY", "BOUNDING"): "Point that bounds the plasma: the active x-point XPT.ALL[0] or the limiter point",
+    ("SOL",): (
+        "Divertor legs: the contours psi = psi(active x-point) that leave the active x-point away from the "
+        "magnetic axis, traced to the vessel; empty when limited"
+    ),
+    ("SOL", "HFS"): "High-field-side leg",
+    ("SOL", "LFS"): "Low-field-side leg",
+    ("SEC_XPT",): (
+        "Secondary separatrix: the four contours psi = psi(x-point) through the first other x-point on the other "
+        "side of the magnetic axis, traced to the vessel; empty when limited or when there is none"
+    ),
+    ("SEC_XPT", "HFS_LOWER"): "Branch that leaves the x-point downwards on the high-field side",
+    ("SEC_XPT", "HFS_UPPER"): "Branch that leaves the x-point upwards on the high-field side",
+    ("SEC_XPT", "LFS_LOWER"): "Branch that leaves the x-point downwards on the low-field side",
+    ("SEC_XPT", "LFS_UPPER"): "Branch that leaves the x-point upwards on the low-field side",
+    **{(*leg, "CONTOUR"): "Points from the x-point to the strike point" for leg in SEPARATRIX_LEGS},
+    **{(*leg, "STRIKE_POINT"): "Where the contour first meets the vessel" for leg in SEPARATRIX_LEGS},
     ("CONSTRAINTS",): "Measurements used to constrain the equilibrium and their reconstructed values",
     ("CONSTRAINTS", "FLUX_LOOP"): "Flux loops",
     ("CONSTRAINTS", "BP_PROBE"): "Poloidal field probes",
@@ -682,6 +737,7 @@ def generate_markdown() -> str:
         "| `N_INTERP` | 4, the points of a bilinear interpolation stencil |",
         "| `N_R_PLUS_2` | N_R + 2 |",
         "| `N_OUTLINE` | Number of points stored for the boundary outline (Python only) |",
+        "| `N_LEG` | Number of points stored for each SOL and SEC_XPT contour (Python only) |",
         "| `N_TIMING` | Number of timed sections of `rtgsfit()` |",
     ]
     sections = [

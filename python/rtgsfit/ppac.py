@@ -1,4 +1,4 @@
-"""RT-GSFit replays in PPAC, ST40's post-pulse analysis chain: rebuild the preshot, replay the pulse, write MDSplus.
+"""RT-GSFit replays in PPAC: build the preshot, replay the pulse and write MDSplus.
 
 This replays a pulse after the event, so it can be run on old pulses. It is not the import of what the PCS
 itself computed during the pulse. PPAC imports the package named in its `ppac_scripts.py` entry and runs
@@ -12,14 +12,16 @@ controller.run()
 
 `run()` is the whole pipeline for one pulse, with no state from earlier pulses:
 
-1. build a new preshot with GSFit for this pulse (`preshot/reader = gsfit`, `gsfit/pulse`), so the
-   machine description and the MAG `BEST` sensors are this pulse's;
-2. read this pulse's MAG `BEST` and PSU signals by their PCS names (`st40_mdsplus`);
+1. build the preshot from GSFit, as the `st40_magrun16` settings say;
+2. read the inputs GSFit's post-shot reconstructions (GSFIT RUN04) fit: the processed MAG RUN16 signals
+   and the PSU2COIL coil currents (`st40_magrun16`), so MAG RUN16 and PSU2COIL must be written first;
 3. compile the preshot into a private copy of the C library (`isolated_build`) and call `rtgsfit()`
-   every millisecond over the PCS's window, exactly as the PCS would;
-4. write the results, which contain the preshot, settings and input signals, to the `RTGSFIT` tree.
+   every millisecond from the PCS's start time, as the PCS would, until after the plasma;
+4. write the results and unvalidated data-quality report to the `RTGSFIT` tree.
 
-Every other setting is that of the `st40` configuration. A setting can be changed before `run()`:
+The coil eras need nothing special: PSU2COIL gives the current of every PF coil.
+
+Every other setting is that of the `st40_magrun16` configuration. A setting can be changed before `run()`:
 
 ```python
 controller = RtgsfitReplay(pulseNo=13343, run_name="RUN99", write_to_mds=False)
@@ -35,6 +37,10 @@ from typing import Any
 
 import numpy as np
 
+from rtgsfit.data_quality import add_replay_quality
+from rtgsfit.data_quality import unvalidated_quality
+from rtgsfit.database_readers import InputDataError
+from rtgsfit.database_writers.rtgsfit_mdsplus import write_quality_only
 from rtgsfit.library import isolated_build
 from rtgsfit.replay import replay
 from rtgsfit.replay import write_results
@@ -43,11 +49,8 @@ from rtgsfit.settings import Settings
 from rtgsfit.settings import load_settings
 
 POST_SHOT_SETTINGS: dict[str, Any] = {
-    "preshot/reader": "gsfit",
-    "signals/reader": "st40_mdsplus",
-    "signals/st40_mdsplus/mag_run": "BEST",
     "replay/time_start": 0.0055,
-    "replay/time_end": 0.6,
+    "replay/time_end": 0.35,
     "replay/time_step": 0.001,
     "replay/repeat": 1,
     "replay/stop_on_status": False,
@@ -57,16 +60,17 @@ POST_SHOT_SETTINGS: dict[str, Any] = {
 
 The PCS runs `rtgsfit()` every millisecond from 5.5 ms to 600 ms, starting from the initial conditions
 each time it is enabled (`RT_Diagnostics.c` enables it for PCS clock times 1.1055 s to 1.7 s, and the
-PCS clock starts at pulse time -1.1 s), so the replay does the same. Do not start earlier: from 0 ms,
-pulse 14922 locks onto a one-cell 'plasma' with status 0 and never recovers. Status 0 is not proof of a
-plasma: on 14922 a 5 kA, 0.001 m^2 filament also has status 0 from 519.5 ms. A failed slice leaves
-`psi_norm` and `mask` unchanged, and the `st40_mdsplus` reader drops times that a signal did not
-record.
+PCS clock starts at pulse time -1.1 s), so the replay starts at 5.5 ms too. Do not start earlier: from
+0 ms, pulse 14922 locks onto a one-cell 'plasma' with status 0 and never recovers. The replay stops at
+350 ms: in the sampled long pulses of 10651-14928 the current is gone by 320-340 ms. Status 0 is not
+proof of a plasma: on 14922 a 5 kA, 0.001 m^2 filament also has
+status 0 from 519.5 ms. A failed slice leaves `psi_norm` and `mask` unchanged, and the `st40_magrun16`
+reader drops times that a signal did not record.
 """
 
 
 class RtgsfitReplay:
-    """Post-shot RT-GSFit replay of one ST40 pulse, with the constructor PPAC calls.
+    """Post-shot replay of one pulse.
 
     The run is `RUN01_POST` of the `RTGSFIT` tree unless `run_name` says otherwise, and is linked to
     `BEST` by default. `pulseNo_write` defaults to `pulseNo`.
@@ -83,7 +87,7 @@ class RtgsfitReplay:
         pulseNo_write: int | None = None,
         link_run_to_best: bool = True,
         write_to_mds: bool = True,
-        settings: str | Path | Settings = "st40",
+        settings: str | Path | Settings = "st40_magrun16",
         overrides: dict[str, Any] | None = None,
         verbose: bool = True,
     ) -> None:
@@ -98,7 +102,6 @@ class RtgsfitReplay:
         pulse_settings = {
             **POST_SHOT_SETTINGS,
             "replay/pulse": self.pulseNo,
-            "gsfit/pulse": self.pulseNo,
             "writers/names": ["rtgsfit_mdsplus"] if self.write_to_mds else [],
             "writers/rtgsfit_mdsplus": {
                 "enabled": self.write_to_mds,
@@ -112,11 +115,18 @@ class RtgsfitReplay:
         self.results: Results | None = None
 
     def run(self) -> Results:
-        """Build the preshot, replay the pulse and write the results; return them."""
+        """Build the preshot, replay the pulse and write the results."""
         if self.verbose:
             print(f"RT-GSFit post-shot replay of pulse {self.pulseNo}")
-        with isolated_build():
-            results = replay(self.settings, verbose=self.verbose)
+        try:
+            with isolated_build():
+                results = replay(self.settings, verbose=self.verbose)
+        except InputDataError as exc:
+            quality = unvalidated_quality(self.settings, {"completed": False, "input_error": str(exc)})
+            if "rtgsfit_mdsplus" in self.settings.get("writers", {}).get("names", []):
+                write_quality_only(quality, self.settings)
+            raise
+        add_replay_quality(results, self.settings)
         write_results(results, self.settings)
         self.results = results
         if self.verbose:
