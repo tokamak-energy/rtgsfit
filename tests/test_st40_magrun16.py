@@ -150,20 +150,28 @@ def test_missing_node_is_an_input_error() -> None:
 
 # RT-GSFit against GSFit, on the TE network.
 
-CASES = [(14816, 0.030), (14816, 0.100)]
+CASES = {
+    (11089, 0.030): 0,
+    (11089, 0.100): 0,
+    (14211, 0.030): 0,
+    (14211, 0.100): 0,
+    (14816, 0.030): 0,
+    (14816, 0.100): 1,
+}
+"""(pulse, time [s]) -> expected topology: 0 wall-limited, 1 diverted."""
 
-# Tolerances of RT-GSFit's last iteration against GSFit, 2-3 times the largest difference of the two cases.
-# Measured (largest of the two): Ip 5.0e-5 relative; the magnetic axis 7.6e-4 m in R and 3.0e-4 m in Z; psi at the
-# axis 2.3e-3 Wb and at the boundary 1.2e-3 Wb; flux loops 9.2e-4 Wb, Bp probes 2.5e-3 T, Rogowski coils 1.1 A;
+# Tolerances of RT-GSFit's last iteration against GSFit, 2-3 times the largest difference of the six cases.
+# Measured (largest of the six): Ip 5.0e-5 relative; the magnetic axis 7.6e-4 m in R and 4.7e-4 m in Z; psi at the
+# axis 2.3e-3 Wb and at the boundary 1.2e-3 Wb; flux loops 9.2e-4 Wb, Bp probes 3.0e-3 T, Rogowski coils 1.3 A;
 # IVC eigenmode currents 0.95 A.
 RTOL = {"GLOBAL.IP": 1.5e-4}
 """Relative tolerances against GSFit."""
-ATOL = {"GLOBAL.MAG_AXIS.R": 2e-3, "GLOBAL.MAG_AXIS.Z": 8e-4, "GLOBAL.PSI_MAG_AXIS": 6e-3, "BOUNDARY.PSI": 3e-3}
+ATOL = {"GLOBAL.MAG_AXIS.R": 2e-3, "GLOBAL.MAG_AXIS.Z": 1.2e-3, "GLOBAL.PSI_MAG_AXIS": 6e-3, "BOUNDARY.PSI": 3e-3}
 """Absolute tolerances against GSFit [m, Wb]; psi at the boundary can be near 0, so not relative."""
 # (group, GSFit sensor quantity, atol vs the measurements, atol vs GSFit's reconstruction) [Wb, T, A]. The atol vs
-# the measurements only bounds the fit of both codes, whose largest residuals are 9.4e-3 Wb, 7.1e-2 T and 290 A.
+# the measurements bounds RT-GSFit's fit, whose largest residuals are 1.7e-2 Wb, 9.9e-2 T and 351 A.
 SENSORS = {
-    "flux_loop": ("FLUX_LOOP", "psi", 2.5e-2, 2.5e-3),
+    "flux_loop": ("FLUX_LOOP", "psi", 4.5e-2, 2.5e-3),
     "bp_probe": ("BP_PROBE", "b", 0.2, 6e-3),
     "rogowski": ("ROGOWSKI", "i", 750.0, 3.0),
 }
@@ -214,7 +222,7 @@ def test_reader_gives_rt_gsfit_the_inputs_gsfit_fits(pulse: int) -> None:
     assert_array_equal(signals.coil_signal, gsfit_coil_current(controller, circuits, signals.time))
 
 
-@pytest.fixture(scope="module", params=CASES, ids=[f"{pulse}@{time}" for pulse, time in CASES])
+@pytest.fixture(scope="module", params=list(CASES), ids=[f"{pulse}@{time}" for pulse, time in CASES])
 def case(request: pytest.FixtureRequest):  # type: ignore[no-untyped-def]
     pulse, time = request.param
     settings = load_settings("st40_magrun16").copy_with({
@@ -250,6 +258,7 @@ def _gsfit_equilibrium(controller) -> dict[str, Any]:  # type: ignore[no-untyped
         "GLOBAL.MAG_AXIS.R": scalar(quantities.magnetic_axis.r),
         "GLOBAL.MAG_AXIS.Z": scalar(quantities.magnetic_axis.z),
         "GLOBAL.PSI_MAG_AXIS": scalar(quantities.psi_magnetic_axis),
+        "GLOBAL.XPT_DIVERTED": scalar(time_slice.boundary.type),
         "BOUNDARY.PSI": scalar(time_slice.boundary.psi),
         "BOUNDARY.OUTLINE.R": array(time_slice.boundary.outline.r),
         "BOUNDARY.OUTLINE.Z": array(time_slice.boundary.outline.z),
@@ -291,6 +300,16 @@ def test_succeeds(case) -> None:  # type: ignore[no-untyped-def]
     _, results, _ = case
     assert_array_equal(results["GLOBAL.STATUS"], 0)
     assert_array_equal(results["FIT.LAPACK_INFO"], 0)
+    assert abs(results["GLOBAL.IP"][-1]) > 1e5
+    assert results["BOUNDARY.OUTLINE.N"][-1] > 3
+
+
+@pytest.mark.te_network
+def test_topology(case) -> None:  # type: ignore[no-untyped-def]
+    settings, results, controller = case
+    expected = CASES[settings.get_path("replay/pulse"), settings.get_path("replay/time_start")]
+    assert results["GLOBAL.XPT_DIVERTED"][-1] == expected
+    assert _gsfit_equilibrium(controller)["GLOBAL.XPT_DIVERTED"] == expected
 
 
 @pytest.mark.te_network

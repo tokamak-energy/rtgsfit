@@ -171,37 +171,39 @@ def _plot_limiter(ax: Axes, results: Results) -> None:
         ax.plot(r_p, z_p, "k-", lw=1.2, label="limiter" if k == 0 else None)
 
 
-def _draw_machine(ax: Axes, results: Results, i: int, reference: Reference, sensors: bool = True) -> None:
+def _draw_machine(ax: Axes, results: Results, i: int, reference: Reference | None, sensors: bool = True) -> None:
     """Limiter; boundary, magnetic axis and x-points of RT-GSFit (solid) and the reference (dashed); sensors."""
     _plot_limiter(ax, results)
     n = int(results["BOUNDARY.OUTLINE.N"][i])
     if n:
         ax.plot(results["BOUNDARY.OUTLINE.R"][i, :n], results["BOUNDARY.OUTLINE.Z"][i, :n], "-", color=RTGSFIT, lw=2,
                 label="RT-GSFit boundary")  # fmt: skip
-    if reference.outline is not None:
+    if reference is not None and reference.outline is not None:
         ax.plot(*reference.outline, "--", color=REFERENCE, lw=2, label=f"{reference.name} boundary")
-    elif math.isfinite(reference.boundary_psi):
+    elif reference is not None and math.isfinite(reference.boundary_psi):
         ax.contour(reference.r, reference.z, reference.psi, levels=[reference.boundary_psi], colors=REFERENCE,
                    linewidths=2, linestyles="--")  # fmt: skip
         ax.plot([], [], "--", color=REFERENCE, lw=2, label=f"{reference.name} boundary")
     ax.plot(results["GLOBAL.MAG_AXIS.R"][i], results["GLOBAL.MAG_AXIS.Z"][i], "+", color=RTGSFIT, ms=12, mew=2,
             label="RT-GSFit magnetic axis")  # fmt: skip
-    ax.plot(reference.axis_r, reference.axis_z, "+", color=REFERENCE, ms=12, mew=2,
-            label=f"{reference.name} magnetic axis")  # fmt: skip
+    if reference is not None:
+        ax.plot(reference.axis_r, reference.axis_z, "+", color=REFERENCE, ms=12, mew=2,
+                label=f"{reference.name} magnetic axis")  # fmt: skip
     n_xpt = int(results["XPT.ALL.N"][i])
     ax.plot(results["XPT.ALL.R"][i, :n_xpt], results["XPT.ALL.Z"][i, :n_xpt], "x", color=RTGSFIT, ms=8, mew=1.5,
             label="RT-GSFit x-points")  # fmt: skip
-    if reference.xpt is not None:
+    if reference is not None and reference.xpt is not None:
         ax.plot(*reference.xpt, "x", color=REFERENCE, ms=8, mew=1.5, label=f"{reference.name} x-points")
-    if sensors:
+    if sensors and reference is not None:
         for (label, (r, z)), (marker, colour) in zip(reference.sensors.items(), SENSOR_STYLES, strict=False):
             ax.plot(r, z, marker, color=colour, mfc="none", ms=4, label=label)
 
 
-def _set_extent(axes: np.ndarray, results: Results, reference: Reference) -> None:
+def _set_extent(axes: np.ndarray, results: Results, reference: Reference | None) -> None:
     """Cover RT-GSFit's grid and the sensors, with equal aspect."""
-    r = np.concatenate([results["PROFILES_2D.R_Z.R"], *(np.ravel(rz[0]) for rz in reference.sensors.values())])
-    z = np.concatenate([results["PROFILES_2D.R_Z.Z"], *(np.ravel(rz[1]) for rz in reference.sensors.values())])
+    sensors = reference.sensors if reference is not None else {}
+    r = np.concatenate([results["PROFILES_2D.R_Z.R"], *(np.ravel(rz[0]) for rz in sensors.values())])
+    z = np.concatenate([results["PROFILES_2D.R_Z.Z"], *(np.ravel(rz[1]) for rz in sensors.values())])
     margin = 0.03 * max(np.ptp(r), np.ptp(z))
     for ax in axes.flat:
         ax.set_aspect("equal")
@@ -234,6 +236,29 @@ def _shade_failures(ax: Axes, x: np.ndarray, results: Results) -> None:
 # ----------------------------------------------------------------------------------------------
 # Figures for every test suite
 # ----------------------------------------------------------------------------------------------
+def plot_reconstruction(results: Results, quantity: str) -> Figure:
+    """Fixed-time iterations of `PSI` or `J_PHI` without an independent reference."""
+    label, unit, scale = MAPS[quantity]
+    r, z = results["PROFILES_2D.R_Z.R"], results["PROFILES_2D.R_Z.Z"]
+    shown = iterations(results)
+    values = results[f"PROFILES_2D.R_Z.{quantity}"][shown] * scale
+    norm = Normalize(vmin=float(np.nanmin(values)), vmax=float(np.nanmax(values)))
+    height = float(np.clip(3.6 * np.ptp(z) / np.ptp(r), 2.5, 7.0))
+    fig = Figure(figsize=(3.6 * len(shown) + 1.0, height + 2.0), layout="constrained")
+    axes = fig.subplots(1, len(shown), sharex=True, sharey=True, squeeze=False)
+    for column, i in enumerate(shown):
+        ax = axes[0, column]
+        ax.pcolormesh(r, z, values[column], shading="nearest", cmap="viridis", norm=norm)
+        _draw_machine(ax, results, i, None)
+        topology = "diverted" if results["GLOBAL.XPT_DIVERTED"][i] else "wall-limited"
+        ax.set_title(f"{_iteration(results, i)}\n{topology}", fontsize="medium")
+    _set_extent(axes, results, None)
+    fig.colorbar(ScalarMappable(norm=norm, cmap="viridis"), ax=list(axes.flat), label=f"{label} [{unit}]")
+    fig.suptitle(f"RT-GSFit {label} at {1e3 * results['TIME'][-1]:g} ms (no reference)")
+    _legend_below(fig, axes[0, 0], ncols=3)
+    return fig
+
+
 def plot_map(results: Results, reference: Reference, quantity: str, rtol: float = 0.0, atol: float = 0.0) -> Figure:
     """RT-GSFit's `PSI` or `J_PHI` (`quantity`) at the first, second and last iterations against the reference.
 

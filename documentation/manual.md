@@ -1007,15 +1007,33 @@ The tests are replays: the same code path as `rtgsfit replay`.
 | Analytic replay | `tests/test_analytic_replay.py` | `psi` within 1 %, `b_theta` and `j_phi` vs the exact solution; Ip, axis, circular boundary; monotonic convergence; zero current gives `NO_AXIS`; bit-for-bit agreement with v1 |
 | Data dictionary, settings, I/O, CLI | `tests/test_*.py` | Names, CSV, generated docs, round trips, preshot validation, enum sizes |
 | FreeGSNKE | `tests/test_freegsnke.py` | FreeGSNKE's p' and FF' are linear in `psi_norm` (`alpha_m = alpha_n = 1`), as in RT-GSFit, on the same grid: Ip to 1e-4, `psi` at the axis and boundary to 2e-3 relative, axis to 0.7 mm, `psi` to 1.8e-3 Wb and `j_phi` to 3e3 A/m² everywhere, `P_PRIME` and `FF_PRIME_MU0` to 0.4 % of FreeGSNKE's coefficients; diverted. Needs the `[freegsnke]` extra and a FreeGSNKE checkout at `~/github/freegsnke` for its machine files; CI clones the tag matching the installed FreeGSNKE and runs `pytest --require-freegsnke`, which fails rather than skips if either is missing |
-| ST40, `st40_magrun16` | `tests/test_st40_magrun16.py` (offline + TE network) | Offline: node names, the PSU2COIL channel of each coil group in both coil eras, interpolation, dropped times and missing nodes. TE network: the reader gives RT-GSFit exactly the measurements and coil currents GSFit fits (pulses 11089, 14816); vs GSFit for pulse 14816 at 30 and 100 ms: Ip, axis, `psi` at the axis and boundary, every sensor and the IVC eigenmode currents, to 2-3 times the largest difference (below); a `RtgsfitReplay` of 14816 to 100 ms |
-| ST40, `st40_tepcs` | `tests/test_st40_tepcs.py` (offline + TE network) | Offline: PSS calibration, drift and magnetic compensation, missing metadata and records. TE network: the campaign preshot PRESHOT04 equals a fresh GSFit build (floats to round-off, and the archived `preshot` and `gsfit` settings); a replay of pulse 13343 to 100 ms succeeds |
+| ST40, `st40_magrun16` | `tests/test_st40_magrun16.py` (offline + TE network) | Offline: node names, the PSU2COIL channel of each coil group in both coil eras, interpolation, dropped times and missing nodes. TE network: the reader gives RT-GSFit exactly the measurements and coil currents GSFit fits (pulses 11089, 14816); vs GSFit for pulses 11089, 14211 and 14816 at 30 and 100 ms: topology, Ip, axis, `psi` at the axis and boundary, every sensor and the IVC eigenmode currents, to 2-3 times the largest difference (below); a `RtgsfitReplay` of 14816 to 100 ms |
+| ST40, `st40_tepcs` | `tests/test_st40_tepcs.py` (offline + TE network) | Offline: PSS calibration, drift and magnetic compensation, missing metadata and records. TE network: the campaign preshot PRESHOT04 equals a fresh GSFit build (floats to round-off, and the archived `preshot` and `gsfit` settings); a replay of pulse 14922 to 100 ms succeeds; fixed-time reconstructions of 11089, 14211 and 14816 at 30 and 100 ms check solver status, plasma current, boundary and topology |
 | ST40 timing | `tests/test_timing.py` (TE network, `--timing`) | 1,000 converged calls per case (`st40_tepcs`, pulses 13343, 13345, 13346 at 30 and 100 ms) succeed; sections add up to `TOTAL`; statistics written to `c/cache/timing/` (§6.4) |
+
+Both ST40 suites repeat each fixed time ten times to converge; these are not ten different
+time slices. The six cases cover both coil eras and both boundary topologies:
+
+| Pulse | Coil era / TEPCS preshot | 30 ms (0.03 s) | 100 ms (0.1 s) |
+|---|---|---|---|
+| 11089 | No MCVC / PRESHOT05 | Wall-limited | Wall-limited |
+| 14211 | MCVC / PRESHOT04 | Wall-limited | Wall-limited |
+| 14816 | MCVC / PRESHOT04 | Wall-limited | Diverted |
+
+The tests assert these topologies, including GSFit's classification in `st40_magrun16`.
+`st40_tepcs` fits different inputs from processed MAG, so it is not an identical-input comparison
+against GSFit. Where historical PSS compensation metadata are missing, the reader reports the
+calibration-only limitation rather than claiming exact historical PCS equivalence.
 
 The tests marked `figures` draw what the analytic, FreeGSNKE and ST40 tests compare, so that a
 pass can be checked by eye. They are skipped unless `--figures` is given, so CI never draws them:
 
     pytest --figures -m figures                  # analytic and FreeGSNKE
-    pytest --te-network --figures -m figures     # and ST40 vs GSFit, every case
+    pytest --te-network --figures -m figures     # and both ST40 modes, every case
+
+To run both ST40 suites, including their numerical assertions and figures:
+
+    pytest --te-network --figures tests/test_st40_magrun16.py tests/test_st40_tepcs.py
 
 `-m figures` selects only the figure tests; the other tests are reported as **deselected**, not
 failed. Omit `-m figures` to run the numerical tests as well: `pytest --te-network --figures`.
@@ -1023,23 +1041,25 @@ failed. Omit `-m figures` to run the numerical tests as well: `pytest --te-netwo
 Each run writes PNG and PDF files to a new directory `tests/figures/<UTC time>/` (gitignored), with
 `run.txt` recording the time, commit, host and command; an earlier run's directory is never
 overwritten. The figures compare RT-GSFit's first, second and last iterations with the reference
-(the exact solution, FreeGSNKE or GSFit), with the test's tolerances drawn where it has them:
+(the exact solution, FreeGSNKE or GSFit), with the test's tolerances drawn where it has them.
+TEPCS figures instead show the reconstruction alone and residuals against its own measurements:
 
 | Figure | Suites | Shows |
 |---|---|---|
-| `psi`, `j_phi` | all | Contours, boundaries, axes and x-points over the machine; below, RT-GSFit - reference |
-| `constraints` | all | Every magnetic constraint: measured, reference and reconstructed; then RT-GSFit's last iteration minus each |
-| `convergence` | all | Change of `psi` per iteration, `chi_sq`, relative errors of Ip and `psi` at the axis and boundary, the axis position and `psi` at the axis and boundary |
+| `psi`, `j_phi` | analytic, FreeGSNKE, ST40 MAGRUN16 | Contours, boundaries, axes and x-points over the machine; below, RT-GSFit - reference |
+| `psi`, `j_phi` | ST40 TEPCS | Reconstruction maps with the limiter, boundary, axis, x-points and topology; no reference or difference map |
+| `constraints` | all | Every magnetic constraint: measured, reconstructed and reference where available; then RT-GSFit's last iteration minus each |
+| `convergence` | analytic, FreeGSNKE, ST40 MAGRUN16 | Change of `psi` per iteration, `chi_sq`, relative errors of Ip and `psi` at the axis and boundary, the axis position and `psi` at the axis and boundary |
 | `midplane` | analytic | `psi`, `b_theta` and `j_phi` along the grid row nearest the plasma centre, against the exact solution |
-| `ivc_eigenmodes`, `passive_currents` | ST40 | The fitted IVC eigenmode currents, and the current density and net current of each passive |
+| `ivc_eigenmodes`, `passive_currents` | ST40 MAGRUN16 | The fitted IVC eigenmode currents, and the current density and net current of each passive |
 
-ST40 vs GSFit (`st40_magrun16`), the largest difference of RT-GSFit's last iteration over the two
+ST40 vs GSFit (`st40_magrun16`), the largest difference of RT-GSFit's last iteration over the six
 cases (the test's tolerance in brackets): Ip 5.0e-5 relative (1.5e-4); the axis 0.76 mm in R
-(2 mm) and 0.30 mm in Z (0.8 mm); `psi` at the axis 2.3e-3 Wb (6e-3) and at the boundary 1.2e-3 Wb
-(3e-3); flux loops 9.2e-4 Wb (2.5e-3), Bp probes 2.5e-3 T (6e-3), Rogowski coils 1.1 A (3 A); IVC
+(2 mm) and 0.47 mm in Z (1.2 mm); `psi` at the axis 2.3e-3 Wb (6e-3) and at the boundary 1.2e-3 Wb
+(3e-3); flux loops 9.2e-4 Wb (2.5e-3), Bp probes 3.0e-3 T (6e-3), Rogowski coils 1.3 A (3 A); IVC
 eigenmode currents 0.95 A (2.5 A). RT-GSFit's residuals are therefore GSFit's to within these; the
-largest is 9.4e-3 Wb for the flux loops (tested to 2.5e-2), 7.1e-2 T for the Bp probes (0.2) and
-286 A for the Rogowski coils (750; GSFit's is 287 A). The two codes use different grids (RT-GSFit
+largest is 1.7e-2 Wb for the flux loops (tested to 4.5e-2), 9.9e-2 T for the Bp probes (0.2) and
+351 A for the Rogowski coils (750). The two codes use different grids (RT-GSFit
 33x65, GSFit 81x161), so `psi` and `j_phi` are compared only in the figures, interpolated onto
 RT-GSFit's grid.
 

@@ -8,6 +8,7 @@ records; the rest need the TE network (--te-network).
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -21,10 +22,21 @@ from rtgsfit.database_readers.st40_tepcs import pcs_signals
 from rtgsfit.replay import build_preshot
 from rtgsfit.replay import read_preshot
 from rtgsfit.replay import replay
+from rtgsfit.results import Results
 from rtgsfit.settings import Settings
 from rtgsfit.settings import load_settings
 
 PRESHOT = {"MEAS:NAMES": ["MEAS"], "COIL:SIGNALS": ["COIL"]}
+
+CASES = {
+    (11089, 0.030): 0,
+    (11089, 0.100): 0,
+    (14211, 0.030): 0,
+    (14211, 0.100): 0,
+    (14816, 0.030): 0,
+    (14816, 0.100): 1,
+}
+"""(pulse, time [s]) -> expected topology: 0 wall-limited, 1 diverted."""
 
 
 class Connection:
@@ -145,3 +157,45 @@ def test_default_replay() -> None:
         atol=1e-8,
     )
     assert np.any(results["CONSTRAINTS.CHI_SQ_REG"][flat_top] > 0)
+
+
+@pytest.fixture(scope="module", params=list(CASES), ids=[f"{pulse}@{time}" for pulse, time in CASES])
+def case(request: pytest.FixtureRequest) -> tuple[Settings, Results]:
+    pulse, time = request.param
+    settings = load_settings("st40_tepcs").copy_with({
+        "replay/pulse": pulse,
+        "replay/time_start": time,
+        "replay/time_end": time,
+        "replay/repeat": 10,
+        "preshot/rtgsfit_mdsplus/run_name": "PRESHOT05" if pulse < 12551 else "PRESHOT04",
+    })  # fmt: skip
+    return settings, replay(settings, verbose=False)
+
+
+@pytest.mark.te_network
+def test_fixed_time_replay(case: tuple[Settings, Results]) -> None:
+    """A physical plasma of the expected topology, in both coil eras, without a GSFit input-equivalence claim."""
+    settings, results = case
+    assert_array_equal(results["GLOBAL.STATUS"], 0)
+    assert_array_equal(results["FIT.LAPACK_INFO"], 0)
+    assert abs(results["GLOBAL.IP"][-1]) > 1e5
+    assert results["BOUNDARY.OUTLINE.N"][-1] > 3
+    expected = CASES[settings.get_path("replay/pulse"), settings.get_path("replay/time_start")]
+    assert results["GLOBAL.XPT_DIVERTED"][-1] == expected
+
+
+@pytest.mark.te_network
+@pytest.mark.figures
+def test_figures(case: tuple[Settings, Results], figure_dir: Path) -> None:
+    """TEPCS reconstructions and residuals against their own fixed-time measurements, not GSFit's inputs."""
+    import plotting
+
+    settings, results = case
+    figures = {
+        "psi": plotting.plot_reconstruction(results, "PSI"),
+        "j_phi": plotting.plot_reconstruction(results, "J_PHI"),
+        "constraints": plotting.plot_constraints(results),
+    }
+    pulse, time = settings.get_path("replay/pulse"), settings.get_path("replay/time_start")
+    paths = plotting.save(figures, figure_dir / "st40_tepcs" / f"{pulse}@{time}")
+    assert all(path.stat().st_size > 0 for path in paths)
