@@ -107,7 +107,8 @@ its settings and a test file of the same name. `st40_magrun16`, the default and 
 builds the pulse's preshot with GSFit and fits the processed MAG RUN16 signals and PSU2COIL
 currents that GSFit fits. `st40_tepcs` fits the TEPCS signals the PCS sees, calibrated as the PCS
 does, with the campaign preshot from `RTGSFIT` pulse 99000230, `PRESHOT04`, the one the PCS
-compiles.
+compiles. For pulses before 12551, select its no-MCVC counterpart `PRESHOT05` with
+`--set preshot/rtgsfit_mdsplus/run_name=PRESHOT05`.
 
 Configurations are in `python/rtgsfit/settings/<name>/rtgsfit.json`; a path to a custom JSON
 file also works. VS Code provides completion, descriptions and validation through the shared
@@ -199,7 +200,8 @@ make -C c                                    # compile the active preshot
 ```
 
 The campaign preshot `RTGSFIT` 99000230, `PRESHOT04` (v2 schema, MCVC coil era) is the one the PCS
-compiles and the `st40_tepcs` replays use. The older v1 runs there, such as `RUN19`, cannot be read.
+compiles and the default for `st40_tepcs`. `PRESHOT05` is its no-MCVC counterpart for pulses
+before 12551. The older v1 runs there, such as `RUN19`, cannot be read.
 The notebook and generator test use private pulse 52000230 `TEST03`, and nothing here writes to the
 shared 99000230 pulse. Tutorial writes use private development destinations; adapt them
 to your own allocated pulse range.

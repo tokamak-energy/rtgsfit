@@ -412,9 +412,18 @@ This runs GSFit with the `st40_setup_for_rtgsfit` settings (`preshot/builder = g
 which runs the C generator `c/tools/write_preshot.c` (section 6.6). It reads `PRESHOT` with the MDSplus
 C library, writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c`, and compiles `c/build/librtgsfit.so`.
 
-**The ST40 campaign preshot** is `RTGSFIT` 99000230 `PRESHOT04`: the v2 schema, for the MCVC coil
-era (pulses from 12551), built by GSFit with the `st40_tepcs` settings from pulse 14922. The PCS
-compiles it and `st40_tepcs` reads it. The v1 runs of 99000230 (e.g. `RUN19`) cannot be read by v2.
+**The ST40 stored preshots** are in `RTGSFIT` 99000230, with one run for each coil era:
+
+| Run | Coil era | MC coil input mapping |
+|---|---|---|
+| `PRESHOT04` | MCVC, pulses from 12551 | MCT = MC wire; MCB = MC wire + MCVC |
+| `PRESHOT05` | no MCVC, pulses before 12551 | MCT = MCB = MC wire |
+
+Both use the v2 schema and were built by GSFit from the pulse 14922 machine description with
+`st40_tepcs` settings. `PRESHOT05` removes `I_MCVC_PSU` and its coil-matrix column; the remaining
+numerical preshot data matches `PRESHOT04` to round-off. `PRESHOT04` is the current-era PCS
+campaign preshot and the packaged `st40_tepcs` default. Select `PRESHOT05` for older TEPCS
+replays (section 7.3). The v1 runs of 99000230 (e.g. `RUN19`) cannot be read by v2.
 Earlier private builds are in pulse 52014922: `RUN19` was written by an early v1, `RUN20` by v1,
 `RUN21` by an earlier v2 that lacks the required units metadata, and `RUN22` is identical to
 `PRESHOT04` but for its archived settings. v1 and v2 trees are not interchangeable (the node names
@@ -648,7 +657,7 @@ or both.
 | Mode | Measurements | Coil currents | Preshot | For |
 |---|---|---|---|---|
 | `st40_magrun16` (default) | processed MAG RUN16 (`*_PROCESS`) | PSU2COIL, `BEST` run | built by GSFit for the pulse | post-shot replays (PPAC); comparison with GSFit |
-| `st40_tepcs` | TEPCS counts, calibrated as the PCS does | PSU and MC wire signals from TEPCS | the campaign preshot, `RTGSFIT` 99000230 `PRESHOT04` | what the PCS would compute |
+| `st40_tepcs` | TEPCS counts, calibrated as the PCS does | PSU and MC wire signals from TEPCS | `RTGSFIT` 99000230: `PRESHOT04` (MCVC, default) or `PRESHOT05` (no MCVC) | what the PCS would compute |
 
 `st40_magrun16` gives RT-GSFit the inputs that GSFit's post-shot reconstructions fit. GSFIT RUN04,
 like GSFit's default settings in PPAC, reads the MAG RUN16 signals after offset and drift correction
@@ -676,11 +685,16 @@ corrections and records that the historical correction is unknown; partial or in
 is an error. It samples the closest recorded digitiser time for each PCS cycle; this is not proof of
 the exact samples received by the live PCS. It needs the full requested interval and the earlier
 drift-calibration window, and does not fill gaps. Its replay times must be on the PCS's 50 µs cycle
-(`(t + 1.1 s) / 50 µs` an integer). The stored preshot and coil matrix are for the MCVC era, from
-pulse 12551. Before then `I_MCVC_PSU` does not exist, and the reader fails with
-`PSS AI.LIST lacks required signals: ['I_MCVC_PSU']`. To replay such a pulse, build its preshot
-(`preshot/reader = gsfit`) without `I_MCVC_PSU` in `gsfit/coils/signals` and its column of
-`gsfit/coils/matrix`, so that MCB, like MCT, carries the `I_ROG_MCWIRE` current.
+(`(t + 1.1 s) / 50 µs` an integer). The default `PRESHOT04` and coil matrix are for the MCVC era,
+from pulse 12551. Before then `I_MCVC_PSU` does not exist: select the stored no-MCVC `PRESHOT05`,
+where MCB, like MCT, carries the `I_ROG_MCWIRE` current. No preshot rebuild is needed:
+
+    rtgsfit replay st40_tepcs --set replay/pulse=11089 \
+        --set preshot/rtgsfit_mdsplus/run_name=PRESHOT05
+
+The workbench's two-mode example selects these runs automatically by pulse. The packaged
+`st40_tepcs` preset remains explicitly configured for `PRESHOT04`; changing only `replay/pulse`
+does not switch its preshot.
 
 ### 7.4 Database writers
 
