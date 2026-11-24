@@ -53,8 +53,9 @@ See the [flux conventions](documentation/manual.md#2-conventions).
 * [Negative-current assessment](documentation/negative_current.md): proposed work and acceptance
   tests; negative-current topology support is not implemented yet.
 * [Examples](examples/): Jupyter notebooks that run RT-GSFit step by step.
-  [Example 01](examples/example_01_run_full_pipeline_st40/README.md) runs the full ST40 pipeline: it
-  builds the preshot with GSFit, replays a pulse and stores both in MDSplus.
+  [Example 01](examples/example_01_run_full_pipeline_pcs_mock/README.md) mocks the PCS pipeline:
+  read PRESHOT04, build C, replay recorded inputs, write/read a NetCDF capture, post-process and
+  plot local results. Private MDSplus result writes are opt-in.
 
 ## What works where
 
@@ -202,9 +203,9 @@ make -C c                                    # compile the active preshot
 The campaign preshot `RTGSFIT` 99000230, `PRESHOT04` (v2 schema, MCVC coil era) is the one the PCS
 compiles and the default for `st40_tepcs`. `PRESHOT05` is its no-MCVC counterpart for pulses
 before 12551. The older v1 runs there, such as `RUN19`, cannot be read.
-The notebook and generator test use private pulse 52000230 `TEST03`, and nothing here writes to the
-shared 99000230 pulse. Tutorial writes use private development destinations; adapt them
-to your own allocated pulse range.
+The notebook reads shared `PRESHOT04`; the generator test reads private pulse 52000230 `TEST03`.
+Neither writes to the shared 99000230 pulse. Optional tutorial result writes use private development
+destinations; adapt them to your own allocated pulse range.
 
 `write-c-preshot` writes `c/build/preshot.bin` and runs `make PRESHOT_FILE=c/build/preshot.bin preshot`.
 Replace `analytic` with `st40_tepcs` on the TE network to read the configured stored ST40 preshot.

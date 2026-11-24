@@ -347,7 +347,7 @@ def test_generator_writes_to_long_output_directory(analytic_preshot: Preshot, tm
 def test_mdsplus_generator_reads_what_python_reads(tmp_path: Path) -> None:
     """`make SHOT=... RUN_NAME=...` (the PCS, no Python) generates the same C as the preshot file route.
 
-    Reads the private RTGSFIT 52000230 TEST03 fixture, also used by the ST40 example.
+    Reads the private RTGSFIT 52000230 TEST03 fixture, separate from the PCS-mock example.
     This test never writes to MDSplus or reads the shared PCS preshot.
     """
     pulse, run_name = 52_000_230, "TEST03"

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="610" viewBox="0 0 1140 610" role="img" aria-labelledby="title desc">
+  <title id="title">Full RT-GSFit pipeline with a mock PCS</title>
+  <desc id="desc">Read PRESHOT04 and compile the C library without Python. Feed recorded TEPCS inputs into the solver and buffer its outputs. After the loop, write NetCDF, read it for offline processing, and save local results with optional private MDSplus storage.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#435466"/>
+    </marker>
+    <style>
+      text { font-family: sans-serif; fill: #172b4d; }
+      .lane { fill: #f5f8fc; stroke: #c6d3e1; }
+      .box { fill: #e7f0ff; stroke: #5b86c5; rx: 10; }
+      .head { font-size: 17px; font-weight: bold; }
+      .body { font-size: 14px; }
+      .arrow { fill: none; stroke: #435466; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect x="15" y="15" width="1110" height="165" rx="15" class="lane"/>
+  <text x="35" y="43" class="head">BEFORE THE LOOP: C-only build</text>
+  <rect x="40" y="65" width="285" height="85" class="box"/>
+  <text x="60" y="93" class="head">Stored PRESHOT04</text>
+  <text x="60" y="119" class="body">RTGSFIT 99000230, read only</text>
+  <rect x="425" y="65" width="285" height="85" class="box"/>
+  <text x="445" y="93" class="head">C preshot generator</text>
+  <text x="445" y="119" class="body">Sizes and constant arrays</text>
+  <rect x="810" y="65" width="285" height="85" class="box"/>
+  <text x="830" y="93" class="head">Compile + link</text>
+  <text x="830" y="119" class="body">librtgsfit.so, checksum checked</text>
+  <path d="M325 107 H417" class="arrow"/>
+  <path d="M710 107 H802" class="arrow"/>
+
+  <rect x="15" y="200" width="1110" height="185" rx="15" class="lane"/>
+  <text x="35" y="228" class="head">MOCK PCS LOOP: no file or database I/O</text>
+  <rect x="40" y="250" width="285" height="85" class="box"/>
+  <text x="60" y="278" class="head">Recorded TEPCS inputs</text>
+  <text x="60" y="304" class="body">Calibrated measurements + coil currents</text>
+  <rect x="425" y="250" width="285" height="85" class="box"/>
+  <text x="445" y="278" class="head">rtgsfit() in C</text>
+  <text x="445" y="304" class="body">Fit, solve flux, update state</text>
+  <rect x="810" y="250" width="285" height="85" class="box"/>
+  <text x="830" y="278" class="head">Buffer every C output</text>
+  <text x="830" y="304" class="body">Including j_phi and failed calls</text>
+  <path d="M325 292 H417" class="arrow"/>
+  <path d="M710 292 H802" class="arrow"/>
+  <path d="M952 150 V187 H567 V242" class="arrow"/>
+  <path d="M952 335 V359 H567 V343" class="arrow"/>
+  <text x="620" y="377" class="body">psi_norm and mask carried to the next call</text>
+
+  <rect x="15" y="405" width="1110" height="185" rx="15" class="lane"/>
+  <text x="35" y="433" class="head">AFTER THE LOOP: capture, processing and storage</text>
+  <rect x="40" y="455" width="285" height="100" class="box"/>
+  <text x="60" y="483" class="head">NetCDF-4 capture</text>
+  <text x="60" y="508" class="body">Shared C writer; preshot + inputs</text>
+  <text x="60" y="531" class="body">+ actual outputs + metadata</text>
+  <rect x="425" y="455" width="285" height="100" class="box"/>
+  <text x="445" y="483" class="head">Read file and post-process</text>
+  <text x="445" y="508" class="body">Python diagnostics; no solver,</text>
+  <text x="445" y="531" class="body">compiler or source database needed</text>
+  <rect x="810" y="455" width="285" height="100" class="box"/>
+  <text x="830" y="483" class="head">Processed results</text>
+  <text x="830" y="508" class="body">Local NPZ + plots</text>
+  <text x="830" y="531" class="body">Optional private MDSplus write/readback</text>
+  <path d="M325 505 H417" class="arrow"/>
+  <path d="M710 505 H802" class="arrow"/>
+</svg>

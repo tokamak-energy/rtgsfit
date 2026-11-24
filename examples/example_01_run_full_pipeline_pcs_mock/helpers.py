@@ -1,6 +1,6 @@
-"""Helpers for `example_01_run_full_pipeline_st40.ipynb`: checks, summaries and plots.
+"""Helpers for `example_01_run_full_pipeline_pcs_mock.ipynb`: checks, summaries and plots.
 
-The notebook calls the RT-GSFit pipeline (`rtgsfit.replay`) itself. This module holds only the code
+The notebook calls the RT-GSFit library, capture and storage APIs itself. This module holds only the code
 that would distract from it: checking the environment and the MDSplus runs, collecting the machine
 geometry from GSFit, and plotting.
 """
@@ -39,15 +39,17 @@ from rtgsfit.settings import Settings
 # ----------------------------------------------------------------------------------------------
 # Environment and MDSplus runs
 # ----------------------------------------------------------------------------------------------
-def check_environment(server: str = DEFAULT_SERVER) -> None:
+def check_environment(server: str = DEFAULT_SERVER, *, write_mdsplus: bool = False) -> None:
     """Check the packages, the MDSplus server and the compiler that this example needs.
 
     Every problem is reported at once, in a single `RuntimeError`.
     """
     problems: list[str] = []
     print(f"rtgsfit {rtgsfit.__version__} from {Path(rtgsfit.__file__).parent}")
-    # st40_database is needed by GSFit's ST40 reader, which builds the preshot
-    for name in ("gsfit", "st40_database", "mdsthin", "standard_utility"):
+    packages = ["mdsthin", "netCDF4"]
+    if write_mdsplus:
+        packages.append("standard_utility")
+    for name in packages:
         try:
             module = importlib.import_module(name)
         except ImportError as error:
@@ -125,13 +127,13 @@ def _same(expected: Any, stored: Any) -> bool:
 
 
 def compare_results(results: Results, stored: Results) -> None:
-    """Check that every node of `stored` (read back from MDSplus) equals `results`."""
+    """Check that every node read back from a local file or MDSplus equals `results`."""
     expected = results.flat
     differences = [key for key, value in stored.flat.items() if key not in expected or not _same(expected[key], value)]
     missing = sorted(set(expected) - set(stored.flat))
     if differences or missing:
         raise AssertionError(f"nodes that differ: {differences}; nodes not read back: {missing}")
-    print(f"All {len(expected)} nodes read back from MDSplus are identical to the results in memory")
+    print(f"All {len(expected)} stored nodes are identical to the results in memory")
 
 
 # ----------------------------------------------------------------------------------------------

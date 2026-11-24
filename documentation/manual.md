@@ -396,7 +396,7 @@ data dictionary and every size relation (the same relations as the `_Static_asse
 **Making a test preshot for ST40** (TE network):
 
 Use private development pulse space, not the shared PCS preshot pulse 99000230.
-The notebook and C-generator test use 52000230 `TEST03`; choose an unused test run (`TEST_NEW`
+The C-generator test uses 52000230 `TEST03`; choose an unused test run (`TEST_NEW`
 below) rather than overwriting that fixture. Adapt the pulse number to your own allocated private
 space when using this example.
 
@@ -526,10 +526,12 @@ x86 workstation (one OpenBLAS thread):
     make -C c clean                            # remove c/build and the generated preshot
 
 PCS examples use the campaign preshot `RTGSFIT` 99000230, `PRESHOT04` (section 5), which the
-`st40_tepcs` replays and tests also read. The notebook and C-generator test use private pulse
-52000230 `TEST03`, and no test or tutorial writes to the shared 99000230 pulse. Publishing a
-campaign preshot there is a separate deployment action, never
-a test or tutorial side effect.
+`st40_tepcs` replays and tests also read.
+[Example 01](../examples/example_01_run_full_pipeline_pcs_mock/README.md) reads PRESHOT04 and mocks the
+full PCS capture pipeline, with local results by default and opt-in private MDSplus writes.
+The C-generator test uses private pulse 52000230 `TEST03`. No test or tutorial writes to the shared
+99000230 pulse. Publishing a campaign preshot there is a separate deployment action, never a test or
+tutorial side effect.
 
 The code is C11 and requires `double` to have the binary64 format used by the C API and LAPACK; the
 public `rtgsfit.h` checks its size, radix, precision and exponent range at compile time. It compiles
