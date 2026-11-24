@@ -128,7 +128,8 @@ uint32_t rtgsfit_get_preshot_checksum(void)
 static void build_fit_matrix(void)
 {
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, N_PLASMA, N_FIT_TARGET, N_GRID, 1.0,
-                workspace.basis, N_GRID, FIT_G_GRID, N_GRID, 0.0, workspace.fit_matrix, N_FIT_TARGET);
+                workspace.basis, N_GRID, FIT_G_GRID, N_GRID, 0.0, workspace.fit_matrix,
+                N_FIT_TARGET);
     for (int32_t i_passive = 0; i_passive < N_PASSIVE; i_passive++)
     {
         double *column = &workspace.fit_matrix[(N_PLASMA + i_passive) * N_FIT_TARGET];
@@ -152,8 +153,8 @@ static int32_t compute_plasma_current(const double fit_dof[],
     RTGSFIT_CHECK_SIZE(n_j_phi, N_GRID);
     RTGSFIT_CHECK_ARRAY(fit_dof, n_fit_dof);
     RTGSFIT_CHECK_ARRAY(j_phi, n_j_phi);
-    cblas_dgemv(CblasRowMajor, CblasTrans, N_PLASMA, N_GRID, 1.0, workspace.basis, N_GRID, fit_dof, 1,
-                0.0, j_phi, 1);
+    cblas_dgemv(CblasRowMajor, CblasTrans, N_PLASMA, N_GRID, 1.0, workspace.basis, N_GRID, fit_dof,
+                1, 0.0, j_phi, 1);
 
     double j_phi_sum = 0.0;
     double j_phi_r_sum = 0.0;
@@ -365,10 +366,10 @@ int32_t rtgsfit(const double meas[],
     memcpy(workspace.fit_matrix_lapack, workspace.fit_matrix, sizeof(workspace.fit_matrix));
     memcpy(workspace.fit_target_lapack, workspace.fit_target, sizeof(workspace.fit_target));
     int32_t rank = 0;
-    status = least_squares_solve(N_FIT_TARGET, N_FIT_DOF, workspace.fit_matrix_lapack,
-                                 N_FIT_DOF * N_FIT_TARGET, workspace.fit_target_lapack, N_FIT_TARGET,
-                                 workspace.singular_values, N_FIT_DOF, workspace.least_squares_work,
-                                 LEAST_SQUARES_WORK_SIZE, -1.0, &rank, lapack_info);
+    status = least_squares_solve(
+        N_FIT_TARGET, N_FIT_DOF, workspace.fit_matrix_lapack, N_FIT_DOF * N_FIT_TARGET,
+        workspace.fit_target_lapack, N_FIT_TARGET, workspace.singular_values, N_FIT_DOF,
+        workspace.least_squares_work, LEAST_SQUARES_WORK_SIZE, -1.0, &rank, lapack_info);
     if (status != RTGSFIT_OK)
     {
         goto finish;
@@ -399,8 +400,9 @@ int32_t rtgsfit(const double meas[],
     {
         workspace.poisson_rhs[i] = -POISSON_RHS_SCALE[i] * j_phi[i];
     }
-    status = poisson_solve_free_boundary(&poisson, workspace.poisson_rhs, N_GRID, workspace.psi_plasma,
-                                         N_GRID, workspace.poisson_work, POISSON_WORK_SIZE);
+    status =
+        poisson_solve_free_boundary(&poisson, workspace.poisson_rhs, N_GRID, workspace.psi_plasma,
+                                    N_GRID, workspace.poisson_work, POISSON_WORK_SIZE);
     if (status != RTGSFIT_OK)
     {
         goto finish;
