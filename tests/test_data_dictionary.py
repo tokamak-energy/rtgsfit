@@ -30,7 +30,7 @@ def test_every_c_node_is_declared_in_preshot_h() -> None:
 
 
 def test_documentation_is_up_to_date() -> None:
-    path = c_directory().parent / "documentation" / "data_dictionary.md"
+    path = Path(__file__).resolve().parents[1] / "documentation" / "data_dictionary.md"
     assert path.read_text() == dd.generate_markdown(), "run: python -m rtgsfit write-data-dictionary " + str(path)
 
 
