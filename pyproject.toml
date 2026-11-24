@@ -18,12 +18,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Tokamak Energy internal packages. They are not on PyPI; install them from TE's GitLab.
+# Full ST40 access includes internal packages from TE's GitLab.
 # GSFit's ST40 reader, used to build the ST40 preshot, needs its with_st40_mdsplus extra.
 te = ["gsfit[with_st40_mdsplus]", "mdsthin", "standard_utility"]
 # FreeGSNKE synthetic data. GSFit computes the preshot (Green's functions) for the FreeGSNKE machine.
 freegsnke = ["gsfit", "freegsnke"]
-dev = ["pytest>=8", "ruff>=0.5", "clang-format==21.1.8", "matplotlib"]
+# The offline reader/writer tests use mdsthin's exceptions with fake connections.
+dev = ["pytest>=8", "ruff>=0.5", "clang-format==21.1.8", "matplotlib", "mdsthin"]
 
 [project.scripts]
 rtgsfit = "rtgsfit.__main__:main"
