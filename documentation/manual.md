@@ -456,23 +456,28 @@ grid (`c/tests`).
 ### 6.2 Interface
 
 ```c
-int32_t rtgsfit(const double meas[], int32_t n_meas,
-                const double coil_current[], int32_t n_coil_current,
-                double psi_norm[], int32_t n_psi_norm,     /* in and out */
-                int32_t mask[], int32_t n_mask,            /* in and out */
-                double psi[], int32_t n_psi,
-                double j_phi[], int32_t n_j_phi,
+int32_t rtgsfit(const double meas[], const int32_t n_meas,
+                const double coil_current[], const int32_t n_coil_current,
+                double psi_norm[], const int32_t n_psi_norm,     /* in and out */
+                int32_t mask[], const int32_t n_mask,            /* in and out */
+                double psi[], const int32_t n_psi,
+                double j_phi[], const int32_t n_j_phi,
                 double fit_dof[], const int32_t n_fit_dof,
-                double constraint_measured[], int32_t n_constraint_measured,
-                double constraint_reconstructed[], int32_t n_constraint_reconstructed,
-                double xpt_r[], int32_t n_xpt_r,
-                double xpt_z[], int32_t n_xpt_z,
-                double xpt_psi[], int32_t n_xpt_psi,
+                double constraint_measured[], const int32_t n_constraint_measured,
+                double constraint_reconstructed[], const int32_t n_constraint_reconstructed,
+                double xpt_r[], const int32_t n_xpt_r,
+                double xpt_z[], const int32_t n_xpt_z,
+                double xpt_psi[], const int32_t n_xpt_psi,
                 int32_t *xpt_n, int32_t *xpt_diverted,
                 double *ip, double *axis_psi, double *axis_r, double *axis_z,
                 double *boundary_psi, double *current_centroid_r, double *current_centroid_z,
                 double *chi_sq_magnetic, double *chi_sq_total, int32_t *lapack_info);
 ```
+
+Each length is passed by value. Its `const` qualifier prevents reassignment inside the function;
+callers can still pass ordinary integer variables or literals, and the calling convention is unchanged.
+By contrast, `const double meas[]` prevents writes through `meas` to the input elements.
+The state and output buffers remain writable.
 
 Every array is followed by its length, which is checked against the preshot on every call; a
 mismatch returns `RTGSFIT_ERR_ARGUMENT_SIZE` before anything is written. The full description of
