@@ -146,7 +146,7 @@ See [the native capture specification](documentation/manual.md#76-native-netcdf-
     python/rtgsfit/       Python package: settings/, database_readers/, database_writers/, replay, preshot
     tests/                pytest: every integration test is a replay
     tests/figures/        diagnostic figures from pytest --figures, one directory per run (not committed)
-    examples/             Jupyter notebooks that run RT-GSFit step by step, committed without outputs
+    examples/             step-by-step notebooks; Example 01 retains approved sample outputs
     documentation/        manual, data dictionary, style guide
 
 Private analysis notebooks and one-off replays live in a separate repository,

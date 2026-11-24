@@ -61,9 +61,18 @@ cp examples/example_01_run_full_pipeline_pcs_mock/preshot_to_rtgsfit.svg c/cache
     examples/example_01_run_full_pipeline_pcs_mock/example_01_run_full_pipeline_pcs_mock.ipynb
 ```
 
-This keeps executed outputs out of the source notebook. Network reads and compilation dominate
-runtime; no GSFit inverse solve is performed. The notebook prints the exact output paths.
-Do not commit notebook outputs containing ST40 data.
+This writes a separate executed copy without replacing the sample outputs in the source notebook.
+Network reads and compilation dominate runtime; no GSFit inverse solve is performed.
+The notebook prints the exact output paths.
+
+## Saved example outputs
+
+As a one-off exception, this notebook retains an approved run for ST40 pulse 14926 with PRESHOT04,
+including its seven plots and printed summaries, so it can be read directly on GitHub.
+These are saved results, not a live execution; timings are illustrative, not PCS qualification.
+Machine-specific checkout paths in the saved text are shown relative to the repository root.
+The raw NetCDF capture and NPZ results remain local and are not committed.
+This exception does not change the output policy for other notebooks or future runs.
 
 [helpers.py](helpers.py) holds checks and plots; [preshot_to_rtgsfit.svg](preshot_to_rtgsfit.svg)
 shows the data flow. See the [manual](../../documentation/manual.md#76-native-netcdf-captures-replay-and-pcs)
