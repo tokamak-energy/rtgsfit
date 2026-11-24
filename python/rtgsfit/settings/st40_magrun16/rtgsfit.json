@@ -2,12 +2,17 @@
     "$schema": "../settings.schema.json",
     "preshot": {
         "builder": "gsfit",
-        "reader": "gsfit",
+        "reader": "rtgsfit_mdsplus",
         "boundary": {
             "xpt_fraction": 0.999,
             "tolerance": 1e-10,
             "ip_min": 1000.0,
             "n_xpt_max": 50
+        },
+        "rtgsfit_mdsplus": {
+            "pulse": 99000230,
+            "run_name": "PRESHOT06",
+            "legacy_schema": false
         }
     },
     "signals": {
@@ -45,6 +50,7 @@
     },
     "gsfit": {
         "settings_path": "st40_magrun16/gsfit",
+        "pulse": 14816,
         "grid": {
             "n_r": 33,
             "n_z": 65,

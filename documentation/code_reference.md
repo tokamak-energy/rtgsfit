@@ -37,7 +37,7 @@ All paths in this table are relative to `python/rtgsfit/`.
 | `preshot.py` | Assemble/validate preshot matrices, initial state and generated C contract |
 | `library.py` | Build the active C library with make, reload it when rebuilt, check ctypes buffers, run one iteration, decode status; `isolated_build()` compiles in a private temporary copy of `c/` |
 | `replay.py` | Orchestrate input reading, iteration, offline collection, then output writers |
-| `ppac.py` | `RtgsfitReplay`: PPAC's post-shot replay of one ST40 pulse (GSFit preshot, `st40_magrun16` signals over the PCS window, MDSplus write to `RUN01_POST`) |
+| `ppac.py` | `RtgsfitReplay`: PPAC's post-shot replay of one ST40 pulse (stored preshot `PRESHOT06`, `st40_magrun16` signals over the PCS window, MDSplus write to `RUN01_POST`) |
 | `capture.py` | ctypes bridge to the shared atomic C NetCDF writer, plus versioned solver-free readback |
 | `results.py` | Collect complete captured slices and validate the result dictionary |
 | `post_processing.py` | Offline fit diagnostics, poloidal fields, geometry and export-unit conversion |
@@ -45,7 +45,7 @@ All paths in this table are relative to `python/rtgsfit/`.
 | `settings/__init__.py` | Strict JSON parsing, schema validation, effective settings serialisation and overrides |
 | `settings/settings.schema.json` | Types, allowed values, descriptions and units shared by runtime validation and VS Code |
 | `settings/analytic/rtgsfit.json` | Self-contained circular analytic replay |
-| `settings/st40_magrun16/rtgsfit.json` | ST40 replay like GSFit: GSFit preshot and MAG RUN16/PSU2COIL signals (default, PPAC) |
+| `settings/st40_magrun16/rtgsfit.json` | ST40 replay like GSFit: stored preshot `PRESHOT06` (built by GSFit) and MAG RUN16/PSU2COIL signals (default, PPAC) |
 | `settings/st40_magrun16/gsfit/` | GSFit's settings for the preshot: GSFIT RUN04's, with one p' and one FF' degree of freedom |
 | `settings/st40_tepcs/rtgsfit.json` | ST40 replay like the PCS: stored preshot and calibrated TEPCS signals; GSFit preshot builder |
 | `settings/freegsnke/rtgsfit.json` | FreeGSNKE example machine settings |

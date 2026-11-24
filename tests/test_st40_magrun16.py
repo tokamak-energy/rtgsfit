@@ -222,6 +222,14 @@ def test_reader_gives_rt_gsfit_the_inputs_gsfit_fits(pulse: int) -> None:
     assert_array_equal(signals.coil_signal, gsfit_coil_current(controller, circuits, signals.time))
 
 
+@pytest.mark.te_network
+def test_mdsplus_preshot_is_the_gsfit_build() -> None:
+    """`PRESHOT06` is GSFit's build, which is the same for every pulse in both coil eras."""
+    from stored_preshot import assert_mdsplus_preshot_is_the_gsfit_build
+
+    assert_mdsplus_preshot_is_the_gsfit_build(load_settings("st40_magrun16"))
+
+
 @pytest.fixture(scope="module", params=list(CASES), ids=[f"{pulse}@{time}" for pulse, time in CASES])
 def case(request: pytest.FixtureRequest):  # type: ignore[no-untyped-def]
     pulse, time = request.param

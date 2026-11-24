@@ -74,10 +74,10 @@ creation and writing, with its `mdsthin` transport explicitly selected.
 | Local preshot and results files (`.npz`), C preshot from a local file | ✅ | |
 | Native NetCDF capture and offline post-processing | ✅ | `netCDF4` plus NetCDF-C development/runtime library for the shared C writer; no compiler needed for readback |
 | FreeGSNKE MAST-U-like replay (`rtgsfit replay freegsnke`) | ✅ | [GSFit](https://github.com/tokamak-energy/gsfit) and [FreeGSNKE](https://github.com/FusionComputingLab/freegsnke), with FreeGSNKE's example machine files |
-| ST40 replay like GSFit (`rtgsfit replay st40_magrun16`) | ❌ | GSFit, `mdsthin`, and MAG RUN16 and PSU2COIL in MDSplus |
+| ST40 replay like GSFit (`rtgsfit replay st40_magrun16`) | ❌ | `mdsthin`, and MAG RUN16, PSU2COIL and `RTGSFIT` 99000230 in MDSplus |
 | ST40 replay like the PCS (`rtgsfit replay st40_tepcs`) | ❌ | `mdsthin` and access to the TEPCS, PSS and RTGSFIT trees |
 | ST40 preshot (`rtgsfit preshot st40_tepcs`) | ❌ | GSFit and ST40 data in MDSplus |
-| PPAC post-shot replay of one pulse (`rtgsfit.RtgsfitReplay`, [manual section 7.5](documentation/manual.md#75-post-shot-replays-in-ppac)) | ❌ | GSFit, `mdsthin`, ST40 data in MDSplus; `standard_utility` to write |
+| PPAC post-shot replay of one pulse (`rtgsfit.RtgsfitReplay`, [manual section 7.5](documentation/manual.md#75-post-shot-replays-in-ppac)) | ❌ | `mdsthin`, ST40 data in MDSplus; `standard_utility` to write |
 | Build the PCS library from MDSplus (`make -C c SHOT=... RUN_NAME=...`) | ❌ | MDSplus |
 | Write to the `RTGSFIT` MDSplus tree | ❌ | MDSplus, `standard_utility`, write access |
 | ST40 tests and RT-GSFit vs GSFit (`pytest --te-network`) | ❌ | all of the above |
@@ -108,7 +108,8 @@ directory, so earlier figures are kept; see the manual's Verification section.
 
 ST40 has two modes ([manual section 7.3](documentation/manual.md#73-database-readers)), each with
 its settings and a test file of the same name. `st40_magrun16`, the default and the one PPAC uses,
-builds the pulse's preshot with GSFit and fits the processed MAG RUN16 signals and PSU2COIL
+reads the stored preshot `PRESHOT06` from `RTGSFIT` pulse 99000230, which GSFit builds the same for
+every pulse, and fits the processed MAG RUN16 signals and PSU2COIL
 currents that GSFit fits. `st40_tepcs` fits the TEPCS signals the PCS sees, calibrated as the PCS
 does, with the campaign preshot from `RTGSFIT` pulse 99000230, `PRESHOT04`, the one the PCS
 compiles. For pulses before 12551, select its no-MCVC counterpart `PRESHOT05` with
