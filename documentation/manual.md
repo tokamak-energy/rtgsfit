@@ -1149,16 +1149,29 @@ v1 is the code released up to v0.1.2; v2 is release v0.2.0 onwards.
 | `LIMIT_IDX`, `LIMIT_WEIGHT` / `LIMIT_W` | `LIMITER:GRID_INDEX`, `LIMITER:GRID_WEIGHT` |
 | `R_MU0_DZ2` | `POISSON:RHS_SCALE` |
 | `LOWER_BAND`, `UPPER_BAND`, `PERM_IDX` | `POISSON:LOWER_BAND`, `POISSON:UPPER_BAND`, `POISSON:PERMUTATION` |
-| `SENS_NAMES` | `CONSTRAINT:NAMES` |
+| `SENS_NAMES` | `MEAS:NAMES` |
 | `SENSOR_REPLACEMENT_MATRIX` / `SENS_REP_MAT` | `CONSTRAINT:REPLACEMENT` |
 | `G_MEAS_COIL` / `GREENS.MEAS_COIL` | `CONSTRAINT:G_COIL` |
 | `WEIGHT` | `FIT:WEIGHT` |
 | `G_GRID_MEAS_WEIGHT` / `GREENS.GRID_MEAS_W` | `FIT:G_GRID` (transposed) |
 | `G_COEF_MEAS_WEIGHT` / `GREENS.COEF_MEAS_W` | `FIT:G_PASSIVE` (passive DOFs only, transposed) |
 | `COEF_NAMES` | `FIT:DOF_NAMES` |
-| `MEAS_NAMES` | `MEAS:NAMES` |
-| `COIL_NAMES`, `COIL_SIGNALS`, `COIL_MATRIX` | `COIL:NAMES`, `COIL:SIGNALS`, `COIL:MATRIX` |
+| `MEAS_NAMES` | `FIT:TARGET_NAMES` (full names, e.g. `L001` → `PSI_FLOOP_001`) |
+| `COIL_NAMES`, `COIL_SIGNALS` | `COIL:NAMES`, `COIL:SIGNALS` |
+| `COIL_MATRIX` | `COIL:MATRIX` (transposed, see below) |
 | `INITIAL_COND.FLUX_NORM`, `INITIAL_COND.MASK` | `INITIAL:PSI_NORM`, `INITIAL:MASK` |
+
+`COIL:MATRIX` is [N_COIL, N_COIL_SIGNAL] in Python (`coil_current = COIL:MATRIX coil_signal`).
+MATLAB reads MDSplus arrays column-major, so it sees the matrix as [N_COIL_SIGNAL, N_COIL]. v1
+stored `COIL_MATRIX` already transposed, because the PCS computes the coil currents in MATLAB/Simulink
+as `RTGSFIT_coil_matrix * signals`. **The PCS must therefore transpose v2's matrix when it reads it**,
+e.g. `coil_matrix = temdsvalue(...).';`. Of the preshot nodes the PCS reads today
+(`m-files/mds_get_rtgsfit.m`), this is the only 2D one.
+
+ST40's matrix is 8 × 8, so a missing transpose passes the size checks in `pss/initialise_rtgsfit.m`
+and silently gives wrong currents: for `PRESHOT04`, SOL would come from the MCVC PSU and MCB from the
+PSH PSU. `rtgsfit()` only receives the coil currents and can't detect this, but `rtgsfit post-process`
+rejects a capture whose `coil_current` isn't `COIL:MATRIX coil_signal`.
 
 ### 11.3 `rtgsfit()` arguments
 
