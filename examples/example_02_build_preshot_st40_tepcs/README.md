@@ -72,8 +72,14 @@ mkdir -p c/cache/example_02_build_preshot
 ```
 
 This writes an executed copy to `c/cache/example_02_build_preshot/`, beside each run's timestamped
-output directory. The whole notebook takes about a minute, mostly in the GSFit build; compiling
-takes seconds. The committed notebook has no outputs.
+output directory, without replacing the saved outputs in the source notebook. The whole notebook
+takes about a minute, mostly in the GSFit build; compiling takes seconds.
 
 [helpers.py](helpers.py) holds the checks, the comparison, the GSFit geometry and the plots. The
 [manual](../../documentation/manual.md#5-the-preshot) describes the preshot and its storage.
+
+## Saved example outputs
+
+The notebook keeps the outputs of one run (24 November 2026, `WRITE_MDSPLUS = False`), including its
+four figures, so it can be read directly on GitHub. That run reproduced PRESHOT04 bit for bit
+(checksum `431C9A97`). Checkout paths in the saved text are shown relative to the repository root.
