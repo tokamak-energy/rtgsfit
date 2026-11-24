@@ -411,6 +411,8 @@ This runs GSFit with the `st40_setup_for_rtgsfit` settings (`preshot/builder = g
 
 which runs the C generator `c/tools/write_preshot.c` (section 6.6). It reads `PRESHOT` with the MDSplus
 C library, writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c`, and compiles `c/build/librtgsfit.so`.
+[Example 02](../examples/example_02_build_preshot_st40_tepcs/README.md) builds the ST40 preshot step by
+step, checks it against `PRESHOT04`, and describes how a new campaign preshot is published for the PCS.
 
 **The ST40 stored preshots** are in `RTGSFIT` 99000230, with one run for each coil era:
 
@@ -425,9 +427,9 @@ numerical preshot data matches `PRESHOT04` to round-off. `PRESHOT04` is the curr
 campaign preshot and the packaged `st40_tepcs` default. Select `PRESHOT05` for older TEPCS
 replays (section 7.3). The v1 runs of 99000230 (e.g. `RUN19`) cannot be read by v2.
 Earlier private builds are in pulse 52014922: `RUN19` was written by an early v1, `RUN20` by v1,
-`RUN21` by an earlier v2 that lacks the required units metadata, and `RUN22` is identical to
-`PRESHOT04` but for its archived settings. v1 and v2 trees are not interchangeable (the node names
-changed, section 11).
+`RUN21` by an earlier v2 that lacks the required units metadata, and `RUN22` matches `PRESHOT04` but
+for its archived settings and round-off (about 3e-16) in the Poisson LU factors, so its C checksum
+differs. v1 and v2 trees are not interchangeable (the node names changed, section 11).
 
 ## 6. The C library
 
@@ -534,6 +536,8 @@ PCS examples use the campaign preshot `RTGSFIT` 99000230, `PRESHOT04` (section 5
 `st40_tepcs` replays and tests also read.
 [Example 01](../examples/example_01_run_full_pipeline_pcs_mock/README.md) reads PRESHOT04 and mocks the
 full PCS capture pipeline, with local results by default and opt-in private MDSplus writes.
+[Example 02](../examples/example_02_build_preshot_st40_tepcs/README.md) rebuilds PRESHOT04 from GSFit,
+compares it with the stored copy and compiles it with `PRESHOT_FILE`, with opt-in private MDSplus writes.
 The C-generator test uses private pulse 52000230 `TEST03`. No test or tutorial writes to the shared
 99000230 pulse. Publishing a campaign preshot there is a separate deployment action, never a test or
 tutorial side effect.

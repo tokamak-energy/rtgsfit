@@ -56,6 +56,9 @@ See the [flux conventions](documentation/manual.md#2-conventions).
   [Example 01](examples/example_01_run_full_pipeline_pcs_mock/README.md) mocks the PCS pipeline:
   read PRESHOT04, build C, replay recorded inputs, write/read a NetCDF capture, post-process and
   plot local results. Private MDSplus result writes are opt-in.
+  [Example 02](examples/example_02_build_preshot_st40_tepcs/README.md) builds the PCS preshot: rebuild
+  PRESHOT04 from GSFit with `st40_tepcs`, compare it with the stored copy, then save and compile it.
+  Private MDSplus preshot writes are opt-in.
 
 ## What works where
 

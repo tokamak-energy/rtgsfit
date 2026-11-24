@@ -1,8 +1,7 @@
 """Helpers for `example_01_run_full_pipeline_pcs_mock.ipynb`: checks, summaries and plots.
 
 The notebook calls the RT-GSFit library, capture and storage APIs itself. This module holds only the code
-that would distract from it: checking the environment and the MDSplus runs, collecting the machine
-geometry from GSFit, and plotting.
+that would distract from it: checking the environment and the MDSplus runs, summaries, and plotting.
 """
 
 from __future__ import annotations
@@ -11,7 +10,6 @@ import importlib
 import os
 import shutil
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,12 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rtgsfit
 from matplotlib.axes import Axes
-from matplotlib.cm import ScalarMappable
-from matplotlib.collections import PatchCollection
-from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
-from matplotlib.patches import Patch
-from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_readers import Signals
@@ -33,7 +26,6 @@ from rtgsfit.database_writers.rtgsfit_mdsplus import check_standard_utility_csv
 from rtgsfit.library import describe_status
 from rtgsfit.preshot import Preshot
 from rtgsfit.results import Results
-from rtgsfit.settings import Settings
 
 
 # ----------------------------------------------------------------------------------------------
@@ -175,79 +167,6 @@ def print_replay_summary(results: Results) -> None:
 
 
 # ----------------------------------------------------------------------------------------------
-# Machine geometry from GSFit
-# ----------------------------------------------------------------------------------------------
-@dataclass
-class Filaments:
-    """Rectangular filaments of a PF coil or passive structure: centres and sizes [m]."""
-
-    r: np.ndarray
-    z: np.ndarray
-    d_r: np.ndarray
-    d_z: np.ndarray
-
-
-@dataclass
-class Geometry:
-    """The geometry behind the preshot's Greens functions.
-
-    The preshot holds only what `rtgsfit()` needs: the flux and field of each PF coil and passive degree of
-    freedom (DOF), not the conductors that make them. This comes from the GSFit controller that built it.
-    """
-
-    coil_members: dict[str, list[str]]  # COIL:NAMES -> the GSFit PF coils in series in that circuit
-    coils: dict[str, Filaments]  # GSFit PF coil -> filaments
-    passives: dict[str, Filaments]  # GSFit passive structure -> filaments
-    dof_passive: dict[str, str]  # passive DOF (FIT:DOF_NAMES) -> GSFit passive structure
-    dof_current: dict[str, np.ndarray]  # passive DOF -> current in each filament of its structure when the DOF is 1
-    dof_unit: dict[str, str]  # passive DOF -> its unit: A/m² for a constant current density, A for an eigenmode
-    time_constant: dict[str, float]  # eigenmode DOF -> its L/R time constant [s]
-
-
-def gsfit_geometry(settings: Settings) -> Geometry:
-    """The PF coils, passive structures and passive DOFs of the GSFit controller that built the preshot.
-
-    Each passive DOF is a fixed pattern of filament currents times an amplitude, the DOF. A structure with
-    `constant_current_density` has one DOF, the current density [A/m²], so the pattern is the filament areas.
-    The in-vessel components (IVC) instead have the slowest `eig` modes of their L/R circuit equation,
-    `M x = tau R x`, with the filaments' mutual inductance matrix M and resistance matrix R. GSFit scales each
-    eigenvector `x` to a 2-norm of 100, so the DOF is the amplitude of the mode in amperes.
-    """
-    from rtgsfit.database_readers.gsfit import coil_circuits
-    from rtgsfit.database_readers.gsfit import gsfit_controller
-
-    controller = gsfit_controller(settings)  # cached by build_preshot, so this does not set up GSFit again
-
-    def filaments(objects: Any, path: list[str]) -> Filaments:
-        return Filaments(*(np.ravel(objects.get_array1([*path, "geometry", key])) for key in ("r", "z", "d_r", "d_z")))
-
-    passives = controller.passives
-    geometry = Geometry(
-        coil_members=coil_circuits(controller, settings).groups,
-        coils={name: filaments(controller.coils, ["pf", name]) for name in controller.coils.keys(["pf"])},
-        passives={name: filaments(passives, [name]) for name in passives.keys()},
-        dof_passive={}, dof_current={}, dof_unit={}, time_constant={},
-    )  # fmt: skip
-    for passive in passives.keys():
-        for dof in passives.keys([passive, "dof"]):
-            # The same names as the preshot reader (rtgsfit.database_readers.gsfit.preshot_inputs)
-            name = passive if dof == "constant_current_density" else f"{passive}_{dof.upper()}"
-            geometry.dof_passive[name] = passive
-            geometry.dof_current[name] = np.ravel(passives.get_array1([passive, "dof", dof, "current_distribution"]))
-            geometry.dof_unit[name] = "A/m²" if dof == "constant_current_density" else "A"
-            if "time_constant" in passives.keys([passive, "dof", dof]):
-                geometry.time_constant[name] = float(passives.get_f64([passive, "dof", dof, "time_constant"]))
-    return geometry
-
-
-def up_down_parity(filaments: Filaments, current: np.ndarray) -> float:
-    """+1 if the filament currents are up-down symmetric, -1 if antisymmetric (for an up-down symmetric structure)."""
-    distance = np.hypot(filaments.r[:, None] - filaments.r, filaments.z[:, None] + filaments.z)
-    mirror = np.argmin(distance, axis=1)
-    return float(current @ current[mirror] / (current @ current))
-
-
-# ----------------------------------------------------------------------------------------------
 # Plots
 # ----------------------------------------------------------------------------------------------
 def _plot_limiter(ax: Axes, r: np.ndarray, z: np.ndarray, labels: bool = False) -> None:
@@ -287,13 +206,6 @@ def _grid_shape(preshot: Preshot) -> tuple[int, int]:
     return len(preshot["GRID:Z"]), len(preshot["GRID:R"])
 
 
-def _si(value: float, unit: str) -> str:
-    """`2.04e-7, "Wb"` -> `204 nWb`."""
-    prefixes = (("", 1.0), ("m", 1e-3), ("µ", 1e-6), ("n", 1e-9), ("p", 1e-12))
-    prefix, scale = next(((p, s) for p, s in prefixes if abs(value) >= s), prefixes[-1])
-    return f"{value / scale:.3g} {prefix}{unit}"
-
-
 def plot_preshot(preshot: Preshot) -> Figure:
     """The grid's allowed-plasma region and limiter points, and the initial plasma."""
     r, z = preshot["GRID:R"], preshot["GRID:Z"]
@@ -323,18 +235,6 @@ def plot_preshot(preshot: Preshot) -> Figure:
     return fig
 
 
-def _plot_filaments(ax: Axes, filaments: Filaments, values: np.ndarray | None = None, **kwargs: Any) -> None:
-    """Filaments as rectangles, in one colour or coloured by `values`."""
-    corners = zip(filaments.r - filaments.d_r / 2, filaments.z - filaments.d_z / 2, strict=True)
-    rectangles = [
-        Rectangle(corner, d_r, d_z) for corner, d_r, d_z in zip(corners, filaments.d_r, filaments.d_z, strict=True)
-    ]
-    collection = PatchCollection(rectangles, **kwargs)
-    if values is not None:
-        collection.set_array(values)
-    ax.add_collection(collection)
-
-
 def _panels(n: int, n_columns: int, height: float) -> tuple[Figure, np.ndarray]:
     """Small multiples of R-Z plots; the panels after the first `n` are hidden."""
     n_rows = -(-n // n_columns)
@@ -354,14 +254,9 @@ def _panels(n: int, n_columns: int, height: float) -> tuple[Figure, np.ndarray]:
     return fig, axes
 
 
-def _set_limits(axes: np.ndarray, preshot: Preshot, filaments: Sequence[Filaments]) -> None:
-    """Cover the grid and every filament drawn."""
-    r = np.concatenate(
-        [preshot["GRID:R"], *(f.r + f.d_r / 2 for f in filaments), *(f.r - f.d_r / 2 for f in filaments)]
-    )
-    z = np.concatenate(
-        [preshot["GRID:Z"], *(f.z + f.d_z / 2 for f in filaments), *(f.z - f.d_z / 2 for f in filaments)]
-    )
+def _set_limits(axes: np.ndarray, preshot: Preshot) -> None:
+    """Cover the grid, from R = 0."""
+    r, z = preshot["GRID:R"], preshot["GRID:Z"]
     margin = 0.03
     for ax in axes.flat:
         ax.set_aspect("equal")
@@ -382,8 +277,11 @@ def _circuit(preshot: Preshot, i_coil: int) -> str:
     return "I = " + " ".join(terms).removeprefix("+ ")
 
 
-def plot_coil_greens(preshot: Preshot, geometry: Geometry | None = None) -> Figure:
-    """GRID:G_COIL, the poloidal flux per ampere of every PF coil circuit, with its coils in red."""
+def plot_coil_greens(preshot: Preshot) -> Figure:
+    """GRID:G_COIL, the poloidal flux per ampere of every PF coil circuit.
+
+    Example 02 also draws the coils, from the GSFit machine description.
+    """
     r, z = preshot["GRID:R"], preshot["GRID:Z"]
     shape = _grid_shape(preshot)
     names = list(preshot["COIL:NAMES"])
@@ -392,107 +290,8 @@ def plot_coil_greens(preshot: Preshot, geometry: Geometry | None = None) -> Figu
         image = ax.contourf(r, z, preshot["GRID:G_COIL"][:, i_coil].reshape(shape) * 1e6, levels=20, cmap="viridis")
         fig.colorbar(image, ax=ax, location="bottom", shrink=0.9, label="psi [µWb / A]", ticks=MaxNLocator(5))
         _plot_limiter(ax, preshot["LIMITER:R"], preshot["LIMITER:Z"])
-        title = name
-        if geometry is not None:
-            members = geometry.coil_members[name]
-            for coil, filaments in geometry.coils.items():
-                in_circuit = coil in members
-                _plot_filaments(ax, filaments, color="tab:red" if in_circuit else "0.75", zorder=3 if in_circuit else 2)
-            if members != [name]:
-                title += " = " + " + ".join(members)
-        ax.set_title(f"{title}\n{_circuit(preshot, i_coil)}", fontsize="medium")
-    _set_limits(axes, preshot, list(geometry.coils.values()) if geometry is not None else [])
-    return fig
-
-
-def plot_passive_greens(preshot: Preshot, geometry: Geometry, names: Sequence[str], n_columns: int = 5) -> Figure:
-    """GRID:G_PASSIVE, the poloidal flux of each passive DOF in `names`, and the filament currents that make it.
-
-    Both are divided by their largest magnitude in each panel, so they share one colour scale. The title gives
-    that magnitude, for a DOF of 1.
-    """
-    r, z = preshot["GRID:R"], preshot["GRID:Z"]
-    shape = _grid_shape(preshot)
-    dof_names = list(preshot["FIT:DOF_NAMES"][int(preshot["SIZES:N_PLASMA"]) :])
-    norm, cmap = Normalize(-1.0, 1.0), "RdBu_r"
-    levels = np.linspace(-1.0, 1.0, 21)
-    fig, axes = _panels(len(names), n_columns, 4.6)
-    for ax, name in zip(axes.flat, names, strict=False):
-        psi = preshot["GRID:G_PASSIVE"][:, dof_names.index(name)].reshape(shape)
-        psi_max = np.abs(psi).max()
-        ax.contourf(r, z, psi / psi_max, levels=levels, cmap=cmap, norm=norm)
-        _plot_limiter(ax, preshot["LIMITER:R"], preshot["LIMITER:Z"])
-        current = geometry.dof_current[name]
-        _plot_filaments(ax, geometry.passives[geometry.dof_passive[name]], current / np.abs(current).max(),
-                        cmap=cmap, norm=norm, edgecolor="k", linewidth=0.2, zorder=3)  # fmt: skip
-        title = name
-        if name in geometry.time_constant:
-            title += f", tau = {geometry.time_constant[name] * 1e3:.1f} ms"
-        ax.set_title(f"{title}\n|psi| ≤ {_si(psi_max, 'Wb')} per {geometry.dof_unit[name]}", fontsize="medium")
-    _set_limits(axes, preshot, [geometry.passives[geometry.dof_passive[name]] for name in names])
-    fig.colorbar(ScalarMappable(norm, cmap), ax=axes, location="bottom", shrink=0.5,
-                 label="value / largest |value| in the panel: psi on the grid, current in the filaments")  # fmt: skip
-    return fig
-
-
-def _regularisation_weight(preshot: Preshot) -> np.ndarray:
-    """The weight of the regularisation of each passive DOF: the size of its regularisation rows of FIT:G_PASSIVE."""
-    n_constraint = int(preshot["SIZES:N_CONSTRAINT"])
-    return np.linalg.norm(preshot["FIT:G_PASSIVE"][n_constraint:], axis=0)
-
-
-def plot_eigenmodes(preshot: Preshot, geometry: Geometry, passive: str = "IVC") -> Figure:
-    """For each eigenmode of `passive`: its L/R time constant, net current and regularisation weight."""
-    dof_names = list(preshot["FIT:DOF_NAMES"][int(preshot["SIZES:N_PLASMA"]) :])
-    names = [name for name in dof_names if geometry.dof_passive[name] == passive and name in geometry.time_constant]
-    filaments = geometry.passives[passive]
-    symmetric = np.array([up_down_parity(filaments, geometry.dof_current[name]) > 0 for name in names])
-    colour = np.where(symmetric, "tab:blue", "tab:orange")
-    weight = _regularisation_weight(preshot)
-    panels = {
-        "L/R time constant [ms]": [geometry.time_constant[name] * 1e3 for name in names],
-        "Net current per ampere of amplitude": [geometry.dof_current[name].sum() for name in names],
-        "Regularisation weight [1 / A]": [weight[dof_names.index(name)] for name in names],
-    }
-    labels = [name.removeprefix(f"{passive}_EIG_") for name in names]
-    fig, axes = plt.subplots(1, 3, figsize=(14, 3.8), sharex=True, constrained_layout=True)
-    for ax, (title, values) in zip(axes, panels.items(), strict=True):
-        ax.bar(labels, values, color=colour)
-        ax.axhline(0.0, color="k", lw=0.5)
-        ax.set(title=title, xlabel=f"{passive} eigenmode")
-    axes[0].legend(handles=[Patch(color="tab:blue", label="up-down symmetric"),
-                            Patch(color="tab:orange", label="up-down antisymmetric")])  # fmt: skip
-    return fig
-
-
-def plot_passive_currents(results: Results, geometry: Geometry, passive: str = "IVC") -> Figure:
-    """The fitted eigenmode amplitudes of `passive`, and the net current in every passive structure."""
-    time_ms = results["TIME"] * 1e3
-    ok = results["GLOBAL.STATUS"] == 0
-    names = list(results["FIT.DOF_NAMES"])
-    values = np.where(ok[:, None], results["FIT.DOF_VALUES"], np.nan)
-
-    fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True, constrained_layout=True)
-    ax = axes[0]
-    modes = [name for name in names if geometry.dof_passive.get(name) == passive and name in geometry.time_constant]
-    colours = plt.get_cmap("viridis")(np.linspace(0.0, 0.9, len(modes)))
-    for name, colour in zip(modes, colours, strict=True):
-        symmetric = up_down_parity(geometry.passives[passive], geometry.dof_current[name]) > 0
-        ax.plot(time_ms, values[:, names.index(name)], "-" if symmetric else "--", color=colour,
-                label=name.removeprefix(f"{passive}_EIG_"))  # fmt: skip
-    ax.set(title=f"Fitted {passive} eigenmode amplitudes (dashed: antisymmetric)", ylabel="amplitude [A]")
-    ax.legend(ncol=8, fontsize="small", title="mode")
-
-    ax = axes[1]
-    net: dict[str, np.ndarray] = {}
-    for name, structure in geometry.dof_passive.items():
-        net[structure] = net.get(structure, 0.0) + values[:, names.index(name)] * geometry.dof_current[name].sum()
-    for structure, current in net.items():
-        ax.plot(time_ms, current * 1e-3, label=structure)
-    ax.set(title="Net toroidal current in each passive structure", ylabel="I [kA]", xlabel="t [ms]")
-    ax.legend(ncol=4, fontsize="small")
-    for ax in axes:
-        _shade_failures(ax, time_ms, ok)
+        ax.set_title(f"{name}\n{_circuit(preshot, i_coil)}", fontsize="medium")
+    _set_limits(axes, preshot)
     return fig
 
 
