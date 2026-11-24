@@ -60,7 +60,9 @@ int32_t poisson_solve_fixed_boundary(const struct poisson_operator *op,
 /*
  * Solve the free-boundary problem.
  *
- * rhs[n_rhs] is -mu0 R j_phi d_z^2 on the grid; its edge values are ignored (treated as zero).
+ * rhs[n_rhs] is -POISSON_RHS_SCALE * j_phi on the grid, with
+ * POISSON_RHS_SCALE = (2 pi / INFO:PSI_TO_WB) mu0 R d_z^2 (INFO:PSI_TO_WB = 1 for new preshots).
+ * Its edge values are ignored (treated as zero).
  * psi[n_psi] receives the plasma psi on the grid. work[n_work] must hold at least
  * `poisson_work_size()` doubles.
  */
