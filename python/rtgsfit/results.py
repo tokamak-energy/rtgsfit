@@ -111,7 +111,7 @@ def collect_results(
         }
     coil_signal = signals.coil_signal[:n_time]
     constraints["PF_CURRENT"] = {
-        "ALL": {"NAMES": list(preshot["COIL:NAMES"]), "MEASURED": coil_signal @ preshot["COIL:MATRIX"].T}
+        "ALL": {"NAMES": list(preshot["COIL:NAMES"]), "MEASURED": coil_signal @ preshot["COIL:MATRIX"]}
     }
 
     r, z = np.asarray(preshot["GRID:R"]), np.asarray(preshot["GRID:Z"])

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1140" height="610" viewBox="0 0 1140 610" role="img" aria-labelledby="title desc">
   <title id="title">Full RT-GSFit pipeline with a mock PCS</title>
-  <desc id="desc">Read PRESHOT04 and compile the C library without Python. Feed recorded TEPCS inputs into the solver and buffer its outputs. After the loop, write NetCDF, read it for offline processing, and save local results with optional private MDSplus storage.</desc>
+  <desc id="desc">Read PRESHOT07 and compile the C library without Python. Feed recorded TEPCS inputs into the solver and buffer its outputs. After the loop, write NetCDF, read it for offline processing, and save local results with optional private MDSplus storage.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
       <path d="M0,0 L10,4 L0,8 Z" fill="#435466"/>
@@ -17,7 +17,7 @@
   <rect x="15" y="15" width="1110" height="165" rx="15" class="lane"/>
   <text x="35" y="43" class="head">BEFORE THE LOOP: C-only build</text>
   <rect x="40" y="65" width="285" height="85" class="box"/>
-  <text x="60" y="93" class="head">Stored PRESHOT04</text>
+  <text x="60" y="93" class="head">Stored PRESHOT07</text>
   <text x="60" y="119" class="body">RTGSFIT 99000230, read only</text>
   <rect x="425" y="65" width="285" height="85" class="box"/>
   <text x="445" y="93" class="head">C preshot generator</text>

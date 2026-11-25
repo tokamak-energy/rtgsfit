@@ -11,7 +11,7 @@
         },
         "rtgsfit_mdsplus": {
             "pulse": 99000230,
-            "run_name": "PRESHOT04",
+            "run_name": "PRESHOT07",
             "legacy_schema": false
         }
     },
@@ -20,7 +20,7 @@
     },
     "replay": {
         "pulse": 14922,
-        "time_start": 0.0076,
+        "time_start": 0.006,
         "time_end": 0.3,
         "time_step": 0.001,
         "repeat": 1,

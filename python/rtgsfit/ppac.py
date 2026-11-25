@@ -50,7 +50,7 @@ from rtgsfit.settings import Settings
 from rtgsfit.settings import load_settings
 
 POST_SHOT_SETTINGS: dict[str, Any] = {
-    "replay/time_start": 0.0055,
+    "replay/time_start": 0.006,
     "replay/time_end": 0.35,
     "replay/time_step": 0.001,
     "replay/repeat": 1,
@@ -59,12 +59,12 @@ POST_SHOT_SETTINGS: dict[str, Any] = {
 }
 """Changes to the base settings for every pulse.
 
-The PCS runs `rtgsfit()` every millisecond from 5.5 ms to 600 ms, starting from the initial conditions
-each time it is enabled (`RT_Diagnostics.c` enables it for PCS clock times 1.1055 s to 1.7 s, and the
-PCS clock starts at pulse time -1.1 s), so the replay starts at 5.5 ms too. Do not start earlier: from
-0 ms, pulse 14922 locks onto a one-cell 'plasma' with status 0 and never recovers. The replay stops at
-350 ms: in the sampled long pulses of 10651-14928 the current is gone by 320-340 ms. Status 0 is not
-proof of a plasma: on 14922 a 5 kA, 0.001 m^2 filament also has
+The PCS enables RT-GSFit for PCS clock times 1.1055 s to 1.7 s (`RT_Diagnostics.c`; the PCS clock starts
+at pulse time -1.1 s), starting from the initial conditions each time. Its RT-GSFit thread reads the
+inputs on whole milliseconds, so the first step reads them at 6 ms, and the replay starts at 6 ms too.
+Do not start earlier: from 0 ms, pulse 14922 locks onto a one-cell 'plasma' with status 0 and never
+recovers. The replay stops at 350 ms: in the sampled long pulses of 10651-14928 the current is gone by
+320-340 ms. Status 0 is not proof of a plasma: on 14922 a 5 kA, 0.001 m^2 filament also has
 status 0 from 519.5 ms. A failed slice leaves `psi_norm` and `mask` unchanged, and the `st40_magrun16`
 reader drops times that a signal did not record.
 """

@@ -265,9 +265,9 @@ def _set_limits(axes: np.ndarray, preshot: Preshot) -> None:
 
 
 def _circuit(preshot: Preshot, i_coil: int) -> str:
-    """The current of coil `i_coil` from the PCS signals: row `i_coil` of COIL:MATRIX."""
+    """The current of coil `i_coil` from the PCS signals: column `i_coil` of COIL:MATRIX."""
     terms = []
-    for coefficient, signal in zip(preshot["COIL:MATRIX"][i_coil], preshot["COIL:SIGNALS"], strict=True):
+    for coefficient, signal in zip(preshot["COIL:MATRIX"][:, i_coil], preshot["COIL:SIGNALS"], strict=True):
         if coefficient != 0.0:
             sign = "-" if coefficient < 0 else "+"
             size = "" if abs(coefficient) == 1.0 else f"{abs(coefficient):g} "
@@ -324,7 +324,7 @@ def plot_signals(signals: Signals, preshot: Preshot) -> Figure:
     ax = axes[1, 2]
     lines = ax.plot(time_ms, signals.coil_current(preshot) * 1e-3, lw=1.0)
     ax.legend(lines, list(preshot["COIL:NAMES"]), ncol=2, fontsize="small")
-    ax.set(title="PF coil currents\n= COIL:MATRIX coil_signal", ylabel="I [kA]")
+    ax.set(title="PF coil currents\n= coil_signal @ COIL:MATRIX", ylabel="I [kA]")
     for ax in axes[1]:
         ax.set_xlabel("t [ms]")
     return fig

@@ -37,10 +37,20 @@ CASES = {
 
 
 class Connection:
-    def __init__(self, *, missing_mag: bool = False, partial: bool = False, short: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        missing_mag: bool = False,
+        partial: bool = False,
+        short: bool = False,
+        per_cycle: int = 1,
+        comp_clock: float = 1.0,
+    ) -> None:
         self.missing_mag = missing_mag
         self.partial = partial
-        self.samples = np.arange(23000, dtype=float)
+        self.per_cycle = per_cycle
+        self.comp_clock = comp_clock  # stored-time rate of the compensation channel, CH003
+        self.samples = np.arange(23000 * per_cycle, dtype=float)
         self.short = short
 
     def openTree(self, tree: str, pulse: int) -> None:
@@ -67,7 +77,8 @@ class Connection:
         if expression.startswith("raw_of("):
             value = self.samples[:-1] if self.short else self.samples
         elif expression.startswith("dim_of("):
-            value = -1.1 + 5e-5 * self.samples
+            clock = self.comp_clock if "CH003" in expression else 1.0
+            value = -1.1 + 5e-5 / self.per_cycle * clock * self.samples
         else:
             value = values[expression]
         return SimpleNamespace(data=lambda: value)
@@ -79,21 +90,25 @@ def _settings(pulse: int) -> Settings:
     )
 
 
-def test_pcs_calibration_and_drift_compensation() -> None:
-    signals = pcs_signals(Connection(), _settings(14928), PRESHOT)
+@pytest.mark.parametrize(("per_cycle", "comp_clock"), [(1, 1.0), (5, 1 - 1e-4)])
+def test_pcs_calibration_and_drift_compensation(per_cycle: int, comp_clock: float) -> None:
+    """Each cycle reads the last sample before it by count, even where the stored times run fast."""
+    signals = pcs_signals(Connection(per_cycle=per_cycle, comp_clock=comp_clock), _settings(14928), PRESHOT)
     cycle = 22110
-    avg1 = 2 * (np.arange(1, 601) + 1).mean()
-    avg2 = 2 * (np.arange(9401, 10001) + 1).mean()
-    expected = 2 * (cycle + 1) - (avg2 + (avg2 - avg1) / 0.47 * 5e-5 * (cycle - 10000))
-    expected += 0.5 * 4 * (cycle + 3)
+    sample = per_cycle * cycle - 1
+    avg1 = 2 * per_cycle * np.arange(1, 601).mean()
+    avg2 = 2 * per_cycle * np.arange(9401, 10001).mean()
+    expected = 2 * (sample + 1) - (avg2 + (avg2 - avg1) / 0.47 * 5e-5 * (cycle - 10000))
+    expected += 0.5 * 4 * (sample + 3)
     assert_allclose(signals.meas[:, 0], [expected])
+    assert_allclose(signals.coil_signal[:, 0], [3 * (sample + 2)])
     assert "compensation" in signals.input_quality["correction"]
 
 
 def test_missing_compensation_is_flagged_but_partial_metadata_is_rejected() -> None:
     settings = _settings(11089)
     signals = pcs_signals(Connection(missing_mag=True), settings, PRESHOT)
-    assert_allclose(signals.meas[:, 0], [2 * (22110 + 1)])
+    assert_allclose(signals.meas[:, 0], [2 * 22110])
     assert "unknown" in signals.input_quality["correction"]
     with pytest.raises(InputDataError, match="incomplete"):
         pcs_signals(Connection(partial=True), settings, PRESHOT)
@@ -143,7 +158,7 @@ def case(request: pytest.FixtureRequest) -> tuple[Settings, Results]:
         "replay/time_start": time,
         "replay/time_end": time,
         "replay/repeat": 10,
-        "preshot/rtgsfit_mdsplus/run_name": "PRESHOT05" if pulse < 12551 else "PRESHOT04",
+        "preshot/rtgsfit_mdsplus/run_name": "PRESHOT08" if pulse < 12551 else "PRESHOT07",
     })  # fmt: skip
     return settings, replay(settings, verbose=False)
 

@@ -170,7 +170,7 @@ def print_pcs_inputs(preshot: Preshot) -> None:
     print(f"  first {', '.join(names[:3])}; last {', '.join(names[-3:])}")
     signals = list(preshot["COIL:SIGNALS"])
     print(f"coil signals: {len(signals)} PCS channels in COIL:SIGNALS order: {', '.join(signals)}")
-    print("coil_current = COIL:MATRIX coil_signal, one value per COIL:NAMES:")
+    print("coil_current = coil_signal @ COIL:MATRIX, one value per COIL:NAMES:")
     for i_coil, name in enumerate(preshot["COIL:NAMES"]):
         print(f"  {name:<6}{_circuit(preshot, i_coil)}")
 
@@ -361,9 +361,9 @@ def _set_limits(axes: np.ndarray, preshot: Preshot, filaments: Sequence[Filament
 
 
 def _circuit(preshot: Preshot, i_coil: int) -> str:
-    """The current of coil `i_coil` from the PCS signals: row `i_coil` of COIL:MATRIX."""
+    """The current of coil `i_coil` from the PCS signals: column `i_coil` of COIL:MATRIX."""
     terms = []
-    for coefficient, signal in zip(preshot["COIL:MATRIX"][i_coil], preshot["COIL:SIGNALS"], strict=True):
+    for coefficient, signal in zip(preshot["COIL:MATRIX"][:, i_coil], preshot["COIL:SIGNALS"], strict=True):
         if coefficient != 0.0:
             sign = "-" if coefficient < 0 else "+"
             size = "" if abs(coefficient) == 1.0 else f"{abs(coefficient):g} "

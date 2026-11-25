@@ -13,7 +13,7 @@
 # src/preshot_sizes.h and src/preshot_data.c, which are not version-controlled, and rewrites them
 # only when they change. The output is build/librtgsfit.so. There is one active preshot at a time,
 # so run one build at a time.
-# The selected preshot must use the v2 schema; the ST40 v2 campaign preshot is 99000230 PRESHOT04.
+# The selected preshot must use the v2 schema; the ST40 v2 campaign preshot is 99000230 PRESHOT07.
 
 CC ?= gcc
 DEBUG ?= 0
@@ -84,7 +84,7 @@ endif
 
 ifdef SHOT
   ifndef RUN_NAME
-    $(error RUN_NAME is needed with SHOT, e.g. make SHOT=99000230 RUN_NAME=PRESHOT04)
+    $(error RUN_NAME is needed with SHOT, e.g. make SHOT=99000230 RUN_NAME=PRESHOT07)
   endif
 preshot: $(GENERATOR_MDSPLUS)
 	$< --mdsplus $(MDSPLUS_SERVER) $(SHOT) $(RUN_NAME) $(SRC_DIR)

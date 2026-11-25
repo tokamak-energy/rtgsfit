@@ -78,8 +78,8 @@ class Signals:
         )
 
     def coil_current(self, preshot: Preshot) -> FloatArray:
-        """[N_TIME, N_COIL]: coil_current = PRESHOT.COIL:MATRIX coil_signal."""
-        return self.coil_signal @ preshot["COIL:MATRIX"].T
+        """[N_TIME, N_COIL]: coil_current = coil_signal @ PRESHOT.COIL:MATRIX."""
+        return self.coil_signal @ preshot["COIL:MATRIX"]
 
 
 class PreshotReader(ABC):

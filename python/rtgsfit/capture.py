@@ -324,7 +324,7 @@ def read_capture(path: str | Path) -> Capture:
         values = {name: _read_variable(dataset["INPUT"], name, spec, sizes) for name, spec in INPUTS.items()}
         signals = Signals(time=values["time"], meas=values["meas"], coil_signal=values["coil_signal"])
         if not np.allclose(values["coil_current"], signals.coil_current(preshot), rtol=1e-12, atol=0.0, equal_nan=True):
-            raise ValueError("capture coil_current does not match COIL:MATRIX @ coil_signal")
+            raise ValueError("capture coil_current does not match coil_signal @ COIL:MATRIX")
         outputs = {
             name: _read_variable(dataset["OUTPUT"], name, (dtype, ("N_TIME", *dims)), sizes)
             for name, (dtype, dims) in OUTPUTS.items()

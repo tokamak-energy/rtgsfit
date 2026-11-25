@@ -127,7 +127,7 @@ PF coil circuits.
 |---|---|---|---|---|---|
 | `PRESHOT.COIL:NAMES` |  | [N_COIL] | str | dimensionless | PF coil circuit names |
 | `PRESHOT.COIL:SIGNALS` |  | [N_COIL_SIGNAL] | str | dimensionless | PCS signals that the coil currents are made from |
-| `PRESHOT.COIL:MATRIX` |  | [N_COIL, N_COIL_SIGNAL] | float64 | dimensionless | coil_current = MATRIX coil_signal |
+| `PRESHOT.COIL:MATRIX` |  | [N_COIL_SIGNAL, N_COIL] | float64 | dimensionless | coil_current = coil_signal @ MATRIX; MATLAB reads it as [N_COIL, N_COIL_SIGNAL] |
 
 ### `PRESHOT.MEAS`
 
@@ -512,7 +512,7 @@ Inputs and settings.
 | `INPUT:PRESHOT_SRC` |  | scalar | str | dimensionless | Where the preshot was read from |
 | `INPUT:CODE_VERSION` |  | scalar | str | dimensionless | RT-GSFit version |
 | `INPUT:MEAS` |  | [N_TIME, N_MEAS] | float64 | dimensionless | meas: the PCS measurements passed to rtgsfit() |
-| `INPUT:COIL_SIGNAL` |  | [N_TIME, N_COIL_SIGNAL] | float64 | ampere | PCS coil signals; coil_current = PRESHOT.COIL:MATRIX coil_signal |
+| `INPUT:COIL_SIGNAL` |  | [N_TIME, N_COIL_SIGNAL] | float64 | ampere | PCS coil signals; coil_current = coil_signal @ PRESHOT.COIL:MATRIX |
 
 ### `TIMING`
 

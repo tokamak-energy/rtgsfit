@@ -462,7 +462,7 @@ class PreshotInputs:
     regularisation_weight: FloatArray  # [N_REG]
     sensor_replacements: list[SensorReplacement]
     coil_signals: list[str]
-    coil_matrix: FloatArray  # [N_COIL, N_COIL_SIGNAL]
+    coil_matrix: FloatArray  # [N_COIL, N_COIL_SIGNAL], coil_current = coil_matrix @ coil_signal; stored transposed
     initial_psi_norm: FloatArray  # [N_GRID]
     initial_mask: npt.NDArray[np.int32]  # [N_GRID]
     xpt_fraction: float
@@ -558,7 +558,10 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
         },
         "COIL": {
             "NAMES": list(inputs.coil_names), "SIGNALS": list(inputs.coil_signals),
-            "MATRIX": np.asarray(inputs.coil_matrix, dtype=f64).reshape(len(inputs.coil_names), -1),
+            # Stored [N_COIL_SIGNAL, N_COIL], as in v1, so MATLAB reads it as [N_COIL, N_COIL_SIGNAL].
+            "MATRIX": np.ascontiguousarray(
+                np.asarray(inputs.coil_matrix, dtype=f64).reshape(len(inputs.coil_names), -1).T
+            ),
         },
         "MEAS": {"NAMES": meas_names},
         "INITIAL": {

@@ -5,6 +5,10 @@ with `PSS.AI`, the magnetic sensors have their offset and linear drift subtracte
 compensation matrix applied, as in `RT_Diagnostics.c`. With the PCS preshot (PSU coil signals and its
 sensor replacements) this is the closest replay to the real-time reconstruction.
 
+Like the PCS, every cycle reads each channel's last sample before the cycle time, counting samples from
+the start of the record. The stored times are not used to choose it because they can drift from the
+sample count: by 0.6 s in pulse 14211, ACQ2106_033's stored times are 34 µs behind it.
+
 Settings: `signals/st40_tepcs/server` (default `smaug`). Replay times must lie on the PCS cycle grid.
 """
 
@@ -51,8 +55,8 @@ def pcs_signals(connection: mdsthin.Connection, settings: Settings, preshot: Pre
     time = replay_times(settings)
     cycles_float = (time - PCS_T0) / PCS_DT
     cycles = np.rint(cycles_float).astype(int)
-    if not len(cycles) or not np.allclose(cycles_float, cycles, rtol=0, atol=1e-6) or np.any(cycles < 0):
-        raise InputDataError("replay times do not lie on the PCS cycle grid")
+    if not len(cycles) or not np.allclose(cycles_float, cycles, rtol=0, atol=1e-6) or np.any(cycles < 1):
+        raise InputDataError("replay times do not lie on the PCS cycle grid after its first cycle")
 
     try:
         connection.openTree("PSS", pulse)
@@ -129,15 +133,17 @@ def pcs_signals(connection: mdsthin.Connection, settings: Settings, preshot: Pre
                         raise InputDataError(f"{path} has inconsistent counts and time")
                     if not np.isfinite(times).all() or np.any(np.diff(times) <= 0):
                         raise InputDataError(f"{path} has an invalid time base")
-                    cycle_time = PCS_T0 + PCS_DT * np.arange(max(int(cycles[-1]), PCS_SECOND) + 1)
-                    if times[0] > cycle_time[0] + 1e-7 or times[-1] < cycle_time[-1] - 1e-7:
-                        raise InputDataError(f"{path} is too short for the requested cycles and drift calibration")
-                    right = np.clip(np.searchsorted(times, cycle_time), 1, len(times) - 1)
-                    left = right - 1
-                    samples = np.where(cycle_time - times[left] <= times[right] - cycle_time, left, right)
-                    if np.any(np.abs(times[samples] - cycle_time) > PCS_DT / 2):
+                    per_cycle = round(PCS_DT * (len(times) - 1) / (times[-1] - times[0]))
+                    if per_cycle < 1 or abs(times[0] - PCS_T0) > PCS_DT / per_cycle / 2:
+                        raise InputDataError(f"{path} does not start on the PCS cycle grid")
+                    if np.diff(times).max() > 1.5 * PCS_DT / per_cycle:
                         raise InputDataError(f"{path} has gaps in the recorded time base")
-                    cache[index] = (counts[samples] + offsets[index]) * gains[index]
+                    n_cycle = max(int(cycles.max()), PCS_SECOND) + 1
+                    if len(counts) < per_cycle * (n_cycle - 1):
+                        raise InputDataError(f"{path} is too short for the requested cycles and drift calibration")
+                    # Cycle 0 has no earlier sample.
+                    samples = per_cycle * np.arange(1, n_cycle) - 1
+                    cache[index] = np.concatenate([[np.nan], (counts[samples] + offsets[index]) * gains[index]])
                 return cache[index]
 
             output = {}

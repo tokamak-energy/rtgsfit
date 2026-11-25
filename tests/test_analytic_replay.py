@@ -9,6 +9,7 @@ with `tests/rtgsfit_verify_analytic` at commit 1139238, the last commit with the
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -16,12 +17,16 @@ import pytest
 from numpy.testing import assert_allclose
 from numpy.testing import assert_array_equal
 from rtgsfit.constants import MU_0
+from rtgsfit.database_readers import Signals
 from rtgsfit.database_readers import analytic
 from rtgsfit.database_readers.analytic import analytic_plasma
 from rtgsfit.database_readers.analytic.solution import b_theta_from_psi
 from rtgsfit.library import STATUS_FLAGS
 from rtgsfit.library import Rtgsfit
 from rtgsfit.preshot import Preshot
+from rtgsfit.preshot import PreshotInputs
+from rtgsfit.preshot import assemble_preshot
+from rtgsfit.replay import read_preshot
 from rtgsfit.replay import read_signals
 from rtgsfit.replay import replay
 from rtgsfit.results import Results
@@ -237,3 +242,16 @@ def test_wrong_input_shape_is_rejected(analytic_preshot: Preshot) -> None:
         rtgsfit(np.empty((n_meas, 0)), np.zeros(n_coil))
     with pytest.raises(ValueError, match="shape"):
         rtgsfit(np.zeros(n_meas), np.zeros(n_coil + 1))
+
+
+def test_coil_matrix_is_stored_as_matlab_reads_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """COIL:MATRIX is stored [N_COIL_SIGNAL, N_COIL], as in v1, so MATLAB reads [N_COIL, N_COIL_SIGNAL]."""
+
+    def two_signals(inputs: PreshotInputs) -> Preshot:
+        return assemble_preshot(replace(inputs, coil_signals=["A", "B"], coil_matrix=np.array([[2.0, -1.0]])))
+
+    monkeypatch.setattr(analytic, "assemble_preshot", two_signals)
+    preshot = read_preshot(load_settings("analytic").copy_with({"analytic/grid/n_r": 9, "analytic/grid/n_z": 17}))
+    assert_array_equal(preshot["COIL:MATRIX"], [[2.0], [-1.0]])
+    signals = Signals(np.zeros(1), np.zeros((1, preshot.sizes["N_MEAS"])), np.array([[3.0, 4.0]]))
+    assert_array_equal(signals.coil_current(preshot), [[2.0]])

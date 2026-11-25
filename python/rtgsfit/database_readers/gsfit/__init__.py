@@ -16,7 +16,8 @@ Settings, all under `<gsfit>`:
   `INIVC000` -> `I_ROG_INIVC000`) or `gsfit` (`PSI_<name>`, `B_<name>`, `I_<name>`);
 * `rogowski_names`: Rogowski coils in the order they appear in meas (only included ones are used);
 * `coils/groups/<COIL>`: the GSFit PF coils connected in series as each RT-GSFit coil;
-* `coils/signals`, `coils/matrix`: `PRESHOT.COIL:SIGNALS` and `COIL:MATRIX` (row-major);
+* `coils/signals`, `coils/matrix`: `PRESHOT.COIL:SIGNALS` and the transpose of `COIL:MATRIX` (one row
+  per coil, one column per signal);
   without `coils`, every GSFit PF coil is an RT-GSFit coil driven by a signal of the same name;
 * `sensor_replacements/<NAME>/{replacements, coefficients}`;
 * `initial/{source, r, z, radius}`: `gsfit_settings` uses GSFit's `rtgsfit_initial_conditions.json`
@@ -431,7 +432,7 @@ def gsfit_signals(controller: Any, settings: Settings, preshot: Preshot) -> Sign
 
     Coil currents are those of the first GSFit coil in each group. GSFit has coil currents, not the
     PCS coil signals, so `coil_signal` is the least-squares solution of
-    `COIL:MATRIX coil_signal = coil_current`; coils whose row of the matrix is zero get no current,
+    `coil_signal @ COIL:MATRIX = coil_current`; coils whose column of the matrix is zero get no current,
     as in the real-time code.
     """
     time = replay_times(settings)
@@ -452,7 +453,7 @@ def gsfit_signals(controller: Any, settings: Settings, preshot: Preshot) -> Sign
         )
 
     coil_current = gsfit_coil_current(controller, coil_circuits(controller, settings), time)
-    coil_signal = coil_current @ np.linalg.pinv(preshot["COIL:MATRIX"]).T
+    coil_signal = coil_current @ np.linalg.pinv(preshot["COIL:MATRIX"])
     return Signals(time=time, meas=meas, coil_signal=coil_signal)
 
 

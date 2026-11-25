@@ -60,7 +60,7 @@ def test_ppac_replay_defaults_to_run01_post_linked_to_best() -> None:
 
 def test_ppac_replays_from_the_pcs_start_until_after_the_plasma() -> None:
     settings = ppac.RtgsfitReplay(pulseNo=13343).settings
-    assert settings.get_path("replay/time_start") == 0.0055
+    assert settings.get_path("replay/time_start") == 0.006
     assert settings.get_path("replay/time_end") == 0.35
     assert settings.get_path("replay/time_step") == 0.001
 

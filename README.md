@@ -54,10 +54,10 @@ See the [flux conventions](documentation/manual.md#2-conventions).
   tests; negative-current topology support is not implemented yet.
 * [Examples](examples/): Jupyter notebooks that run RT-GSFit step by step.
   [Example 01](examples/example_01_run_full_pipeline_pcs_mock/README.md) mocks the PCS pipeline:
-  read PRESHOT04, build C, replay recorded inputs, write/read a NetCDF capture, post-process and
+  read PRESHOT07, build C, replay recorded inputs, write/read a NetCDF capture, post-process and
   plot local results. Private MDSplus result writes are opt-in.
   [Example 02](examples/example_02_build_preshot_st40_tepcs/README.md) builds the PCS preshot: rebuild
-  PRESHOT04 from GSFit with `st40_tepcs`, compare it with the stored copy, then save and compile it.
+  PRESHOT07 from GSFit with `st40_tepcs`, compare it with the stored copy, then save and compile it.
   Private MDSplus preshot writes are opt-in.
 
 ## What works where
@@ -111,9 +111,9 @@ its settings and a test file of the same name. `st40_magrun16`, the default and 
 reads the stored preshot `PRESHOT06` from `RTGSFIT` pulse 99000230, which GSFit builds the same for
 every pulse, and fits the processed MAG RUN16 signals and PSU2COIL
 currents that GSFit fits. `st40_tepcs` fits the TEPCS signals the PCS sees, calibrated as the PCS
-does, with the campaign preshot from `RTGSFIT` pulse 99000230, `PRESHOT04`, the one the PCS
-compiles. For pulses before 12551, select its no-MCVC counterpart `PRESHOT05` with
-`--set preshot/rtgsfit_mdsplus/run_name=PRESHOT05`.
+does, with the campaign preshot from `RTGSFIT` pulse 99000230, `PRESHOT07`, the one the PCS
+compiles. For pulses before 12551, select its no-MCVC counterpart `PRESHOT08` with
+`--set preshot/rtgsfit_mdsplus/run_name=PRESHOT08`.
 
 Configurations are in `python/rtgsfit/settings/<name>/rtgsfit.json`; a path to a custom JSON
 file also works. VS Code provides completion, descriptions and validation through the shared
@@ -199,15 +199,15 @@ The C build itself needs no Python. The generator `c/tools/write_preshot.c` read
 either from MDSplus or from a file that Python writes:
 
 ```sh
-make -C c SHOT=99000230 RUN_NAME=PRESHOT04  # campaign preshot
+make -C c SHOT=99000230 RUN_NAME=PRESHOT07  # campaign preshot
 rtgsfit write-c-preshot analytic             # a preshot that is only in Python (analytic, FreeGSNKE, ...)
 make -C c                                    # compile the active preshot
 ```
 
-The campaign preshot `RTGSFIT` 99000230, `PRESHOT04` (v2 schema, MCVC coil era) is the one the PCS
-compiles and the default for `st40_tepcs`. `PRESHOT05` is its no-MCVC counterpart for pulses
+The campaign preshot `RTGSFIT` 99000230, `PRESHOT07` (v2 schema, MCVC coil era) is the one the PCS
+compiles and the default for `st40_tepcs`. `PRESHOT08` is its no-MCVC counterpart for pulses
 before 12551. The older v1 runs there, such as `RUN19`, cannot be read.
-The notebook reads shared `PRESHOT04`; the generator test reads private pulse 52000230 `TEST03`.
+The notebook reads shared `PRESHOT07`; the generator test reads private pulse 52000230 `TEST03`.
 Neither writes to the shared 99000230 pulse. Optional tutorial result writes use private development
 destinations; adapt them to your own allocated pulse range.
 
