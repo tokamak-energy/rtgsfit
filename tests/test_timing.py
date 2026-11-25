@@ -65,10 +65,10 @@ def test_timing(pulse: int, time: float, timing_csv: Path, git_commit: str, caps
     })  # fmt: skip
     preshot = read_preshot(settings)
     signals = read_signals(settings, preshot)
-    meas, coil_current = signals.meas[0], signals.coil_current(preshot)[0]
+    mag_signal, coil_current = signals.mag_signal[0], signals.coil_current(preshot)[0]
     rtgsfit = Rtgsfit.build(preshot, BuildOptions.from_settings(settings))
     for _ in range(N_WARM_UP):
-        rtgsfit(meas, coil_current)
+        rtgsfit(mag_signal, coil_current)
     psi_norm, mask = rtgsfit.psi_norm.copy(), rtgsfit.mask.copy()
 
     timing = np.empty((N_CALLS, len(TIMING_SECTIONS)))
@@ -77,7 +77,7 @@ def test_timing(pulse: int, time: float, timing_csv: Path, git_commit: str, caps
         # Restart every call from the converged state, so that each call does the same work.
         rtgsfit.psi_norm[:] = psi_norm
         rtgsfit.mask[:] = mask
-        result = rtgsfit(meas, coil_current)
+        result = rtgsfit(mag_signal, coil_current)
         status[i] = result.status
         assert result.timing is not None
         timing[i] = result.timing * 1e6

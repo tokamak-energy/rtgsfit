@@ -55,6 +55,19 @@ def test_writer_explicitly_uses_mdsthin(
     assert data["PASSIVE"]["NAMES"].dtype.kind == "U"
     assert data["PASSIVE"]["NAMES"].shape == (0,)
     assert_array_equal(data["COIL"]["NAMES"], ["SOL"])
+    code_version = data["CODE_VERSION"]
+    assert {
+        "COMPUTER",
+        "DATETIME",
+        "GIT_ID",
+        "LIBRARY",
+        "MATLAB",
+        "PYTHON",
+        "USER",
+        "VERSION",
+    } <= set(code_version)
+    assert all(code_version[key] for key in ("COMPUTER", "GIT_ID", "LIBRARY", "PYTHON", "USER", "VERSION"))
+    assert code_version["MATLAB"] == "N/A"
     written_at = datetime.fromisoformat(data["CODE_VERSION"]["DATETIME"])
     assert written_at.tzinfo == UTC
     assert before <= written_at <= after
@@ -103,6 +116,7 @@ def test_quality_only_does_not_replace_a_run_or_link_best(
         SimpleNamespace(
             __file__=str(package / "__init__.py"),
             create_script_nodes=lambda **kwargs: calls.append(kwargs),
+            write_script_data=lambda **kwargs: calls.append(kwargs),
             create_write_nodes_from_csv_file=lambda *args, **kwargs: calls.append(kwargs),
         ),
     )
@@ -114,7 +128,17 @@ def test_quality_only_does_not_replace_a_run_or_link_best(
     else:
         write_quality_only({"SCORE": 0}, settings)
         assert calls[0]["link_best"] is False
-        assert calls[1]["data_to_write"] == {"SCORE": 0}
+        assert set(calls[1]["data_to_write"]["CODE_VERSION"]) == {
+            "COMPUTER",
+            "DATETIME",
+            "GIT_ID",
+            "LIBRARY",
+            "MATLAB",
+            "PYTHON",
+            "USER",
+            "VERSION",
+        }
+        assert calls[2]["data_to_write"] == {"SCORE": 0}
 
 
 def test_quality_writer_uses_standard_data_quality_schema(monkeypatch: pytest.MonkeyPatch) -> None:

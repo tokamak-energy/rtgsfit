@@ -50,7 +50,7 @@ int32_t rtgsfit_status_from_lapack_info(const int32_t info);
  * the plasma boundary.
  *
  * Inputs:
- *   meas                      PCS measurements, ordered as PRESHOT.MEAS:NAMES
+ *   mag_signal                PCS magnetic signals, ordered as PRESHOT.CONSTRAINT:MAG_SIGNALS
  *   coil_current              PF coil currents [A], ordered as PRESHOT.COIL:NAMES
  *
  * Inputs and outputs (the result of one iteration is the starting guess of the next):
@@ -77,8 +77,8 @@ int32_t rtgsfit_status_from_lapack_info(const int32_t info);
  * Returns a bitwise OR of `enum rtgsfit_status`. When the status is non-zero, `psi_norm` and
  * `mask` are left unchanged, so the next iteration restarts from the last good equilibrium.
  */
-int32_t rtgsfit(const double meas[],
-                const int32_t n_meas,
+int32_t rtgsfit(const double mag_signal[],
+                const int32_t n_mag_signal,
                 const double coil_current[],
                 const int32_t n_coil_current,
                 double psi_norm[],
@@ -127,7 +127,7 @@ enum rtgsfit_size_index
     RTGSFIT_SIZE_N_EDGE,
     RTGSFIT_SIZE_N_LIMITER,
     RTGSFIT_SIZE_N_COIL,
-    RTGSFIT_SIZE_N_MEAS,
+    RTGSFIT_SIZE_N_MAG_SIGNAL,
     RTGSFIT_SIZE_N_FLUX_LOOP,
     RTGSFIT_SIZE_N_BP_PROBE,
     RTGSFIT_SIZE_N_ROGOWSKI,

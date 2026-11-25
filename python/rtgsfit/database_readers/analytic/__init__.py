@@ -160,9 +160,9 @@ class AnalyticReader(PreshotReader, SignalsReader):
         plasma = analytic_plasma(settings)
         time = replay_times(settings)
         filament = _constraint_greens(settings, np.array([plasma.r_0]), np.array([plasma.z_0]))[:, 0] * plasma.ip
-        meas = np.concatenate([filament, [plasma.ip, 0.0]])
+        mag_signal = np.concatenate([filament, [plasma.ip, 0.0]])
         return Signals(
             time=time,
-            meas=np.tile(meas, (len(time), 1)),
+            mag_signal=np.tile(mag_signal, (len(time), 1)),
             coil_signal=np.zeros((len(time), 1)),
         )

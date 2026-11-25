@@ -57,7 +57,7 @@ extern const int32_t POISSON_PERMUTATION[N_GRID];
 
 /* CONSTRAINT: from the PCS measurements to the constraints */
 extern const double CONSTRAINT_G_COIL[N_CONSTRAINT * N_COIL];
-extern const double CONSTRAINT_REPLACEMENT[N_CONSTRAINT * N_MEAS];
+extern const double CONSTRAINT_REPLACEMENT[N_CONSTRAINT * N_MAG_SIGNAL];
 
 /* FIT: the weighted least-squares problem, fit_matrix fit_dof = fit_target */
 extern const double FIT_WEIGHT[N_FIT_TARGET];
@@ -79,7 +79,7 @@ _Static_assert(N_FIT_TARGET == N_CONSTRAINT + N_REG,
 _Static_assert((int)N_PLASMA == (int)CURRENT_BASIS_N_DOF, "N_PLASMA must match the current basis");
 _Static_assert(N_FIT_DOF == N_PLASMA + N_PASSIVE, "N_FIT_DOF must equal N_PLASMA + N_PASSIVE");
 _Static_assert(N_FIT_TARGET >= N_FIT_DOF, "the least-squares problem must not be under-determined");
-_Static_assert(N_LIMITER >= 1 && N_COIL >= 1 && N_MEAS >= 1 && N_XPT_MAX >= 1,
-               "N_LIMITER, N_COIL, N_MEAS and N_XPT_MAX must be at least 1");
+_Static_assert(N_LIMITER >= 1 && N_COIL >= 1 && N_MAG_SIGNAL >= 1 && N_XPT_MAX >= 1,
+               "N_LIMITER, N_COIL, N_MAG_SIGNAL and N_XPT_MAX must be at least 1");
 
 #endif /* RTGSFIT_PRESHOT_H */

@@ -70,6 +70,11 @@ class Node:
         """Flat key used in local files, e.g. `PRESHOT.GRID.R`."""
         return ".".join(self.path)
 
+    @property
+    def dimensions(self) -> str:
+        """Array extents in C/Python order, referring to stored names where possible."""
+        return "(" + ", ".join(DIMENSION_SOURCES[size] for size in self.shape) + ")"
+
 
 # ----------------------------------------------------------------------------------------------
 # Sizes. These become `enum` constants in the generated `preshot_sizes.h` (issue #97).
@@ -81,7 +86,7 @@ SIZE_DESCRIPTIONS: dict[str, str] = {
     "N_EDGE": "Number of grid points on the edge of the grid, 2 N_R + 2 N_Z - 4",
     "N_LIMITER": "Number of limiter points",
     "N_COIL": "Number of PF coil circuits",
-    "N_MEAS": "Number of PCS measurements, the length of meas",
+    "N_MAG_SIGNAL": "Number of PCS magnetic input signals",
     "N_FLUX_LOOP": "Number of flux loop constraints",
     "N_BP_PROBE": "Number of Bp probe constraints",
     "N_ROGOWSKI": "Number of Rogowski coil constraints",
@@ -95,6 +100,17 @@ SIZE_DESCRIPTIONS: dict[str, str] = {
 }
 SIZE_NAMES: tuple[str, ...] = tuple(SIZE_DESCRIPTIONS)
 """Order of the sizes; the same order as `rtgsfit_get_sizes()` in C."""
+
+DIMENSION_SOURCES = {
+    **{name: f"SIZES.{name}" for name in SIZE_NAMES},
+    "N_TIME": "len(:TIME)",
+    "N_COIL_SIGNAL": "len(COIL:COIL_SIGNALS)",
+    "N_INTERP": "4",
+    "N_R_PLUS_2": "SIZES.N_R + 2",
+    "N_OUTLINE": "4 * (SIZES.N_R + SIZES.N_Z)",
+    "N_LEG": "2 * (SIZES.N_R + SIZES.N_Z)",
+    "N_TIMING": "len(TIMING:SECTIONS)",
+}
 
 
 def _preshot_nodes() -> list[Node]:
@@ -172,7 +188,7 @@ def _preshot_nodes() -> list[Node]:
             "G_EDGE",
             "NUMERIC",
             "weber / ampere",
-            "Greens function between edge points, used for the von Hagenow free-boundary condition",
+            "Edge flux response for the free-boundary condition: target rows, source columns",
             ("N_EDGE", "N_EDGE"),
         ),
         # LIMITER
@@ -244,7 +260,7 @@ def _preshot_nodes() -> list[Node]:
             "CONSTRAINT",
             "G_COIL",
             "NUMERIC",
-            "dimensionless",
+            "mixed",
             "Greens function: constraint value per unit coil current",
             ("N_CONSTRAINT", "N_COIL"),
         ),
@@ -253,8 +269,18 @@ def _preshot_nodes() -> list[Node]:
             "REPLACEMENT",
             "NUMERIC",
             "dimensionless",
-            "Maps meas onto the constraints; replaces faulty sensors by combinations of others",
-            ("N_CONSTRAINT", "N_MEAS"),
+            "Maps mag_signal to measured constraints; a faulty sensor can use a combination of signals",
+            ("N_CONSTRAINT", "N_MAG_SIGNAL"),
+        ),
+        p(
+            "CONSTRAINT",
+            "MAG_SIGNALS",
+            "TEXT",
+            "dimensionless",
+            "PCS magnetic signal names in REPLACEMENT column order",
+            ("N_MAG_SIGNAL",),
+            "str",
+            in_c=False,
         ),
         # FIT
         p(
@@ -291,8 +317,8 @@ def _preshot_nodes() -> list[Node]:
             "FIT",
             "WEIGHT",
             "NUMERIC",
-            "dimensionless",
-            "Weight of each row of fit_target; 1 / uncertainty",
+            "mixed",
+            "Constraint weights (1 / uncertainty), followed by regularisation weights",
             ("N_FIT_TARGET",),
         ),
         p(
@@ -331,10 +357,10 @@ def _preshot_nodes() -> list[Node]:
         p("COIL", "NAMES", "TEXT", "dimensionless", "PF coil circuit names", ("N_COIL",), "str", in_c=False),
         p(
             "COIL",
-            "SIGNALS",
+            "COIL_SIGNALS",
             "TEXT",
             "dimensionless",
-            "PCS signals that the coil currents are made from",
+            "PCS coil signal names in MATRIX row order",
             ("N_COIL_SIGNAL",),
             "str",
             in_c=False,
@@ -344,11 +370,10 @@ def _preshot_nodes() -> list[Node]:
             "MATRIX",
             "NUMERIC",
             "dimensionless",
-            "coil_current = coil_signal @ MATRIX; MATLAB reads it as [N_COIL, N_COIL_SIGNAL]",
+            "Maps PCS signals to PF coil currents before the fit: coil_current = coil_signal @ MATRIX",
             ("N_COIL_SIGNAL", "N_COIL"),
             in_c=False,
         ),
-        p("MEAS", "NAMES", "TEXT", "dimensionless", "PCS signal names of meas", ("N_MEAS",), "str", in_c=False),
         p("INITIAL", "PSI_NORM", "NUMERIC", "dimensionless", "psi_norm at the first call", ("N_GRID",), in_c=False),
         p(
             "INITIAL",
@@ -558,7 +583,7 @@ def _results_nodes() -> list[Node]:
         s(
             ("FIT", "TARGET"),
             "dimensionless",
-            "Weighted native measurements minus coil response; regularisation target zero",
+            "Weighted measured constraints minus coil response; zero for regularisation rows",
             ("N_FIT_TARGET",),
         ),
         s(
@@ -587,7 +612,7 @@ def _results_nodes() -> list[Node]:
         text(("INPUT", "SETTINGS"), "Validated effective JSON settings of the replay"),
         text(("INPUT", "PRESHOT_SRC"), "Where the preshot was read from"),
         text(("INPUT", "CODE_VERSION"), "RT-GSFit version"),
-        s(("INPUT", "MEAS"), "dimensionless", "meas: the PCS measurements passed to rtgsfit()", ("N_MEAS",)),
+        s(("INPUT", "MAG_SIGNAL"), "mixed", "PCS inputs in PRESHOT.CONSTRAINT:MAG_SIGNALS order", ("N_MAG_SIGNAL",)),
         s(
             ("INPUT", "COIL_SIGNAL"),
             "ampere",
@@ -612,11 +637,10 @@ STRUCTURE_DESCRIPTIONS: dict[tuple[str, ...], str] = {
     ("PRESHOT", "EDGE"): "The edge of the grid, for the free-boundary condition",
     ("PRESHOT", "LIMITER"): "The limiter",
     ("PRESHOT", "POISSON"): "The discrete Grad-Shafranov operator",
-    ("PRESHOT", "CONSTRAINT"): "From the PCS measurements to the constraints",
+    ("PRESHOT", "CONSTRAINT"): "Magnetic signals, sensor replacement and coil response",
     ("PRESHOT", "FIT"): "The weighted least-squares problem fit_matrix fit_dof = fit_target",
     ("PRESHOT", "SETTINGS"): "Scalar algorithm settings",
-    ("PRESHOT", "COIL"): "PF coil circuits",
-    ("PRESHOT", "MEAS"): "PCS measurements",
+    ("PRESHOT", "COIL"): "PF coil circuits and the coil matrix that makes their currents from coil_signal",
     ("PRESHOT", "INITIAL"): "State before the first call",
     ("PRESHOT", "INFO"): "Provenance",
     ("GLOBAL",): "0D parameters of the equilibrium",
@@ -725,8 +749,10 @@ def generate_markdown() -> str:
         "<!-- Generated by `python -m rtgsfit write-data-dictionary`; do not edit by hand. -->",
         "",
         "Every quantity that RT-GSFit stores, in MDSplus (tree `RTGSFIT`, below the run node) and in",
-        "local files. The C name is the name of the compiled-in preshot constant. `N_TIME` is the number",
-        "of time slices. See [manual.md](manual.md) for the definitions of the symbols.",
+        "local files. The C name is the name of the compiled-in preshot constant.",
+        "Dimensions are in C/Python order (row-major, last axis fastest); MATLAB and MDSplus TDI see",
+        "the axes in reverse order. `SIZES.N_R` means `PRESHOT.SIZES:N_R`; `COIL` also refers to",
+        "`PRESHOT.COIL`. See [manual.md](manual.md) for the definitions of the symbols.",
         "",
         "## Sizes",
         "",
@@ -757,7 +783,7 @@ def generate_markdown() -> str:
                 if description:
                     lines += [description + ".", ""]
                 lines += ["| Node | C name | Shape | Type | Unit | Description |", "|---|---|---|---|---|---|"]
-            shape = "[" + ", ".join(node.shape) + "]" if node.shape else "scalar"
+            shape = f"`{node.dimensions}`" if node.shape else "scalar"
             c_name = f"`{node.c_name}`" if node.c_name else ""
             lines.append(
                 f"| `{node.mds_path}` | {c_name} | {shape} | {node.dtype} | {node.unit} | {node.description} |"
@@ -809,7 +835,10 @@ def generate_csv(run_info: str = "Default run") -> str:
         parents = node.path[:-1]
         cells = [*parents, *[""] * (N_CSV_NODE_COLUMNS - len(parents)), node.path[-1], node.node_type]
         data = "data" + "".join(f"['{name}']" for name in node.path)
-        cells += [data, node.unit, node.description]
+        description = node.description
+        if node.shape:
+            description += f". Dimensions: {node.dimensions}"
+        cells += [data, node.unit, description]
         for dim in node.dims:
             cells += [dim, "", ""]
         rows.append(row(*cells))

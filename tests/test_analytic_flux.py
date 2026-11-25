@@ -41,7 +41,7 @@ def test_analytic_preshot_and_raw_measurements_use_total_flux(analytic_preshot: 
 
     r, z = flux_loop_geometry(settings)
     plasma = analytic_plasma(settings)
-    assert_allclose(signals.meas[0, : len(r)], plasma.psi(r, z), rtol=1e-14)
+    assert_allclose(signals.mag_signal[0, : len(r)], plasma.psi(r, z), rtol=1e-14)
 
 
 def test_reference_total_flux_satisfies_poisson_equation() -> None:

@@ -192,7 +192,7 @@ def collect_results(
             "SETTINGS": settings_json,
             "PRESHOT_SRC": preshot_source,
             "CODE_VERSION": code_version,
-            "MEAS": np.asarray(signals.meas[:n_time], dtype=np.float64),
+            "MAG_SIGNAL": np.asarray(signals.mag_signal[:n_time], dtype=np.float64),
             "COIL_SIGNAL": np.asarray(coil_signal, dtype=np.float64),
         },
         "TIMING": {"SECTIONS": list(TIMING_SECTIONS), "DURATION": timing},

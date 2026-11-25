@@ -14,9 +14,9 @@ Settings, all under `<gsfit>`:
 * `grid/{n_r, n_z, r_min, r_max, z_min, z_max}` (optional): overrides GSFit's grid;
 * `sensor_names`: `st40_pcs` (`L007` -> `PSI_FLOOP_007`, `P101` -> `B_BPPROBE_101`,
   `INIVC000` -> `I_ROG_INIVC000`) or `gsfit` (`PSI_<name>`, `B_<name>`, `I_<name>`);
-* `rogowski_names`: Rogowski coils in the order they appear in meas (only included ones are used);
+* `rogowski_names`: Rogowski coils in the order they appear in mag_signal (only included ones are used);
 * `coils/groups/<COIL>`: the GSFit PF coils connected in series as each RT-GSFit coil;
-* `coils/signals`, `coils/matrix`: `PRESHOT.COIL:SIGNALS` and the transpose of `COIL:MATRIX` (one row
+* `coils/signals`, `coils/matrix`: `PRESHOT.COIL:COIL_SIGNALS` and the transpose of `COIL:MATRIX` (one row
   per coil, one column per signal);
   without `coils`, every GSFit PF coil is an RT-GSFit coil driven by a signal of the same name;
 * `sensor_replacements/<NAME>/{replacements, coefficients}`;
@@ -68,7 +68,7 @@ _QUANTITY = {"flux_loop": "psi", "bp_probe": "b", "rogowski": "i"}
 
 
 def sensor_name(sensor: Sensor, style: str) -> str:
-    """The name of a constraint in `PRESHOT.CONSTRAINT:NAMES` and `MEAS:NAMES`."""
+    """The name of a constraint in `PRESHOT.CONSTRAINT:NAMES` and `CONSTRAINT:MAG_SIGNALS`."""
     if style == "st40_pcs":
         if sensor.kind == "flux_loop":
             return sensor.name.replace("L", "PSI_FLOOP_")
@@ -443,18 +443,18 @@ def gsfit_signals(controller: Any, settings: Settings, preshot: Preshot) -> Sign
         for name in objects.keys():
             by_name.setdefault(sensor_name(Sensor(kind, name), style), Sensor(kind, name))
 
-    meas = np.zeros((len(time), preshot.sizes["N_MEAS"]))
-    for i, name in enumerate(preshot["MEAS:NAMES"]):
+    mag_signal = np.zeros((len(time), preshot.sizes["N_MAG_SIGNAL"]))
+    for i, name in enumerate(preshot["CONSTRAINT:MAG_SIGNALS"]):
         if name not in by_name:
             raise ValueError(f"GSFit has no measurement {name!r}; sensor replacements need raw signals")
         sensor = by_name[name]
-        meas[:, i] = _experimental(
+        mag_signal[:, i] = _experimental(
             _sensor_objects(controller, sensor.kind), [sensor.name, _QUANTITY[sensor.kind]], time
         )
 
     coil_current = gsfit_coil_current(controller, coil_circuits(controller, settings), time)
     coil_signal = coil_current @ np.linalg.pinv(preshot["COIL:MATRIX"])
-    return Signals(time=time, meas=meas, coil_signal=coil_signal)
+    return Signals(time=time, mag_signal=mag_signal, coil_signal=coil_signal)
 
 
 class GsfitReader(PreshotReader):

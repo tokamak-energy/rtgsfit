@@ -13,8 +13,8 @@
  * This module has no preshot dependency, so preparation can later move to the PCS caller.
  * Returns RTGSFIT_ERR_ARGUMENT_SIZE before writing outputs if any buffer is invalid.
  */
-int32_t measurement_processing_prepare(const double meas[],
-                                       const int32_t n_meas,
+int32_t measurement_processing_prepare(const double mag_signal[],
+                                       const int32_t n_mag_signal,
                                        const double coil_current[],
                                        const int32_t n_coil_current,
                                        const double replacement[],

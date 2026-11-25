@@ -237,11 +237,11 @@ def test_zero_current_matches_v1(analytic_preshot: Preshot) -> None:
 def test_wrong_input_shape_is_rejected(analytic_preshot: Preshot) -> None:
     """A 2D array with the right length but no data must not reach C, which trusts the lengths."""
     rtgsfit = Rtgsfit.build(analytic_preshot)
-    n_meas, n_coil = analytic_preshot.sizes["N_MEAS"], analytic_preshot.sizes["N_COIL"]
+    n_mag_signal, n_coil = analytic_preshot.sizes["N_MAG_SIGNAL"], analytic_preshot.sizes["N_COIL"]
     with pytest.raises(ValueError, match="shape"):
-        rtgsfit(np.empty((n_meas, 0)), np.zeros(n_coil))
+        rtgsfit(np.empty((n_mag_signal, 0)), np.zeros(n_coil))
     with pytest.raises(ValueError, match="shape"):
-        rtgsfit(np.zeros(n_meas), np.zeros(n_coil + 1))
+        rtgsfit(np.zeros(n_mag_signal), np.zeros(n_coil + 1))
 
 
 def test_coil_matrix_is_stored_as_matlab_reads_it(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -253,5 +253,5 @@ def test_coil_matrix_is_stored_as_matlab_reads_it(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(analytic, "assemble_preshot", two_signals)
     preshot = read_preshot(load_settings("analytic").copy_with({"analytic/grid/n_r": 9, "analytic/grid/n_z": 17}))
     assert_array_equal(preshot["COIL:MATRIX"], [[2.0], [-1.0]])
-    signals = Signals(np.zeros(1), np.zeros((1, preshot.sizes["N_MEAS"])), np.array([[3.0, 4.0]]))
+    signals = Signals(np.zeros(1), np.zeros((1, preshot.sizes["N_MAG_SIGNAL"])), np.array([[3.0, 4.0]]))
     assert_array_equal(signals.coil_current(preshot), [[2.0]])

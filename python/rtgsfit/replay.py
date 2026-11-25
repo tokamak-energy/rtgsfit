@@ -43,7 +43,7 @@ from rtgsfit.settings import Settings
 
 
 def preshot_location(settings: Settings, section: str = "preshot", key: str = "reader") -> str:
-    """Where the preshot comes from, e.g. `rtgsfit_mdsplus {"pulse": 52000230, "run_name": "TEST03"}`."""
+    """Where the preshot comes from, e.g. `rtgsfit_mdsplus {"pulse": 52000230, "run_name": "TEST04"}`."""
     name = str(settings[section][key])
     options = settings[section].get(name, {})
     return f"{name} {json.dumps(options, default=str)}" if options else name
@@ -121,7 +121,7 @@ def replay(
     slices: list[SliceResult] = []
     start = wall_clock.perf_counter()
     for i, time in enumerate(signals.time):
-        result = rtgsfit(signals.meas[i], coil_current[i])
+        result = rtgsfit(signals.mag_signal[i], coil_current[i])
         slices.append(result)
         if verbose:
             print(f"t = {time * 1e3:8.2f} ms  ip = {result.ip:11.4e} A  chi_sq = {result.chi_sq_magnetic:9.3e}  "
@@ -137,7 +137,7 @@ def replay(
         print_timing(slices)
 
     n_time = len(slices)
-    logged = Signals(signals.time[:n_time], signals.meas[:n_time], signals.coil_signal[:n_time])
+    logged = Signals(signals.time[:n_time], signals.mag_signal[:n_time], signals.coil_signal[:n_time])
     capture = Capture(preshot, logged, slices, settings.json_text, source)
     if "capture" in settings:
         path = resolve_output_path(settings["capture"]["path"], cache_directory())

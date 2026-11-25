@@ -267,7 +267,7 @@ def _set_limits(axes: np.ndarray, preshot: Preshot) -> None:
 def _circuit(preshot: Preshot, i_coil: int) -> str:
     """The current of coil `i_coil` from the PCS signals: column `i_coil` of COIL:MATRIX."""
     terms = []
-    for coefficient, signal in zip(preshot["COIL:MATRIX"][:, i_coil], preshot["COIL:SIGNALS"], strict=True):
+    for coefficient, signal in zip(preshot["COIL:MATRIX"][:, i_coil], preshot["COIL:COIL_SIGNALS"], strict=True):
         if coefficient != 0.0:
             sign = "-" if coefficient < 0 else "+"
             size = "" if abs(coefficient) == 1.0 else f"{abs(coefficient):g} "
@@ -296,9 +296,9 @@ def plot_coil_greens(preshot: Preshot) -> Figure:
 
 
 def plot_signals(signals: Signals, preshot: Preshot) -> Figure:
-    """The inputs of `rtgsfit()`: `meas` grouped by signal type, the Rogowski constraints that sensor replacement
-    makes from `meas`, and the PF coil currents."""
-    names = np.asarray(preshot["MEAS:NAMES"]).astype(str)
+    """The inputs of `rtgsfit()`: `mag_signal` grouped by signal type, the Rogowski constraints that sensor replacement
+    makes from `mag_signal`, and the PF coil currents."""
+    names = np.asarray(preshot["CONSTRAINT:MAG_SIGNALS"]).astype(str)
     time_ms = signals.time * 1e3
     groups = {
         "PSI_FLOOP_": ("Flux loops", "psi [Wb]", 1.0),
@@ -309,17 +309,17 @@ def plot_signals(signals: Signals, preshot: Preshot) -> Figure:
     fig, axes = plt.subplots(2, 3, figsize=(15, 8), sharex=True, constrained_layout=True)
     for ax, (prefix, (title, label, scale)) in zip(axes.flat, groups.items(), strict=False):
         columns = np.flatnonzero(np.char.startswith(names, prefix))
-        lines = ax.plot(time_ms, signals.meas[:, columns] * scale, lw=0.8)
-        ax.set(title=f"meas: {title} ({len(columns)})", ylabel=label)
+        lines = ax.plot(time_ms, signals.mag_signal[:, columns] * scale, lw=0.8)
+        ax.set(title=f"mag_signal: {title} ({len(columns)})", ylabel=label)
         if len(columns) <= 10:
             ax.legend(lines, [_short_name(name) for name in names[columns]], ncol=2, fontsize="small")
 
     ax = axes[1, 1]
     constraint_names = np.asarray(preshot["CONSTRAINT:NAMES"]).astype(str)
     rows = np.flatnonzero(np.char.startswith(constraint_names, "I_ROG_"))
-    lines = ax.plot(time_ms, signals.meas @ preshot["CONSTRAINT:REPLACEMENT"][rows].T * 1e-3, lw=0.8)
+    lines = ax.plot(time_ms, signals.mag_signal @ preshot["CONSTRAINT:REPLACEMENT"][rows].T * 1e-3, lw=0.8)
     ax.legend(lines, [_short_name(name) for name in constraint_names[rows]], ncol=2, fontsize="small")
-    ax.set(title=f"Rogowski constraints ({len(rows)})\n= CONSTRAINT:REPLACEMENT meas", ylabel="I [kA]")
+    ax.set(title=f"Rogowski constraints ({len(rows)})\n= CONSTRAINT:REPLACEMENT mag_signal", ylabel="I [kA]")
 
     ax = axes[1, 2]
     lines = ax.plot(time_ms, signals.coil_current(preshot) * 1e-3, lw=1.0)

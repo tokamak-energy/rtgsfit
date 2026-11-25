@@ -40,7 +40,7 @@ for (int32_t i_z = 0; i_z < N_Z; i_z++)
 ```
 
 Never loop to a literal or to a size of something else. A variable whose name is a quantity has the
-length of that quantity: `meas` has `N_MEAS` entries, `fit_target` has `N_FIT_TARGET`. This is why v1's `meas`
+length of that quantity: `mag_signal` has `N_MAG_SIGNAL` entries, `fit_target` has `N_FIT_TARGET`. This is why v1's `meas`
 (which had `N_FIT_TARGET` entries) became `fit_target`.
 
 **Least squares.** `fit_matrix fit_dof ≈ fit_target`, with prediction `fit_prediction`.
@@ -71,6 +71,10 @@ analysis scripts work for both codes. Where those names are abbreviated, the cod
 | `GLOBAL:LENGTH_POL` | poloidal boundary perimeter |
 
 **Units** are SI and are not part of the name; they are in the data dictionary and in comments.
+
+**Node descriptions.** Say what the quantity is in one short sentence. For arrays, the dictionary
+adds `Dimensions: (...)` in C/Python order using size-node names or the actual source of a derived
+length. Explain storage order once in the dictionary, not on every node.
 
 **Spelling.** British English in prose (`normalise`, `neighbour`), as in the existing code.
 
@@ -117,8 +121,8 @@ Python retains its existing Ruff 120-column limit; PCS's C whitespace rules do n
   pointer arguments. Outputs come after inputs.
 * Inputs are `const`. Local variables that do not change are `const`. Declare variables where they
   are first used, and loop indices in the `for`.
-  A value parameter such as `const int32_t n_meas` cannot be reassigned inside the function.
-  This top-level `const` does not change the caller's ABI; `const double meas[]` additionally
+  A value parameter such as `const int32_t n_mag_signal` cannot be reassigned inside the function.
+  This top-level `const` does not change the caller's ABI; `const double mag_signal[]` additionally
   prevents modification of the pointed-to values through that parameter.
 * Integers that are stored or cross the API are `int32_t` (MDSplus and Simulink use 32 bits);
   `double` for every real number.

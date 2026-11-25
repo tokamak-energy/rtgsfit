@@ -110,7 +110,7 @@ def pcs_signals(connection: mdsthin.Connection, settings: Settings, preshot: Pre
         finally:
             connection.closeTree("PSS", pulse)
 
-        requested = [str(name) for name in preshot["MEAS:NAMES"]] + [str(name) for name in preshot["COIL:SIGNALS"]]
+        requested = [str(name) for name in (*preshot["CONSTRAINT:MAG_SIGNALS"], *preshot["COIL:COIL_SIGNALS"])]
         unknown = sorted(set(requested) - set(names))
         if unknown:
             raise InputDataError(f"pulse {pulse} PSS AI.LIST lacks required signals: {unknown}")
@@ -168,11 +168,11 @@ def pcs_signals(connection: mdsthin.Connection, settings: Settings, preshot: Pre
     except (MdsException, ValueError) as exc:
         raise InputDataError(f"pulse {pulse} PSS/TEPCS read failed: {type(exc).__name__}: {exc}") from exc
 
-    n_meas = len(preshot["MEAS:NAMES"])
+    n_mag_signal = len(preshot["CONSTRAINT:MAG_SIGNALS"])
     return Signals(
         time=time,
-        meas=np.column_stack([output[name] for name in requested[:n_meas]]),
-        coil_signal=np.column_stack([output[name] for name in requested[n_meas:]]),
+        mag_signal=np.column_stack([output[name] for name in requested[:n_mag_signal]]),
+        coil_signal=np.column_stack([output[name] for name in requested[n_mag_signal:]]),
         input_quality={"source": "TEPCS counts and per-pulse PSS calibration", "correction": correction},
     )
 

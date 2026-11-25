@@ -36,8 +36,8 @@ from rtgsfit.settings import load_settings
 
 GROUPS = {"SOL": ["SOL"], "MCT": ["MCT"], "MCB": ["MCB"], "DIV": ["DIVT", "DIVB"]}
 FAKE_PRESHOT = {
-    "MEAS:NAMES": ["PSI_FLOOP_007", "I_ROG_INIVC000"],
-    "COIL:SIGNALS": ["I_SOL_PSU2COIL", "I_MCT_PSU2COIL", "I_MCB_PSU2COIL", "I_DIV_PSU2COIL"],
+    "CONSTRAINT:MAG_SIGNALS": ["PSI_FLOOP_007", "I_ROG_INIVC000"],
+    "COIL:COIL_SIGNALS": ["I_SOL_PSU2COIL", "I_MCT_PSU2COIL", "I_MCB_PSU2COIL", "I_DIV_PSU2COIL"],
 }
 OLD_ERA_CHANNELS = np.array([["DIVB", "DIVT"], ["MCB", "MCT"], ["SOL", ""]])
 """PSU2COIL `PF.ALL:COILS` before pulse 12551: MCB and MCT are in series, in one channel."""
@@ -94,7 +94,7 @@ def test_mag_node_is_the_processed_signal_gsfit_fits() -> None:
 
 
 def test_psu2coil_channels() -> None:
-    signals = FAKE_PRESHOT["COIL:SIGNALS"]
+    signals = FAKE_PRESHOT["COIL:COIL_SIGNALS"]
     assert psu2coil_channels(signals, GROUPS, OLD_ERA_CHANNELS) == [2, 1, 1, 0]
     with pytest.raises(InputDataError, match=r"does not have: \['PSH'\]"):
         psu2coil_channels(signals, GROUPS, np.vstack([OLD_ERA_CHANNELS, [["PSH", ""]]]))
@@ -113,7 +113,7 @@ def test_reader_interpolates_and_needs_only_mdsthin(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(mdsthin, "Connection", _context(connection))
     signals = St40Magrun16Reader().read_signals(_fake_settings(), FAKE_PRESHOT)  # type: ignore[arg-type]
     assert_allclose(signals.time, [0.0, 0.005, 0.01, 0.015, 0.02])
-    assert_allclose(signals.meas, np.repeat([[1.0], [1.5], [2.0], [2.5], [3.0]], 2, axis=1))
+    assert_allclose(signals.mag_signal, np.repeat([[1.0], [1.5], [2.0], [2.5], [3.0]], 2, axis=1))
     sample = np.array([1.0, 1.5, 2.0, 2.5, 3.0])
     assert_allclose(signals.coil_signal, np.column_stack([300 * sample, 200 * sample, 200 * sample, 100 * sample]))
     assert signals.input_quality == {"source": "MAG RUN16 processed signals and PSU2COIL BEST (RUN02)"}
@@ -217,14 +217,14 @@ def test_reader_gives_rt_gsfit_the_inputs_gsfit_fits(pulse: int) -> None:
     preshot = read_preshot(settings)
     controller = _gsfit(settings, solve=False)
     signals = St40Magrun16Reader().read_signals(settings, preshot)
-    assert_array_equal(signals.meas, gsfit_signals(controller, settings, preshot).meas)
+    assert_array_equal(signals.mag_signal, gsfit_signals(controller, settings, preshot).mag_signal)
     circuits = coil_circuits(controller, settings)
     assert_array_equal(signals.coil_signal, gsfit_coil_current(controller, circuits, signals.time))
 
 
 @pytest.mark.te_network
 def test_mdsplus_preshot_is_the_gsfit_build() -> None:
-    """`PRESHOT06` is GSFit's build, which is the same for every pulse in both coil eras."""
+    """`PRESHOT09` is GSFit's build, which is the same for every pulse in both coil eras."""
     from stored_preshot import assert_mdsplus_preshot_is_the_gsfit_build
 
     assert_mdsplus_preshot_is_the_gsfit_build(load_settings("st40_magrun16"))

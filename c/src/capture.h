@@ -35,7 +35,7 @@ struct rtgsfit_capture_variable
 };
 
 /*
- * Write an rtgsfit-capture-2 NetCDF-4 file atomically. The writer sources compiled preshot nodes
+ * Write an rtgsfit-capture-3 NetCDF-4 file atomically. The writer sources compiled preshot nodes
  * from librtgsfit and accepts the other 14 preshot nodes in `variables`. It includes both the
  * solver CRC and a CRC over the complete embedded preshot. Returns 0 on success,
  * RTGSFIT_ERR_ARGUMENT_SIZE for a negative length or a null array with a positive length, and -1 on

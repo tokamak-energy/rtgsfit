@@ -159,7 +159,7 @@ def test_build_writes_the_active_preshot_and_reuses_it(analytic_preshot: Preshot
 
 def test_rebuilding_for_another_preshot_reloads_the_library(analytic_preshot: Preshot) -> None:
     def call(rtgsfit: Rtgsfit, preshot: Preshot) -> int:
-        return rtgsfit(np.zeros(preshot.sizes["N_MEAS"]), np.zeros(preshot.sizes["N_COIL"])).status
+        return rtgsfit(np.zeros(preshot.sizes["N_MAG_SIGNAL"]), np.zeros(preshot.sizes["N_COIL"])).status
 
     coarse = build_preshot(load_settings("analytic").copy_with({"analytic/grid/n_r": 33, "analytic/grid/n_z": 65}))
     before = Rtgsfit.build(analytic_preshot)
@@ -347,10 +347,10 @@ def test_generator_writes_to_long_output_directory(analytic_preshot: Preshot, tm
 def test_mdsplus_generator_reads_what_python_reads(tmp_path: Path) -> None:
     """`make SHOT=... RUN_NAME=...` (the PCS, no Python) generates the same C as the preshot file route.
 
-    Reads the private RTGSFIT 52000230 TEST03 fixture, separate from the PCS-mock example.
+    Reads the private RTGSFIT 52000230 TEST04 fixture, separate from the PCS-mock example.
     This test never writes to MDSplus or reads the shared PCS preshot.
     """
-    pulse, run_name = 52_000_230, "TEST03"
+    pulse, run_name = 52_000_230, "TEST04"
     nodes = tuple(node for node in dd.PRESHOT_NODES if node.c_name is not None or node.path[1:] == ("INFO", "SOURCE"))
     groups = read_mdsplus_nodes(pulse, run_name, nodes)["PRESHOT"]
 

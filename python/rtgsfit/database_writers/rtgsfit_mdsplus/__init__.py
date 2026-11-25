@@ -2,7 +2,7 @@
 
 The tree layout is created from `standard_utility/csv_files/RTGSFIT.csv`, which is generated from
 `rtgsfit.data_dictionary` by `python -m rtgsfit write-csv`, so the physics data match a local `.npz`
-file. The common `CODE_VERSION:DATETIME` metadata records the start of the data write in UTC.
+file. The common `CODE_VERSION` metadata records the code environment and the UTC start of the data write.
 
 Settings, `writers/rtgsfit_mdsplus/`:
 
@@ -17,14 +17,20 @@ Settings, `writers/rtgsfit_mdsplus/`:
 
 from __future__ import annotations
 
+import platform
+import socket
+import subprocess
 from datetime import UTC
 from datetime import datetime
+from getpass import getuser
+from importlib.metadata import distributions
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
 import numpy as np
 
+from rtgsfit import __version__
 from rtgsfit import data_dictionary as dd
 from rtgsfit.database_writers import DatabaseWriter
 from rtgsfit.preshot import Preshot
@@ -68,6 +74,34 @@ def _to_mdsplus(data: dict[str, Any]) -> dict[str, Any]:
         else:
             converted[key] = value
     return converted
+
+
+def _code_version() -> dict[str, str]:
+    git_id = ""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / ".git").exists():
+            git_id = subprocess.run(
+                ["git", "-C", str(parent), "rev-parse", "--short", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            break
+    library = sorted(
+        f"{distribution.metadata['Name']}=={distribution.version}"
+        for distribution in distributions()
+        if distribution.metadata.get("Name")
+    )
+    return {
+        "COMPUTER": socket.gethostname(),
+        "DATETIME": datetime.now(UTC).isoformat(),
+        "GIT_ID": git_id,
+        "LIBRARY": ", ".join(library),
+        "MATLAB": "N/A",
+        "PYTHON": platform.python_version(),
+        "USER": getuser(),
+        "VERSION": __version__,
+    }
 
 
 def _write_quality(pulse: int, run_name: str, quality: dict[str, Any]) -> None:
@@ -122,6 +156,15 @@ def write_quality_only(quality: dict[str, Any], settings: Settings) -> None:
         link_best=False,
         use_mdsthin=True,
     )
+    util.write_script_data(
+        script_name=dd.TREE_NAME,
+        pulseNo_write=pulse,
+        data_to_write={"CODE_VERSION": _code_version()},
+        run_name=run_name,
+        run_description=str(section.get("run_description", "")),
+        force_write=True,
+        use_mdsthin=True,
+    )
     _write_quality(pulse, run_name, quality)
 
 
@@ -143,7 +186,12 @@ def write_to_mdsplus(data: dict[str, Any], settings: Settings) -> None:
     )
     data_to_write = _to_mdsplus(data)
     quality = data_to_write.pop("DATA_Q", None)
-    data_to_write.setdefault("CODE_VERSION", {})["DATETIME"] = datetime.now(UTC).isoformat()
+    code_version = data_to_write.setdefault("CODE_VERSION", {})
+    for key, value in _code_version().items():
+        if key == "DATETIME":
+            code_version[key] = value
+        else:
+            code_version.setdefault(key, value)
     util.write_script_data(
         script_name=dd.TREE_NAME,
         pulseNo_write=pulse,

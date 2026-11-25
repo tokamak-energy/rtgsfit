@@ -19,7 +19,7 @@
 #error "capture checksums use little-endian numeric bytes"
 #endif
 
-#define CAPTURE_SCHEMA     "rtgsfit-capture-2"
+#define CAPTURE_SCHEMA     "rtgsfit-capture-3"
 #define CAPTURE_ERROR_SIZE 512
 
 static char capture_error[CAPTURE_ERROR_SIZE];
@@ -27,7 +27,7 @@ static atomic_uint_fast64_t temporary_counter = 0;
 
 static const char *const size_names[RTGSFIT_SIZE_COUNT] = {
     "N_R",          "N_Z",         "N_GRID",     "N_EDGE",     "N_LIMITER",    "N_COIL",
-    "N_MEAS",       "N_FLUX_LOOP", "N_BP_PROBE", "N_ROGOWSKI", "N_CONSTRAINT", "N_REG",
+    "N_MAG_SIGNAL", "N_FLUX_LOOP", "N_BP_PROBE", "N_ROGOWSKI", "N_CONSTRAINT", "N_REG",
     "N_FIT_TARGET", "N_PLASMA",    "N_PASSIVE",  "N_FIT_DOF",  "N_XPT_MAX",
 };
 
@@ -42,7 +42,7 @@ static const char *const dim_grid_passive[] = {"N_GRID", "N_PASSIVE"};
 static const char *const dim_edge_edge[] = {"N_EDGE", "N_EDGE"};
 static const char *const dim_limiter_interp[] = {"N_LIMITER", "N_INTERP"};
 static const char *const dim_constraint_coil[] = {"N_CONSTRAINT", "N_COIL"};
-static const char *const dim_constraint_meas[] = {"N_CONSTRAINT", "N_MEAS"};
+static const char *const dim_constraint_mag_signal[] = {"N_CONSTRAINT", "N_MAG_SIGNAL"};
 static const char *const dim_fit_target_grid[] = {"N_FIT_TARGET", "N_GRID"};
 static const char *const dim_fit_target_passive[] = {"N_FIT_TARGET", "N_PASSIVE"};
 static const char *const dim_grid_r[] = {"N_GRID", "N_R"};
@@ -115,7 +115,7 @@ static const struct rtgsfit_capture_variable compiled_nodes[] = {
                  "REPLACEMENT",
                  RTGSFIT_CAPTURE_FLOAT64,
                  2,
-                 dim_constraint_meas,
+                 dim_constraint_mag_signal,
                  CONSTRAINT_REPLACEMENT),
     CAPTURE_NODE("PRESHOT/FIT", "WEIGHT", RTGSFIT_CAPTURE_FLOAT64, 1, dim_n_fit_target, FIT_WEIGHT),
     CAPTURE_NODE(
@@ -133,10 +133,12 @@ static const struct rtgsfit_capture_variable compiled_nodes[] = {
 };
 
 static const char *const extra_preshot_nodes[] = {
-    "PRESHOT/CONSTRAINT:NAMES", "PRESHOT/FIT:TARGET_NAMES", "PRESHOT/FIT:DOF_NAMES",
-    "PRESHOT/FIT:DOF_UNITS",    "PRESHOT/COIL:NAMES",       "PRESHOT/COIL:SIGNALS",
-    "PRESHOT/COIL:MATRIX",      "PRESHOT/MEAS:NAMES",       "PRESHOT/INITIAL:PSI_NORM",
-    "PRESHOT/INITIAL:MASK",     "PRESHOT/INFO:SETTINGS",    "PRESHOT/INFO:MU0",
+    "PRESHOT/CONSTRAINT:NAMES", "PRESHOT/FIT:TARGET_NAMES",
+    "PRESHOT/FIT:DOF_NAMES",    "PRESHOT/FIT:DOF_UNITS",
+    "PRESHOT/COIL:NAMES",       "PRESHOT/COIL:COIL_SIGNALS",
+    "PRESHOT/COIL:MATRIX",      "PRESHOT/CONSTRAINT:MAG_SIGNALS",
+    "PRESHOT/INITIAL:PSI_NORM", "PRESHOT/INITIAL:MASK",
+    "PRESHOT/INFO:SETTINGS",    "PRESHOT/INFO:MU0",
     "PRESHOT/INFO:PSI_TO_WB",   "PRESHOT/INFO:SOURCE",
 };
 
@@ -170,6 +172,7 @@ static const struct
     {"PRESHOT/CONSTRAINT", "NAMES"},
     {"PRESHOT/CONSTRAINT", "G_COIL"},
     {"PRESHOT/CONSTRAINT", "REPLACEMENT"},
+    {"PRESHOT/CONSTRAINT", "MAG_SIGNALS"},
     {"PRESHOT/FIT", "TARGET_NAMES"},
     {"PRESHOT/FIT", "DOF_NAMES"},
     {"PRESHOT/FIT", "DOF_UNITS"},
@@ -180,9 +183,8 @@ static const struct
     {"PRESHOT/SETTINGS", "TOLERANCE"},
     {"PRESHOT/SETTINGS", "IP_MIN"},
     {"PRESHOT/COIL", "NAMES"},
-    {"PRESHOT/COIL", "SIGNALS"},
+    {"PRESHOT/COIL", "COIL_SIGNALS"},
     {"PRESHOT/COIL", "MATRIX"},
-    {"PRESHOT/MEAS", "NAMES"},
     {"PRESHOT/INITIAL", "PSI_NORM"},
     {"PRESHOT/INITIAL", "MASK"},
     {"PRESHOT/INFO", "SETTINGS"},

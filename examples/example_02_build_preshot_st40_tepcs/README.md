@@ -1,13 +1,13 @@
 # Example 02: build the ST40 PCS preshot (`st40_tepcs`)
 
 [example_02_build_preshot_st40_tepcs.ipynb](example_02_build_preshot_st40_tepcs.ipynb) rebuilds the ST40
-campaign preshot **RTGSFIT 99000230 / PRESHOT07**, which the PCS compiles, from GSFit with the packaged
+campaign preshot **RTGSFIT 99000230 / PRESHOT10**, which the PCS compiles, from GSFit with the packaged
 `st40_tepcs` recipe:
 
 1. Show the recipe: GSFit settings, grid, PCS sensors and coil circuits.
 2. Build the preshot with GSFit (`build_preshot`).
 3. Inspect it: the inputs the PCS supplies, the grid, and the coil and passive Greens functions.
-4. Compare it, node by node, with the stored PRESHOT07.
+4. Compare it, node by node, with the stored PRESHOT10.
 5. Save it as a local NPZ and a C preshot file, compile `librtgsfit.so` from the file, and check the
    compiled checksum.
 6. Optionally write it to a new private MDSplus run, read it back, and compile that run with C only,
@@ -16,13 +16,13 @@ campaign preshot **RTGSFIT 99000230 / PRESHOT07**, which the PCS compiles, from 
 
 The notebook never writes to 99000230. Publishing a campaign preshot changes what the PCS compiles, so
 it is a deployment step agreed with the PCS team, not a side effect of this example.
-[Example 01](../example_01_run_full_pipeline_pcs_mock/README.md) runs the C solver on a pulse with PRESHOT07.
+[Example 01](../example_01_run_full_pipeline_pcs_mock/README.md) runs the C solver on a pulse with PRESHOT10.
 
 ## Files and database access
 
 | Item | Behaviour |
 |---|---|
-| `RTGSFIT` 99000230 / `PRESHOT07` | Read only, for the comparison |
+| `RTGSFIT` 99000230 / `PRESHOT10` | Read only, for the comparison |
 | `c/cache/example_02_build_preshot/<UTC>/` | New directory per run, with the preshot as `.npz` and as a C preshot file (`.bin`) |
 | `WRITE_MDSPLUS = False` | Default: no database writes |
 | Optional destination | Private pulse 52014922 / `EXAMPLE02`; choose your own allocated private pulse and an unused run |
@@ -31,14 +31,14 @@ it is a deployment step agreed with the PCS team, not a side effect of this exam
 With `WRITE_MDSPLUS = True`, the notebook checks that the run is free before building and again
 before writing, refuses 99000230 and `BEST`, and compares every node read back.
 
-## Reproducing PRESHOT07 exactly
+## Reproducing PRESHOT10 exactly
 
 The comparison accepts round-off in floating-point nodes (1e-12 of each node's largest value) and
 reports whether the build is bit-for-bit identical. Only a bit-for-bit identical build has the same C
-checksum, and so compiles to the same library, as PRESHOT07.
+checksum, and so compiles to the same library, as PRESHOT10.
 
 The Poisson LU factors come from a threaded LAPACK factorisation, whose rounding can depend on the
-machine and the number of threads. PRESHOT07 was built with the default number of OpenBLAS threads, so
+machine and the number of threads. PRESHOT10 was built with the default number of OpenBLAS threads, so
 the notebook does not set `OPENBLAS_NUM_THREADS`. With `OPENBLAS_NUM_THREADS=1`, the LU factors differ
 by about 3e-16 of their size and the checksum changes.
 
@@ -81,5 +81,5 @@ takes about a minute, mostly in the GSFit build; compiling takes seconds.
 ## Saved example outputs
 
 The notebook keeps the outputs of one run (24 November 2026, `WRITE_MDSPLUS = False`), including its
-four figures, so it can be read directly on GitHub. That run reproduced PRESHOT07 bit for bit
+four figures, so it can be read directly on GitHub. That run reproduced PRESHOT10 bit for bit
 (checksum `431C9A97`). Checkout paths in the saved text are shown relative to the repository root.

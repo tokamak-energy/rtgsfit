@@ -36,7 +36,7 @@ is running:
 | | Preshot (before the pulse) | Real time (every PCS cycle) |
 |---|---|---|
 | Language | Python (`python/rtgsfit`) | C (`c/src`) |
-| Inputs | Machine description, sensor geometry, settings | `meas`, `coil_current`, last `psi_norm` and `mask` |
+| Inputs | Machine description, sensor geometry, settings | `mag_signal`, `coil_current`, last `psi_norm` and `mask` |
 | Work | Greens functions, LU factors of the Grad-Shafranov operator, weighted response matrices, ... | One least-squares fit, one Poisson solve, null and boundary search |
 | Output | The preshot: `PRESHOT.*` in MDSplus, compiled into C as constants | The equilibrium of this cycle |
 | Allocation | Any | None: all memory is static |
@@ -94,10 +94,10 @@ See also the [source and variable reference](code_reference.md).
 
 | Symbol (code name) | Size | Definition |
 |---|---|---|
-| `meas` | `N_MEAS` | PCS measurements passed to `rtgsfit()`, in the order of `PRESHOT.MEAS:NAMES`. They include signals used only to replace faulty sensors. (v1: `meas_pcs`) |
-| `coil_signal` | len(`COIL:SIGNALS`) | PCS coil signals, in the order of `PRESHOT.COIL:SIGNALS` (PSU currents, Rogowski wires). Python only. |
+| `mag_signal` | `N_MAG_SIGNAL` | PCS magnetic signals passed to `rtgsfit()`, in the order of `PRESHOT.CONSTRAINT:MAG_SIGNALS`. They include signals used only to replace faulty sensors. (v1: `meas_pcs`) |
+| `coil_signal` | len(`COIL:COIL_SIGNALS`) | PCS coil signals, in the order of `PRESHOT.COIL:COIL_SIGNALS` (PSU currents, Rogowski wires). Python only. |
 | `coil_current` | `N_COIL` | PF coil circuit currents: `coil_current = COIL:MATRIX coil_signal`. (v1: `coil_curr`) |
-| `constraint_measured` | `N_CONSTRAINT` | Constraint values from the measurements: `CONSTRAINT:REPLACEMENT meas`. Flux loops, then Bp probes, then Rogowski coils. |
+| `constraint_measured` | `N_CONSTRAINT` | Constraint values from the measurements: `CONSTRAINT:REPLACEMENT mag_signal`. Flux loops, then Bp probes, then Rogowski coils. |
 | `constraint_reconstructed` | `N_CONSTRAINT` | The same constraints computed from the fitted equilibrium. |
 | `fit_target` | `N_FIT_TARGET` | Right-hand side of the least-squares problem: the weighted constraints minus the coil contribution, then `N_REG` zeros for the regularisation rows. (v1: `meas`) |
 | `fit_matrix` | `[N_FIT_TARGET, N_FIT_DOF]` | The weighted response of every row of `fit_target` to every entry of `fit_dof`. (v1: `g_coef_meas_w`) |
@@ -133,9 +133,9 @@ PCS and replay callers keep working. It can later move to the PCS input-processi
 
 Faulty sensors are replaced by combinations of other signals (for example a broken Rogowski coil by
 `I = V / R` from neighbouring flux loop voltages). The replacement is the matrix
-`CONSTRAINT:REPLACEMENT [N_CONSTRAINT, N_MEAS]`; an identity row keeps a sensor as it is:
+`CONSTRAINT:REPLACEMENT [N_CONSTRAINT, N_MAG_SIGNAL]`; an identity row keeps a sensor as it is:
 
-    constraint_measured = CONSTRAINT:REPLACEMENT meas
+    constraint_measured = CONSTRAINT:REPLACEMENT mag_signal
 
 The coils' contribution is known, so it is subtracted, and every row is weighted by
 `FIT:WEIGHT = 1 / uncertainty`:
@@ -383,7 +383,7 @@ constant `<GROUP>_<NODE>`.
 | `CONSTRAINT` | Sensor replacement and coil Greens functions of the constraints |
 | `FIT` | Weights and weighted response matrices of the least-squares problem |
 | `SETTINGS` | `XPT_FRACTION`, `TOLERANCE`, `IP_MIN` |
-| `COIL`, `MEAS` | Names and the coil matrix; used to build the inputs of `rtgsfit()` |
+| `COIL`, `MAG` | Names and the coil matrix; used to build the inputs of `rtgsfit()` |
 | `INITIAL` | `psi_norm` and `mask` for the first call |
 | `INFO` | Archived settings (JSON for new builds) and the reader that made the preshot |
 
@@ -396,7 +396,7 @@ data dictionary and every size relation (the same relations as the `_Static_asse
 **Making a test preshot for ST40** (TE network):
 
 Use private development pulse space, not the shared PCS preshot pulse 99000230.
-The C-generator test uses 52000230 `TEST03`; choose an unused test run (`TEST_NEW`
+The C-generator test uses 52000230 `TEST04`; choose an unused test run (`TEST_NEW`
 below) rather than overwriting that fixture. Adapt the pulse number to your own allocated private
 space when using this example.
 
@@ -412,25 +412,26 @@ This runs GSFit with the `st40_setup_for_rtgsfit` settings (`preshot/builder = g
 which runs the C generator `c/tools/write_preshot.c` (section 6.6). It reads `PRESHOT` with the MDSplus
 C library, writes `c/src/preshot_sizes.h` and `c/src/preshot_data.c`, and compiles `c/build/librtgsfit.so`.
 [Example 02](../examples/example_02_build_preshot_st40_tepcs/README.md) builds the ST40 preshot step by
-step, checks it against `PRESHOT07`, and describes how a new campaign preshot is published for the PCS.
+step, checks it against `PRESHOT10`, and describes how a new campaign preshot is published for the PCS.
 
 **The ST40 stored preshots** are in `RTGSFIT` 99000230:
 
 | Run | Mode | Coil era | MC coil inputs |
 |---|---|---|---|
-| `PRESHOT07` | `st40_tepcs` | MCVC, pulses from 12551 | MCT = MC wire; MCB = MC wire + MCVC |
-| `PRESHOT08` | `st40_tepcs` | no MCVC, pulses before 12551 | MCT = MCB = MC wire |
-| `PRESHOT06` | `st40_magrun16` | both | MCT and MCB = their PSU2COIL channels |
+| `PRESHOT10` | `st40_tepcs` | MCVC, pulses from 12551 | MCT = MC wire; MCB = MC wire + MCVC |
+| `PRESHOT11` | `st40_tepcs` | no MCVC, pulses before 12551 | MCT = MCB = MC wire |
+| `PRESHOT09` | `st40_magrun16` | both | MCT and MCB = their PSU2COIL channels |
 
-All use the v2 schema. `PRESHOT07` and `PRESHOT08` were built by GSFit from the pulse 14922 machine
-description with `st40_tepcs` settings. `PRESHOT08` removes `I_MCVC_PSU` and its coil-matrix entries;
-the remaining numerical preshot data matches `PRESHOT07` to round-off. The coil matrix is not compiled
-into C, so both have C checksum `431C9A97`. `PRESHOT07` is the current-era PCS
-campaign preshot and the packaged `st40_tepcs` default. Select `PRESHOT08` for older TEPCS
-replays (section 7.3). `PRESHOT04` and `PRESHOT05` are superseded: they hold the same data, but
-`COIL:MATRIX` is stored in a pre-release orientation, transposed relative to the one the PCS reads
-(section 11.2). Do not use them: `PRESHOT05` fails to load, and `PRESHOT04` loads but gives wrong coil
-currents. `PRESHOT06` is the packaged `st40_magrun16` default, which PPAC uses
+All use the v2 schema. `PRESHOT10` and `PRESHOT11` were built by GSFit from the pulse 14922 machine
+description with `st40_tepcs` settings. `PRESHOT11` removes `I_MCVC_PSU` and its coil-matrix entries;
+the remaining numerical preshot data matches `PRESHOT10` to round-off. The coil matrix is not compiled
+into C, so both have C checksum `431C9A97`. `PRESHOT10` is the current-era PCS
+campaign preshot and the packaged `st40_tepcs` default. Select `PRESHOT11` for older TEPCS
+replays (section 7.3). Earlier v2 runs are superseded; do not use them. `PRESHOT06`, `PRESHOT07` and
+`PRESHOT08` hold the same data as `PRESHOT09`, `PRESHOT10` and `PRESHOT11`, but under the old names
+`SIZES:N_MEAS`, `MEAS:NAMES` and `COIL:SIGNALS` (section 11.5), which the current code cannot read. `PRESHOT04` and
+`PRESHOT05` also use the old names, and store `COIL:MATRIX` in a pre-release orientation, transposed
+relative to the one the PCS reads (section 11.2). `PRESHOT09` is the packaged `st40_magrun16` default, which PPAC uses
 (section 7.5). It was built by GSFit from the pulse 14816 machine description with
 `st40_magrun16` settings (`rtgsfit preshot st40_magrun16` rebuilds it). PSU2COIL gives every PF
 coil's current in both coil eras, so GSFit builds the same preshot (C checksum `510DB799`) for
@@ -467,7 +468,7 @@ grid (`c/tests`).
 ### 6.2 Interface
 
 ```c
-int32_t rtgsfit(const double meas[], const int32_t n_meas,
+int32_t rtgsfit(const double mag_signal[], const int32_t n_mag_signal,
                 const double coil_current[], const int32_t n_coil_current,
                 double psi_norm[], const int32_t n_psi_norm,     /* in and out */
                 int32_t mask[], const int32_t n_mask,            /* in and out */
@@ -487,7 +488,7 @@ int32_t rtgsfit(const double meas[], const int32_t n_meas,
 
 Each length is passed by value. Its `const` qualifier prevents reassignment inside the function;
 callers can still pass ordinary integer variables or literals, and the calling convention is unchanged.
-By contrast, `const double meas[]` prevents writes through `meas` to the input elements.
+By contrast, `const double mag_signal[]` prevents writes through `mag_signal` to the input elements.
 The state and output buffers remain writable.
 
 Every array is followed by its length, which is checked against the preshot on every call; a
@@ -534,20 +535,20 @@ x86 workstation (one OpenBLAS thread):
 
 ### 6.6 Building
 
-    make -C c SHOT=99000230 RUN_NAME=PRESHOT07 # the campaign preshot
+    make -C c SHOT=99000230 RUN_NAME=PRESHOT10 # the campaign preshot
     make -C c PRESHOT_FILE=<path>              # read the preshot from a file written by Python, then compile
     make -C c                                  # compile the active preshot in c/src
     make -C c test                             # C unit tests; no preshot needed
     make -C c DEBUG=1 TIMING=1 ARCH_FLAGS=...
     make -C c clean                            # remove c/build and the generated preshot
 
-PCS examples use the campaign preshot `RTGSFIT` 99000230, `PRESHOT07` (section 5), which the
+PCS examples use the campaign preshot `RTGSFIT` 99000230, `PRESHOT10` (section 5), which the
 `st40_tepcs` replays and tests also read.
-[Example 01](../examples/example_01_run_full_pipeline_pcs_mock/README.md) reads PRESHOT07 and mocks the
+[Example 01](../examples/example_01_run_full_pipeline_pcs_mock/README.md) reads PRESHOT10 and mocks the
 full PCS capture pipeline, with local results by default and opt-in private MDSplus writes.
-[Example 02](../examples/example_02_build_preshot_st40_tepcs/README.md) rebuilds PRESHOT07 from GSFit,
+[Example 02](../examples/example_02_build_preshot_st40_tepcs/README.md) rebuilds PRESHOT10 from GSFit,
 compares it with the stored copy and compiles it with `PRESHOT_FILE`, with opt-in private MDSplus writes.
-The C-generator test uses private pulse 52000230 `TEST03`. No test or tutorial writes to the shared
+The C-generator test uses private pulse 52000230 `TEST04`. No test or tutorial writes to the shared
 99000230 pulse. Publishing a campaign preshot there is a separate deployment action, never a test or
 tutorial side effect.
 
@@ -628,7 +629,7 @@ from the sdist, as pip does from GitHub, and replays from it without writing int
     rtgsfit replay st40_magrun16 --set replay/pulse=14211 --set replay/time_end=0.2
     rtgsfit replay st40_tepcs --set replay/pulse=13343 --set replay/time_end=0.2
     rtgsfit preshot st40_tepcs
-    rtgsfit write-c-preshot --pulse 99000230 --run-name PRESHOT07
+    rtgsfit write-c-preshot --pulse 99000230 --run-name PRESHOT10
     rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
     rtgsfit write-data-dictionary documentation/data_dictionary.md
 
@@ -676,21 +677,21 @@ or both.
 
 | Mode | Measurements | Coil currents | Preshot | For |
 |---|---|---|---|---|
-| `st40_magrun16` (default) | processed MAG RUN16 (`*_PROCESS`) | PSU2COIL, `BEST` run | `RTGSFIT` 99000230: `PRESHOT06` (both coil eras) | post-shot replays (PPAC); comparison with GSFit |
-| `st40_tepcs` | TEPCS counts, calibrated as the PCS does | PSU and MC wire signals from TEPCS | `RTGSFIT` 99000230: `PRESHOT07` (MCVC, default) or `PRESHOT08` (no MCVC) | what the PCS would compute |
+| `st40_magrun16` (default) | processed MAG RUN16 (`*_PROCESS`) | PSU2COIL, `BEST` run | `RTGSFIT` 99000230: `PRESHOT09` (both coil eras) | post-shot replays (PPAC); comparison with GSFit |
+| `st40_tepcs` | TEPCS counts, calibrated as the PCS does | PSU and MC wire signals from TEPCS | `RTGSFIT` 99000230: `PRESHOT10` (MCVC, default) or `PRESHOT11` (no MCVC) | what the PCS would compute |
 
 `st40_magrun16` gives RT-GSFit the inputs that GSFit's post-shot reconstructions fit. GSFIT RUN04,
 like GSFit's default settings in PPAC, reads the MAG RUN16 signals after offset and drift correction
-and digital filtering, and the PSU2COIL `BEST` coil currents. The preshot, `PRESHOT06` (section 5),
+and digital filtering, and the PSU2COIL `BEST` coil currents. The preshot, `PRESHOT09` (section 5),
 was built by GSFit from the packaged settings `st40_magrun16/gsfit` and pulse 14816's machine
 description (`gsfit/pulse`). These are RUN04's settings with one change: p' and FF'
 have one degree of freedom each, as in RT-GSFit. So the two codes differ only by their grid and
 algorithm (section 10). A pulse needs MAG RUN16, which exists for pulse 11089 and from about 12680,
 with gaps, and PSU2COIL.
 
-`PRESHOT.MEAS:NAMES` keep the PCS names: `PSI_FLOOP_007` reads
+`PRESHOT.CONSTRAINT:MAG_SIGNALS` keep the PCS names: `PSI_FLOOP_007` reads
 `\MAG::TOP.RUN16.FLOOP.L007:PSI_PROCESS` (MDSplus node names have at most 12 characters, so GSFit's
-`PSI_PROCESSED` is the node `PSI_PROCESS`). `COIL:SIGNALS` are `I_<COIL>_PSU2COIL`, the current of
+`PSI_PROCESSED` is the node `PSI_PROCESS`). `COIL:COIL_SIGNALS` are `I_<COIL>_PSU2COIL`, the current of
 the PSU2COIL channel that carries the PF coils of `gsfit/coils/groups/<COIL>`, so the coil matrix is
 the identity. Before pulse 12551, MCB and MCT are in series in one PSU2COIL channel, which both
 coils then read, so every coil era uses the same settings. The reader fails if PSU2COIL drives a PF
@@ -711,16 +712,16 @@ live inputs of most pulses from that campaign. In the others the PCS read the ma
 sample (10 µs) later. It needs the full requested interval and the earlier drift-calibration window,
 and does not fill gaps. Its replay times must be on the PCS's 50 µs cycle (`(t + 1.1 s) / 50 µs` an
 integer). By default it replays every 1 ms from 6 ms. The PCS read its inputs on whole milliseconds,
-but it stores when each step finished, 0.7–0.8 ms after the read. The default `PRESHOT07` and its coil
+but it stores when each step finished, 0.7–0.8 ms after the read. The default `PRESHOT10` and its coil
 matrix are for the MCVC era, from pulse 12551. Before then `I_MCVC_PSU` does not exist: select the
-stored no-MCVC `PRESHOT08`, where MCB, like MCT, carries the `I_ROG_MCWIRE` current. No preshot
+stored no-MCVC `PRESHOT11`, where MCB, like MCT, carries the `I_ROG_MCWIRE` current. No preshot
 rebuild is needed:
 
     rtgsfit replay st40_tepcs --set replay/pulse=11089 \
-        --set preshot/rtgsfit_mdsplus/run_name=PRESHOT08
+        --set preshot/rtgsfit_mdsplus/run_name=PRESHOT11
 
 The workbench's two-mode example selects these runs automatically by pulse. The packaged
-`st40_tepcs` preset remains explicitly configured for `PRESHOT07`; changing only `replay/pulse`
+`st40_tepcs` preset remains explicitly configured for `PRESHOT10`; changing only `replay/pulse`
 does not switch its preshot.
 
 ### 7.4 Database writers
@@ -732,7 +733,7 @@ does not switch its preshot.
 | `rtgsfit_mdsplus` | `PRESHOT` | everything | needs `writers/rtgsfit_mdsplus/enabled = true` |
 
 A results file or tree contains the whole preshot, the effective settings JSON, the code version and the raw
-`meas` and `coil_signal`, so every replay can be reproduced from its own output.
+`mag_signal` and `coil_signal`, so every replay can be reproduced from its own output.
 
 For the `local` writer, relative `path` and `preshot_path` values are resolved under the repository's
 gitignored `c/cache/`, or `~/.cache/rtgsfit/outputs/` for a package installed without a checkout
@@ -764,7 +765,7 @@ available to downstream analyses that consume the preferred RT-GSFit result.
 
 `run()` uses no state from earlier pulses:
 
-1. it reads the stored preshot `PRESHOT06` of `RTGSFIT` 99000230 (section 5), GSFit's build from
+1. it reads the stored preshot `PRESHOT09` of `RTGSFIT` 99000230 (section 5), GSFit's build from
    the packaged `st40_magrun16/gsfit` settings, which is the same for every pulse;
 2. it reads the processed MAG RUN16 signals and the PSU2COIL coil currents (`st40_magrun16`);
 3. it compiles the preshot in a private temporary copy of `c/` (`library.isolated_build()`), so
@@ -842,7 +843,7 @@ to rebuild the preshot. The replay reads
 what PPAC's own GSFit run reads, MAG RUN16 and PSU2COIL `BEST`, so it has the same dependency,
 `PSU2COIL`.
 
-Every pulse uses the geometry and sensor list of `PRESHOT06`, and MAG RUN16 is **not** an automatic
+Every pulse uses the geometry and sensor list of `PRESHOT09`, and MAG RUN16 is **not** an automatic
 dead-sensor mask. GSFit's `include` flags and weights remain those of the packaged settings. A change
 to the machine description needs a new stored preshot (section 5).
 Missing or nonfinite inputs fail rather than being silently dropped.
@@ -880,7 +881,7 @@ capture = read_capture("c/cache/analytic.nc")
 results = capture.to_results()  # no solver, compiler or database access
 ```
 
-#### Logger contract (`rtgsfit-capture-2`)
+#### Logger contract (`rtgsfit-capture-3`)
 
 Use **NetCDF-4**, not the old classic-format v1 file. The shared C writer is `c/src/capture.c`,
 declared in `c/src/capture.h`; replay calls it through ctypes, and a PCS logger can call the same
@@ -892,7 +893,7 @@ Root attributes:
 
 | Attribute | Value |
 |---|---|
-| `schema` | `rtgsfit-capture-2` |
+| `schema` | `rtgsfit-capture-3` |
 | `flux_convention` | `native` |
 | `settings_json` | Effective RT-GSFit JSON settings |
 | `preshot_source` | Original preshot provenance |
@@ -919,7 +920,7 @@ The three groups are:
 * `PRESHOT`: the **complete** preshot data dictionary, with subgroups such as `GRID`, `FIT`
   and `INFO`. Store numeric nodes as their specified int32/float64 type and text as NetCDF4
   strings. This binds the capture to its actual preshot, not a later `BEST` run.
-* `INPUT`: `time[N_TIME]`, `meas[N_TIME,N_MEAS]`, `coil_signal[N_TIME,N_COIL_SIGNAL]` and the
+* `INPUT`: `time[N_TIME]`, `mag_signal[N_TIME,N_MAG_SIGNAL]`, `coil_signal[N_TIME,N_COIL_SIGNAL]` and the
   actual `coil_current[N_TIME,N_COIL]`, all float64. Inputs precede sensor replacement; coil
   currents must match `COIL:MATRIX @ coil_signal`. Log both original channels and actual coil
   currents, not just one reconstructed from a pseudoinverse.
@@ -998,9 +999,11 @@ physics and preshot nodes (keys such as `PROFILES_2D.R_Z.PSI`). Every such node 
 [data_dictionary.md](data_dictionary.md).
 
 MDSplus also has the common run metadata created by `standard_utility`. For both preshots and results,
-the writer fills `CODE_VERSION:DATETIME` with the UTC start of the data write, in ISO 8601 format.
-The physics viewer displays this timestamp in its configured time zone. It is write metadata, not a
-plasma time or a replacement for the archived settings and code version in `INPUT`.
+the writer fills missing `CODE_VERSION` fields with the RT-GSFit version, Git commit, installed Python
+packages, host, user, Python version and UTC write time. `MATLAB` is `N/A` for this Python writer.
+Caller-supplied fields are preserved. The physics viewer displays the timestamp in its configured time
+zone. It is write metadata, not a plasma time or a replacement for the archived settings and code
+version in `INPUT`.
 
 Node names are at most 12 characters (an MDSplus limit). The tests check that the CSV, the C header
 and the data dictionary agree.
@@ -1038,8 +1041,8 @@ The tests are replays: the same code path as `rtgsfit replay`.
 | Analytic replay | `tests/test_analytic_replay.py` | `psi` within 1 %, `b_theta` and `j_phi` vs the exact solution; Ip, axis, circular boundary; monotonic convergence; zero current gives `NO_AXIS`; bit-for-bit agreement with v1 |
 | Data dictionary, settings, I/O, CLI | `tests/test_*.py` | Names, CSV, generated docs, round trips, preshot validation, enum sizes |
 | FreeGSNKE | `tests/test_freegsnke.py` | FreeGSNKE's p' and FF' are linear in `psi_norm` (`alpha_m = alpha_n = 1`), as in RT-GSFit, on the same grid: Ip to 1e-4, `psi` at the axis and boundary to 2e-3 relative, axis to 0.7 mm, `psi` to 1.8e-3 Wb and `j_phi` to 3e3 A/m² everywhere, `P_PRIME` and `FF_PRIME_MU0` to 0.4 % of FreeGSNKE's coefficients; diverted. Needs the `[freegsnke]` extra and a FreeGSNKE checkout at `~/github/freegsnke` for its machine files; CI clones the tag matching the installed FreeGSNKE and runs `pytest --require-freegsnke`, which fails rather than skips if either is missing |
-| ST40, `st40_magrun16` | `tests/test_st40_magrun16.py` (offline + TE network) | Offline: node names, the PSU2COIL channel of each coil group in both coil eras, interpolation, dropped times and missing nodes. TE network: the stored preshot PRESHOT06 equals a fresh GSFit build (as for PRESHOT07); the reader gives RT-GSFit exactly the measurements and coil currents GSFit fits (pulses 11089, 14816); vs GSFit for pulses 11089, 14211 and 14816 at 30 and 100 ms: topology, Ip, axis, `psi` at the axis and boundary, every sensor and the IVC eigenmode currents, to 2-3 times the largest difference (below); a `RtgsfitReplay` of 14816 to 100 ms |
-| ST40, `st40_tepcs` | `tests/test_st40_tepcs.py` (offline + TE network) | Offline: PSS calibration, drift and magnetic compensation, sample counting with a fast stored clock, missing metadata and records. TE network: the campaign preshot PRESHOT07 equals a fresh GSFit build (floats to round-off, and the archived `preshot` and `gsfit` settings); a replay of pulse 14922 to 100 ms succeeds; fixed-time reconstructions of 11089, 14211 and 14816 at 30 and 100 ms check solver status, plasma current, boundary and topology |
+| ST40, `st40_magrun16` | `tests/test_st40_magrun16.py` (offline + TE network) | Offline: node names, the PSU2COIL channel of each coil group in both coil eras, interpolation, dropped times and missing nodes. TE network: the stored preshot PRESHOT09 equals a fresh GSFit build (as for PRESHOT10); the reader gives RT-GSFit exactly the measurements and coil currents GSFit fits (pulses 11089, 14816); vs GSFit for pulses 11089, 14211 and 14816 at 30 and 100 ms: topology, Ip, axis, `psi` at the axis and boundary, every sensor and the IVC eigenmode currents, to 2-3 times the largest difference (below); a `RtgsfitReplay` of 14816 to 100 ms |
+| ST40, `st40_tepcs` | `tests/test_st40_tepcs.py` (offline + TE network) | Offline: PSS calibration, drift and magnetic compensation, sample counting with a fast stored clock, missing metadata and records. TE network: the campaign preshot PRESHOT10 equals a fresh GSFit build (floats to round-off, and the archived `preshot` and `gsfit` settings); a replay of pulse 14922 to 100 ms succeeds; fixed-time reconstructions of 11089, 14211 and 14816 at 30 and 100 ms check solver status, plasma current, boundary and topology |
 | ST40 timing | `tests/test_timing.py` (TE network, `--timing`) | 1,000 converged calls per case (`st40_tepcs`, pulses 13343, 13345, 13346 at 30 and 100 ms) succeed; sections add up to `TOTAL`; statistics written to `c/cache/timing/` (§6.4) |
 
 Both ST40 suites repeat each fixed time ten times to converge; these are not ten different
@@ -1047,9 +1050,9 @@ time slices. The six cases cover both coil eras and both boundary topologies:
 
 | Pulse | Coil era / TEPCS preshot | 30 ms (0.03 s) | 100 ms (0.1 s) |
 |---|---|---|---|
-| 11089 | No MCVC / PRESHOT08 | Wall-limited | Wall-limited |
-| 14211 | MCVC / PRESHOT07 | Wall-limited | Wall-limited |
-| 14816 | MCVC / PRESHOT07 | Wall-limited | Diverted |
+| 11089 | No MCVC / PRESHOT11 | Wall-limited | Wall-limited |
+| 14211 | MCVC / PRESHOT10 | Wall-limited | Wall-limited |
+| 14816 | MCVC / PRESHOT10 | Wall-limited | Diverted |
 
 The tests assert these topologies, including GSFit's classification in `st40_magrun16`.
 `st40_tepcs` fits different inputs from processed MAG, so it is not an identical-input comparison
@@ -1143,7 +1146,7 @@ v1 is the code released up to v0.1.2; v2 is release v0.2.0 onwards.
 | `N_COEF` | `SIZES:N_FIT_DOF` |
 | `N_PLS` | `SIZES:N_PLASMA` |
 | `N_VESS` | `SIZES:N_PASSIVE` |
-| `N_SENS_PCS` | `SIZES:N_MEAS` |
+| `N_SENS_PCS` | `SIZES:N_MAG_SIGNAL` |
 | v1 `N_MEAS` (constraints + regularisation) | `SIZES:N_FIT_TARGET` |
 | `N_LIMIT` | `SIZES:N_LIMITER` |
 | `N_LCFS_MAX` | removed (the outline is post-processed) |
@@ -1160,7 +1163,7 @@ v1 is the code released up to v0.1.2; v2 is release v0.2.0 onwards.
 | `LIMIT_IDX`, `LIMIT_WEIGHT` / `LIMIT_W` | `LIMITER:GRID_INDEX`, `LIMITER:GRID_WEIGHT` |
 | `R_MU0_DZ2` | `POISSON:RHS_SCALE` |
 | `LOWER_BAND`, `UPPER_BAND`, `PERM_IDX` | `POISSON:LOWER_BAND`, `POISSON:UPPER_BAND`, `POISSON:PERMUTATION` |
-| `SENS_NAMES` | `MEAS:NAMES` |
+| `SENS_NAMES` | `CONSTRAINT:MAG_SIGNALS` |
 | `SENSOR_REPLACEMENT_MATRIX` / `SENS_REP_MAT` | `CONSTRAINT:REPLACEMENT` |
 | `G_MEAS_COIL` / `GREENS.MEAS_COIL` | `CONSTRAINT:G_COIL` |
 | `WEIGHT` | `FIT:WEIGHT` |
@@ -1168,14 +1171,14 @@ v1 is the code released up to v0.1.2; v2 is release v0.2.0 onwards.
 | `G_COEF_MEAS_WEIGHT` / `GREENS.COEF_MEAS_W` | `FIT:G_PASSIVE` (passive DOFs only, transposed) |
 | `COEF_NAMES` | `FIT:DOF_NAMES` |
 | `MEAS_NAMES` | `FIT:TARGET_NAMES` (full names, e.g. `L001` → `PSI_FLOOP_001`) |
-| `COIL_NAMES`, `COIL_SIGNALS` | `COIL:NAMES`, `COIL:SIGNALS` |
+| `COIL_NAMES`, `COIL_SIGNALS` | `COIL:NAMES`, `COIL:COIL_SIGNALS` |
 | `COIL_MATRIX` | `COIL:MATRIX` (same orientation, see below) |
 | `INITIAL_COND.FLUX_NORM`, `INITIAL_COND.MASK` | `INITIAL:PSI_NORM`, `INITIAL:MASK` |
 
 `COIL:MATRIX` is stored as v1 stored `COIL_MATRIX`, so the PCS reads it unchanged. In Python it is
 [N_COIL_SIGNAL, N_COIL] (`coil_current = coil_signal @ COIL:MATRIX`). MATLAB reads MDSplus arrays
 column-major, so it sees [N_COIL, N_COIL_SIGNAL], as the PCS needs for
-`RTGSFIT_coil_matrix * signals` in MATLAB/Simulink. `PRESHOT07`'s matrix equals v1 `RUN10`'s. The
+`RTGSFIT_coil_matrix * signals` in MATLAB/Simulink. `PRESHOT10`'s matrix equals v1 `RUN10`'s. The
 settings' `gsfit/coils/matrix` keeps the readable [coil, signal] layout; only the stored node is
 transposed. Of the preshot nodes the PCS reads today (`m-files/mds_get_rtgsfit.m`), this is the
 only 2D one.
@@ -1190,7 +1193,7 @@ and can't detect this, but `rtgsfit post-process` rejects a capture whose `coil_
 
 | v1 | v2 |
 |---|---|
-| `meas_pcs` | `meas` |
+| `meas_pcs` | `mag_signal` |
 | `coil_curr` | `coil_current` |
 | `flux_norm`, `flux_total` | `psi_norm`, `psi` |
 | `coef` | `fit_dof` |
@@ -1227,7 +1230,7 @@ Migration converts metadata and the inverse-R basis; it does not modify the remo
 Use `legacy_schema=false` when reading a newly generated preshot.
 Migration requires `FIT:DOF_UNITS`: it does not infer missing passive units. The old `RUN21`
 does not have this node and must be rebuilt under a new run name. The bundled ST40 settings now
-read the v2 campaign preshot 99000230 `PRESHOT07` with `legacy_schema=false`.
+read the v2 campaign preshot 99000230 `PRESHOT10` with `legacy_schema=false`.
 
 The earlier coefficient-named v2 layout is now DOF-named: `N_FIT_COEF` becomes
 `N_FIT_DOF`, `FIT:COEF_NAMES` becomes `FIT:DOF_NAMES`, and result nodes
@@ -1240,9 +1243,19 @@ N_FIT_TARGET]` are now `FIT:G_GRID` and `FIT:G_PASSIVE`, stored `[N_FIT_TARGET, 
 other Greens function. `Preshot.from_nested()` transposes the old arrays, so the content hash is
 unchanged. The result x-points `XPOINTS.ALL` are now `XPT.ALL`, as in GSFit, and the unit of
 `CONSTRAINTS.PF_PASSIVE.ALL:RECONSTRUCT` is `mixed` (see `FIT:DOF_UNITS`). New result captures
-identify this layout as `rtgsfit-6`. It is `rtgsfit-5` plus the post-processed
+identify this layout as `rtgsfit-7`. `rtgsfit-6` was `rtgsfit-5` plus the post-processed
 `BOUNDARY.BOUNDING`, `SOL` and `SEC_XPT` nodes (section 4.11). Regenerate stored preshots
 before reading them through the current non-legacy MDSplus schema.
+
+The PCS magnetic signals were called `meas`; they are now `mag_signal`, matching `coil_signal`.
+`SIZES:N_MEAS` becomes `SIZES:N_MAG_SIGNAL`, `MEAS:NAMES` becomes `CONSTRAINT:MAG_SIGNALS` and
+`COIL:SIGNALS` becomes `COIL:COIL_SIGNALS`, so each list of signal names sits beside the matrix whose
+columns or rows it names (`CONSTRAINT:REPLACEMENT`, `COIL:MATRIX`) and has the same name as the argument
+it orders. The result node
+`INPUT:MEAS` becomes `INPUT:MAG_SIGNAL` (`rtgsfit-7`), and the capture variable `meas` becomes
+`mag_signal` (`rtgsfit-capture-3`). The `rtgsfit()` argument is now `mag_signal`; its position and
+type are unchanged. Preshots with the old names are not migrated: `PRESHOT06`, `PRESHOT07` and
+`PRESHOT08` were rewritten unchanged as `PRESHOT09`, `PRESHOT10` and `PRESHOT11`.
 
 Old result archives are not silently relabelled: their coefficient and native analytic flux
 conventions differ. Reprocess a complete capture or explicitly convert those conventions.

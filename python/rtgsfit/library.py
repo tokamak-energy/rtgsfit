@@ -297,7 +297,7 @@ class Rtgsfit:
 
     ```python
     rtgsfit = Rtgsfit.build(preshot)
-    result = rtgsfit(meas, coil_current)
+    result = rtgsfit(mag_signal, coil_current)
     ```
     The library keeps a static workspace, so use one `Rtgsfit` at a time. Creating an `Rtgsfit` for a
     rebuilt library (another preshot or other options) unloads the old library; earlier `Rtgsfit`
@@ -352,19 +352,19 @@ class Rtgsfit:
         self.psi_norm = np.array(self.preshot["INITIAL:PSI_NORM"], dtype=np.float64)
         self.mask = np.array(self.preshot["INITIAL:MASK"], dtype=np.int32)
 
-    def __call__(self, meas: FloatArray, coil_current: FloatArray) -> SliceResult:
+    def __call__(self, mag_signal: FloatArray, coil_current: FloatArray) -> SliceResult:
         if self._loaded.unloaded:
             raise RuntimeError(
                 f"{self.library_path} was rebuilt and reloaded after this Rtgsfit was created; "
                 "create a new one with Rtgsfit.build(preshot)"
             )
         sizes = self.sizes
-        meas = np.ascontiguousarray(meas, dtype=np.float64)
+        mag_signal = np.ascontiguousarray(mag_signal, dtype=np.float64)
         coil_current = np.ascontiguousarray(coil_current, dtype=np.float64)
-        if meas.shape != (sizes["N_MEAS"],) or coil_current.shape != (sizes["N_COIL"],):
+        if mag_signal.shape != (sizes["N_MAG_SIGNAL"],) or coil_current.shape != (sizes["N_COIL"],):
             raise ValueError(
-                f"rtgsfit() needs meas of shape ({sizes['N_MEAS']},) and coil_current of shape "
-                f"({sizes['N_COIL']},); got {meas.shape} and {coil_current.shape}"
+                f"rtgsfit() needs mag_signal of shape ({sizes['N_MAG_SIGNAL']},) and coil_current of shape "
+                f"({sizes['N_COIL']},); got {mag_signal.shape} and {coil_current.shape}"
             )
         arrays = {
             "psi": sizes["N_GRID"], "j_phi": sizes["N_GRID"], "fit_dof": sizes["N_FIT_DOF"],
@@ -386,7 +386,7 @@ class Rtgsfit:
         for name in arrays:
             array_args += [out[name], len(out[name])]
         status = self._lib.rtgsfit(
-            meas, len(meas), coil_current, len(coil_current),
+            mag_signal, len(mag_signal), coil_current, len(coil_current),
             self.psi_norm, len(self.psi_norm), self.mask, len(self.mask),
             *array_args,
             ctypes.byref(int_scalars["xpt_n"]), ctypes.byref(int_scalars["xpt_diverted"]),

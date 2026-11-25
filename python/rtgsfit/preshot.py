@@ -146,7 +146,7 @@ class Preshot:
         sizes = self.sizes
         sizes["N_INTERP"] = N_INTERP
         sizes["N_R_PLUS_2"] = sizes["N_R"] + 2
-        sizes["N_COIL_SIGNAL"] = len(self.groups["COIL"]["SIGNALS"])
+        sizes["N_COIL_SIGNAL"] = len(self.groups["COIL"]["COIL_SIGNALS"])
         return sizes
 
     def validate(self) -> None:
@@ -233,8 +233,8 @@ def _check_size_relations(sizes: dict[str, int]) -> None:
         f"N_PLASMA == {N_PLASMA}": sizes["N_PLASMA"] == N_PLASMA,
         "N_FIT_DOF == N_PLASMA + N_PASSIVE": sizes["N_FIT_DOF"] == sizes["N_PLASMA"] + sizes["N_PASSIVE"],
         "N_FIT_TARGET >= N_FIT_DOF": sizes["N_FIT_TARGET"] >= sizes["N_FIT_DOF"],
-        "N_LIMITER, N_COIL, N_MEAS, N_XPT_MAX >= 1": min(
-            sizes["N_LIMITER"], sizes["N_COIL"], sizes["N_MEAS"], sizes["N_XPT_MAX"]
+        "N_LIMITER, N_COIL, N_MAG_SIGNAL, N_XPT_MAX >= 1": min(
+            sizes["N_LIMITER"], sizes["N_COIL"], sizes["N_MAG_SIGNAL"], sizes["N_XPT_MAX"]
         )
         >= 1,
     }
@@ -393,9 +393,9 @@ class SensorReplacement:
 def replacement_matrix(
     constraint_names: Sequence[str], replacements: Sequence[SensorReplacement]
 ) -> tuple[FloatArray, list[str]]:
-    """Build `CONSTRAINT:REPLACEMENT` and `MEAS:NAMES`.
+    """Build `CONSTRAINT:REPLACEMENT` and `CONSTRAINT:MAG_SIGNALS`.
 
-    meas holds the constraints that are not replaced, in order, followed by every sensor used in a
+    mag_signal holds the constraints that are not replaced, in order, followed by every sensor used in a
     replacement that is not already a constraint. Each constraint row is either a unit row or the
     replacement coefficients.
     """
@@ -403,25 +403,25 @@ def replacement_matrix(
     unknown = set(by_name) - set(constraint_names)
     if unknown:
         raise PreshotError(f"cannot replace sensors that are not constraints: {sorted(unknown)}")
-    meas_names = [name for name in constraint_names if name not in by_name]
+    mag_signal_names = [name for name in constraint_names if name not in by_name]
     for item in replacements:
         for name in item.replacements:
             if name in by_name:
                 raise PreshotError(f"{name} is replaced, so it cannot be used as a replacement")
-            if name not in meas_names:
-                meas_names.append(name)
+            if name not in mag_signal_names:
+                mag_signal_names.append(name)
 
-    matrix = np.zeros((len(constraint_names), len(meas_names)))
+    matrix = np.zeros((len(constraint_names), len(mag_signal_names)))
     for i, name in enumerate(constraint_names):
         if name in by_name:
             item = by_name[name]
             if len(item.replacements) != len(item.coefficients):
                 raise PreshotError(f"replacement of {name}: names and coefficients differ in length")
             for replacement, coefficient in zip(item.replacements, item.coefficients, strict=True):
-                matrix[i, meas_names.index(replacement)] += coefficient
+                matrix[i, mag_signal_names.index(replacement)] += coefficient
         else:
-            matrix[i, meas_names.index(name)] = 1.0
-    return matrix, meas_names
+            matrix[i, mag_signal_names.index(name)] = 1.0
+    return matrix, mag_signal_names
 
 
 # ----------------------------------------------------------------------------------------------
@@ -506,11 +506,11 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
     )
     fit_g_passive = g_fit_target_passive * weight[:, np.newaxis]
 
-    replacement, meas_names = replacement_matrix(inputs.constraint_names, inputs.sensor_replacements)
+    replacement, mag_signal_names = replacement_matrix(inputs.constraint_names, inputs.sensor_replacements)
     fit_coefficient_names = [*PLASMA_DOF_NAMES, *inputs.passive_names]
     sizes = {
         "N_R": n_r, "N_Z": n_z, "N_GRID": n_grid, "N_EDGE": len(edge_r), "N_LIMITER": len(inputs.limiter_r),
-        "N_COIL": len(inputs.coil_names), "N_MEAS": len(meas_names), "N_FLUX_LOOP": inputs.n_flux_loop,
+        "N_COIL": len(inputs.coil_names), "N_MAG_SIGNAL": len(mag_signal_names), "N_FLUX_LOOP": inputs.n_flux_loop,
         "N_BP_PROBE": inputs.n_bp_probe, "N_ROGOWSKI": inputs.n_rogowski, "N_CONSTRAINT": n_constraint,
         "N_REG": n_reg, "N_FIT_TARGET": n_fit_target, "N_PLASMA": N_PLASMA, "N_PASSIVE": n_passive,
         "N_FIT_DOF": N_PLASMA + n_passive, "N_XPT_MAX": inputs.n_xpt_max,
@@ -541,6 +541,7 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
             "NAMES": list(inputs.constraint_names),
             "G_COIL": np.asarray(inputs.g_constraint_coil, dtype=f64).reshape(n_constraint, -1),
             "REPLACEMENT": replacement,
+            "MAG_SIGNALS": mag_signal_names,
         },
         "FIT": {
             "TARGET_NAMES": [*inputs.constraint_names, *inputs.regularisation_names],
@@ -557,13 +558,12 @@ def assemble_preshot(inputs: PreshotInputs) -> Preshot:
             "XPT_FRACTION": f64(inputs.xpt_fraction), "TOLERANCE": f64(inputs.tolerance), "IP_MIN": f64(inputs.ip_min),
         },
         "COIL": {
-            "NAMES": list(inputs.coil_names), "SIGNALS": list(inputs.coil_signals),
+            "NAMES": list(inputs.coil_names), "COIL_SIGNALS": list(inputs.coil_signals),
             # Stored [N_COIL_SIGNAL, N_COIL], as in v1, so MATLAB reads it as [N_COIL, N_COIL_SIGNAL].
             "MATRIX": np.ascontiguousarray(
                 np.asarray(inputs.coil_matrix, dtype=f64).reshape(len(inputs.coil_names), -1).T
             ),
         },
-        "MEAS": {"NAMES": meas_names},
         "INITIAL": {
             "PSI_NORM": np.asarray(inputs.initial_psi_norm, dtype=f64).ravel(),
             "MASK": np.asarray(inputs.initial_mask).astype(np.int32).ravel(),

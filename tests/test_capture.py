@@ -35,11 +35,11 @@ from rtgsfit.settings import parse_settings
 def native_capture(analytic_preshot: Preshot) -> Capture:
     settings = load_settings("analytic").copy_with({"replay/time_end": 0.002, "replay/repeat": 1})
     signals = read_signals(settings, analytic_preshot)
-    signals.meas[-1] = 0.0
+    signals.mag_signal[-1] = 0.0
     signals.coil_signal[-1] = 0.0
     solver = Rtgsfit.build(analytic_preshot, BuildOptions(timing=True))
     coils = signals.coil_current(analytic_preshot)
-    slices = [solver(signals.meas[i], coils[i]) for i in range(len(signals.time))]
+    slices = [solver(signals.mag_signal[i], coils[i]) for i in range(len(signals.time))]
     assert slices[0].status == 0
     assert slices[-1].status != 0
     return Capture(analytic_preshot, signals, slices, settings.json_text, "PCS logger", "test-logger-version")
@@ -70,7 +70,7 @@ def test_native_round_trip(native_capture: Capture, tmp_path: Path, timed: bool)
     for node in dd.PRESHOT_NODES:
         key = ":".join(node.path[1:])
         assert_array_equal(restored.preshot[key], captured.preshot[key], err_msg=key)
-    for name in ("time", "meas", "coil_signal"):
+    for name in ("time", "mag_signal", "coil_signal"):
         assert_array_equal(getattr(restored.signals, name), getattr(captured.signals, name))
     for actual, expected in zip(restored.slices, captured.slices, strict=True):
         for field in fields(SliceResult):
@@ -226,11 +226,11 @@ def test_failed_write_is_atomic(native_capture: Capture, tmp_path: Path) -> None
 
 def test_failed_nonfinite_values_are_retained(native_capture: Capture, tmp_path: Path) -> None:
     captured = copy.deepcopy(native_capture)
-    captured.signals.meas[-1, 0] = np.nan
+    captured.signals.mag_signal[-1, 0] = np.nan
     captured.slices[-1].j_phi[:] = np.nan
     captured.slices[-1].status = 1024
     restored = read_capture(write_capture(tmp_path / "nonfinite.nc", captured))
-    assert np.isnan(restored.signals.meas[-1, 0])
+    assert np.isnan(restored.signals.mag_signal[-1, 0])
     assert np.isnan(restored.slices[-1].j_phi).all()
     assert restored.slices[-1].status == 1024
     results = restored.to_results()

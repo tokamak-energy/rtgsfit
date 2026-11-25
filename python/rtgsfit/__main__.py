@@ -7,7 +7,7 @@ rtgsfit replay analytic --set capture/path=analytic.nc
 rtgsfit post-process c/cache/analytic.nc                  # no solver or database reads
 rtgsfit preshot st40_tepcs                                # build a new preshot, then run the writers
 rtgsfit write-c-preshot st40_tepcs                        # make the replay preshot the active one in c/src
-rtgsfit write-c-preshot --pulse 99000230 --run-name PRESHOT07 # read the PCS preshot from MDSplus
+rtgsfit write-c-preshot --pulse 99000230 --run-name PRESHOT10 # read the PCS preshot from MDSplus
 rtgsfit write-csv path/to/standard_utility/csv_files/RTGSFIT.csv
 rtgsfit write-data-dictionary documentation/data_dictionary.md
 rtgsfit list-settings

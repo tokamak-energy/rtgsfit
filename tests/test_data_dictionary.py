@@ -64,6 +64,17 @@ def test_csv_has_every_node_once() -> None:
     assert len({len(row) for row in rows}) == 1
 
 
+def test_csv_help_identifies_array_dimensions() -> None:
+    descriptions = {row[7]: row[9] for row in _csv_rows() if row[7].startswith("data[")}
+    for node in dd.ALL_NODES:
+        key = "data" + "".join(f"['{name}']" for name in node.path)
+        assert ("Dimensions:" in descriptions[key]) == bool(node.shape), node.mds_path
+    assert descriptions["data['PROFILES_2D']['R_Z']['PSI']"].endswith("Dimensions: (len(:TIME), SIZES.N_Z, SIZES.N_R)")
+    assert descriptions["data['PRESHOT']['COIL']['MATRIX']"].endswith(
+        "Dimensions: (len(COIL:COIL_SIGNALS), SIZES.N_COIL)"
+    )
+
+
 def test_csv_loads_with_standard_utility(tmp_path: Path) -> None:
     functions = pytest.importorskip("standard_utility.functions.functions_node_information")
     path = tmp_path / "RTGSFIT.csv"

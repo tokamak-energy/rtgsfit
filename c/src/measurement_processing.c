@@ -4,8 +4,8 @@
 
 #include "argument_check.h"
 
-int32_t measurement_processing_prepare(const double meas[],
-                                       const int32_t n_meas,
+int32_t measurement_processing_prepare(const double mag_signal[],
+                                       const int32_t n_mag_signal,
                                        const double coil_current[],
                                        const int32_t n_coil_current,
                                        const double replacement[],
@@ -22,15 +22,15 @@ int32_t measurement_processing_prepare(const double meas[],
                                        const int32_t n_fit_target)
 {
     const int32_t n_constraint = n_constraint_measured;
-    RTGSFIT_CHECK_MIN_SIZE(n_meas, 1);
+    RTGSFIT_CHECK_MIN_SIZE(n_mag_signal, 1);
     RTGSFIT_CHECK_MIN_SIZE(n_coil_current, 1);
     RTGSFIT_CHECK_MIN_SIZE(n_constraint, 1);
-    RTGSFIT_CHECK_SIZE(n_replacement, (int64_t)n_constraint * n_meas);
+    RTGSFIT_CHECK_SIZE(n_replacement, (int64_t)n_constraint * n_mag_signal);
     RTGSFIT_CHECK_SIZE(n_g_coil, (int64_t)n_constraint * n_coil_current);
     RTGSFIT_CHECK_SIZE(n_constraint_coil, n_constraint);
     RTGSFIT_CHECK_MIN_SIZE(n_fit_target, n_constraint);
     RTGSFIT_CHECK_SIZE(n_weight, n_fit_target);
-    RTGSFIT_CHECK_ARRAY(meas, n_meas);
+    RTGSFIT_CHECK_ARRAY(mag_signal, n_mag_signal);
     RTGSFIT_CHECK_ARRAY(coil_current, n_coil_current);
     RTGSFIT_CHECK_ARRAY(replacement, n_replacement);
     RTGSFIT_CHECK_ARRAY(g_coil, n_g_coil);
@@ -39,8 +39,8 @@ int32_t measurement_processing_prepare(const double meas[],
     RTGSFIT_CHECK_ARRAY(constraint_coil, n_constraint_coil);
     RTGSFIT_CHECK_ARRAY(fit_target, n_fit_target);
 
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_constraint, n_meas, 1.0, replacement, n_meas, meas,
-                1, 0.0, constraint_measured, 1);
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, n_constraint, n_mag_signal, 1.0, replacement,
+                n_mag_signal, mag_signal, 1, 0.0, constraint_measured, 1);
     cblas_dgemv(CblasRowMajor, CblasNoTrans, n_constraint, n_coil_current, 1.0, g_coil,
                 n_coil_current, coil_current, 1, 0.0, constraint_coil, 1);
     for (int32_t i = 0; i < n_constraint; i++)

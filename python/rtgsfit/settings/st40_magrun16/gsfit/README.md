@@ -2,7 +2,7 @@
 
 GSFit's `st40_setup_for_rtgsfit` settings, made as close as possible to those of the post-shot
 GSFit reconstructions (GSFIT RUN04, e.g. pulse 14816). RT-GSFit's `st40_magrun16` preshot,
-`RTGSFIT` 99000230 `PRESHOT06`, is built from them, and `tests/test_st40_magrun16.py` runs GSFit
+`RTGSFIT` 99000230 `PRESHOT09`, is built from them, and `tests/test_st40_magrun16.py` runs GSFit
 itself with them.
 
 * `GSFIT_code_settings.json`: the `st40_mdsplus_with_digital_filter` reader with ELMAG RUN16, MAG

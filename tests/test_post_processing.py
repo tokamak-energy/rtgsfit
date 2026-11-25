@@ -117,14 +117,14 @@ def test_logged_outputs_can_be_processed_without_running_the_solver(
     settings = load_settings("analytic")
     signals = read_signals(settings, analytic_preshot)
     solver = Rtgsfit.build(analytic_preshot)
-    captured = solver(signals.meas[0], signals.coil_current(analytic_preshot)[0])
+    captured = solver(signals.mag_signal[0], signals.coil_current(analytic_preshot)[0])
     native_psi = captured.psi.copy()
 
     def reject_solver_call(*args: object, **kwargs: object) -> None:
         pytest.fail("offline post-processing called the solver")
 
     monkeypatch.setattr(Rtgsfit, "__call__", reject_solver_call)
-    logged = Signals(signals.time[:1], signals.meas[:1], signals.coil_signal[:1])
+    logged = Signals(signals.time[:1], signals.mag_signal[:1], signals.coil_signal[:1])
     results = collect_results(analytic_preshot, logged, [captured], settings.json_text, "captured log")
     assert_allclose(
         results["PROFILES_2D.R_Z.PSI"][0].ravel(),

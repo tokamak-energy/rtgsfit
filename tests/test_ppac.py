@@ -44,7 +44,7 @@ def test_ppac_constructs_and_runs_it_as_slurm_python_job_does() -> None:
     settings = controller.settings
     assert settings.get_path("replay/pulse") == 13343
     assert settings.get_path("preshot/reader") == "rtgsfit_mdsplus"
-    assert settings.get_path("preshot/rtgsfit_mdsplus/run_name") == "PRESHOT06"
+    assert settings.get_path("preshot/rtgsfit_mdsplus/run_name") == "PRESHOT09"
     assert settings.get_path("signals/reader") == "st40_magrun16"
     assert settings.get_path("writers/names") == ["rtgsfit_mdsplus"]
     assert settings.get_path("writers/rtgsfit_mdsplus") == {

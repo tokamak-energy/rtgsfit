@@ -53,16 +53,16 @@ class Signals:
     """The inputs to `rtgsfit()` at every time slice, before the coil matrix is applied."""
 
     time: FloatArray  # [N_TIME]
-    meas: FloatArray  # [N_TIME, N_MEAS], ordered as PRESHOT.MEAS:NAMES
-    coil_signal: FloatArray  # [N_TIME, N_COIL_SIGNAL], ordered as PRESHOT.COIL:SIGNALS
+    mag_signal: FloatArray  # [N_TIME, N_MAG_SIGNAL], ordered as PRESHOT.CONSTRAINT:MAG_SIGNALS
+    coil_signal: FloatArray  # [N_TIME, N_COIL_SIGNAL], ordered as PRESHOT.COIL:COIL_SIGNALS
     input_quality: dict[str, str] = field(default_factory=dict)
 
     def validate(self, preshot: Preshot) -> None:
         n_time = len(self.time)
-        n_meas = preshot.sizes["N_MEAS"]
-        n_coil_signal = len(preshot["COIL:SIGNALS"])
-        if self.meas.shape != (n_time, n_meas):
-            raise ValueError(f"meas has shape {self.meas.shape}, expected ({n_time}, {n_meas})")
+        n_mag_signal = preshot.sizes["N_MAG_SIGNAL"]
+        n_coil_signal = len(preshot["COIL:COIL_SIGNALS"])
+        if self.mag_signal.shape != (n_time, n_mag_signal):
+            raise ValueError(f"mag_signal has shape {self.mag_signal.shape}, expected ({n_time}, {n_mag_signal})")
         if self.coil_signal.shape != (n_time, n_coil_signal):
             raise ValueError(f"coil_signal has shape {self.coil_signal.shape}, expected ({n_time}, {n_coil_signal})")
         if n_time > 1 and np.any(np.diff(self.time) < 0.0):
@@ -72,7 +72,7 @@ class Signals:
         """Every time slice `n_repeat` times: more iterations of `rtgsfit()` per time."""
         return Signals(
             time=np.repeat(self.time, n_repeat),
-            meas=np.repeat(self.meas, n_repeat, axis=0),
+            mag_signal=np.repeat(self.mag_signal, n_repeat, axis=0),
             coil_signal=np.repeat(self.coil_signal, n_repeat, axis=0),
             input_quality=self.input_quality.copy(),
         )

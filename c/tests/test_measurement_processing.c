@@ -3,14 +3,14 @@
 
 static void test_prepare(void)
 {
-    const double meas[] = {2.0, 4.0, 8.0};
+    const double mag_signal[] = {2.0, 4.0, 8.0};
     const double coil_current[] = {3.0};
     const double replacement[] = {1.0, 0.0, 0.0, 0.0, 0.5, 0.5};
     const double g_coil[] = {2.0, -1.0};
     const double weight[] = {0.5, 2.0, 7.0};
     double measured[2], coil[2], fit_target[3];
 
-    CHECK(measurement_processing_prepare(meas, 3, coil_current, 1, replacement, 6, g_coil, 2,
+    CHECK(measurement_processing_prepare(mag_signal, 3, coil_current, 1, replacement, 6, g_coil, 2,
                                          weight, 3, measured, 2, coil, 2, fit_target,
                                          3) == RTGSFIT_OK);
     CHECK_CLOSE(measured[0], 2.0, 0.0);
@@ -24,7 +24,7 @@ static void test_prepare(void)
 
 static void test_prepare_rejects_invalid_buffers(void)
 {
-    const double meas[3] = {0.0};
+    const double mag_signal[3] = {0.0};
     const double coil_current[1] = {0.0};
     const double replacement[6] = {0.0};
     const double g_coil[2] = {0.0};
@@ -39,7 +39,7 @@ static void test_prepare_rejects_invalid_buffers(void)
             sizes[i] += delta;
             measured[0] = coil[0] = fit_target[0] = 123.0;
             CHECK(measurement_processing_prepare(
-                      meas, sizes[0], coil_current, sizes[1], replacement, sizes[2], g_coil,
+                      mag_signal, sizes[0], coil_current, sizes[1], replacement, sizes[2], g_coil,
                       sizes[3], weight, sizes[4], measured, sizes[5], coil, sizes[6], fit_target,
                       sizes[7]) == RTGSFIT_ERR_ARGUMENT_SIZE);
             CHECK_CLOSE(measured[0], 123.0, 0.0);

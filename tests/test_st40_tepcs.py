@@ -23,7 +23,7 @@ from rtgsfit.results import Results
 from rtgsfit.settings import Settings
 from rtgsfit.settings import load_settings
 
-PRESHOT = {"MEAS:NAMES": ["MEAS"], "COIL:SIGNALS": ["COIL"]}
+PRESHOT = {"CONSTRAINT:MAG_SIGNALS": ["MAG"], "COIL:COIL_SIGNALS": ["COIL"]}
 
 CASES = {
     (11089, 0.030): 0,
@@ -61,12 +61,12 @@ class Connection:
 
     def get(self, expression: str) -> SimpleNamespace:
         values = {
-            "\\PSS::TOP.AI.LIST": np.array(["MEAS", "COIL", "COMP"]),
+            "\\PSS::TOP.AI.LIST": np.array(["MAG", "COIL", "COMP"]),
             "\\PSS::TOP.AI.OFFSETCOUNTS": np.array([1, 2, 3]),
             "\\PSS::TOP.AI.COUNT2MKS": np.array([2, 3, 4]),
             "\\PSS::TOP.TIMES.T_OFFSET": -1.1,
             "\\PSS::TOP.TIMES.DT_CYCLE": 5e-5,
-            "\\PSS::TOP.MAG.SUB_NAMES": np.array(["MEAS"]),
+            "\\PSS::TOP.MAG.SUB_NAMES": np.array(["MAG"]),
             "\\PSS::TOP.MAG.COMP_MATRIX": np.array([[0.5]]),
             "\\PSS::TOP.MAG.INDEX_COMP": np.array([3]),
         }
@@ -100,7 +100,7 @@ def test_pcs_calibration_and_drift_compensation(per_cycle: int, comp_clock: floa
     avg2 = 2 * per_cycle * np.arange(9401, 10001).mean()
     expected = 2 * (sample + 1) - (avg2 + (avg2 - avg1) / 0.47 * 5e-5 * (cycle - 10000))
     expected += 0.5 * 4 * (sample + 3)
-    assert_allclose(signals.meas[:, 0], [expected])
+    assert_allclose(signals.mag_signal[:, 0], [expected])
     assert_allclose(signals.coil_signal[:, 0], [3 * (sample + 2)])
     assert "compensation" in signals.input_quality["correction"]
 
@@ -108,7 +108,7 @@ def test_pcs_calibration_and_drift_compensation(per_cycle: int, comp_clock: floa
 def test_missing_compensation_is_flagged_but_partial_metadata_is_rejected() -> None:
     settings = _settings(11089)
     signals = pcs_signals(Connection(missing_mag=True), settings, PRESHOT)
-    assert_allclose(signals.meas[:, 0], [2 * 22110])
+    assert_allclose(signals.mag_signal[:, 0], [2 * 22110])
     assert "unknown" in signals.input_quality["correction"]
     with pytest.raises(InputDataError, match="incomplete"):
         pcs_signals(Connection(partial=True), settings, PRESHOT)
@@ -123,7 +123,7 @@ def test_missing_tepcs_record_identifies_signal_and_channel() -> None:
                 raise TreeNODATA()
             return super().get(expression)
 
-    with pytest.raises(InputDataError, match=r"14894.*MEAS.*ACQ2106_032:CH001.*TreeNODATA"):
+    with pytest.raises(InputDataError, match=r"14894.*MAG.*ACQ2106_032:CH001.*TreeNODATA"):
         pcs_signals(MissingChannel(), _settings(14894), PRESHOT)
 
 
@@ -158,7 +158,7 @@ def case(request: pytest.FixtureRequest) -> tuple[Settings, Results]:
         "replay/time_start": time,
         "replay/time_end": time,
         "replay/repeat": 10,
-        "preshot/rtgsfit_mdsplus/run_name": "PRESHOT08" if pulse < 12551 else "PRESHOT07",
+        "preshot/rtgsfit_mdsplus/run_name": "PRESHOT11" if pulse < 12551 else "PRESHOT10",
     })  # fmt: skip
     return settings, replay(settings, verbose=False)
 

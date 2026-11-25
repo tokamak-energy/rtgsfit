@@ -25,7 +25,7 @@ from rtgsfit.results import Results
 from rtgsfit.results import collect_results
 from rtgsfit.settings import parse_settings
 
-SCHEMA = "rtgsfit-capture-2"
+SCHEMA = "rtgsfit-capture-3"
 Spec = tuple[str, tuple[str, ...]]
 OUTPUTS: dict[str, Spec] = {
     "status": ("int32", ()),
@@ -54,7 +54,7 @@ OUTPUTS: dict[str, Spec] = {
 }
 INPUTS: dict[str, Spec] = {
     "time": ("float64", ("N_TIME",)),
-    "meas": ("float64", ("N_TIME", "N_MEAS")),
+    "mag_signal": ("float64", ("N_TIME", "N_MAG_SIGNAL")),
     "coil_signal": ("float64", ("N_TIME", "N_COIL_SIGNAL")),
     "coil_current": ("float64", ("N_TIME", "N_COIL")),
 }
@@ -114,7 +114,7 @@ class Capture:
             raise ValueError("capture needs one output slice per input time, and at least one slice")
         if not np.isfinite(self.signals.time).all():
             raise ValueError("capture times must be finite")
-        for name in ("time", "meas", "coil_signal"):
+        for name in ("time", "mag_signal", "coil_signal"):
             if np.asarray(getattr(self.signals, name)).dtype.kind != "f":
                 raise ValueError(f"capture input {name} must contain floating-point values")
         if not self.preshot_source or not self.code_version:
@@ -322,7 +322,7 @@ def read_capture(path: str | Path) -> Capture:
         if int(dataset.preshot_checksum) != _full_preshot_checksum(preshot):
             raise ValueError("capture preshot checksum does not match the embedded preshot")
         values = {name: _read_variable(dataset["INPUT"], name, spec, sizes) for name, spec in INPUTS.items()}
-        signals = Signals(time=values["time"], meas=values["meas"], coil_signal=values["coil_signal"])
+        signals = Signals(time=values["time"], mag_signal=values["mag_signal"], coil_signal=values["coil_signal"])
         if not np.allclose(values["coil_current"], signals.coil_current(preshot), rtol=1e-12, atol=0.0, equal_nan=True):
             raise ValueError("capture coil_current does not match coil_signal @ COIL:MATRIX")
         outputs = {

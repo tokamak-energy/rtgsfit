@@ -12,7 +12,7 @@ controller.run()
 
 `run()` is the whole pipeline for one pulse, with no state from earlier pulses:
 
-1. read the stored preshot, `RTGSFIT` 99000230 `PRESHOT06`, as the `st40_magrun16` settings say;
+1. read the stored preshot, `RTGSFIT` 99000230 `PRESHOT09`, as the `st40_magrun16` settings say;
 2. read the inputs GSFit's post-shot reconstructions (GSFIT RUN04) fit: the processed MAG RUN16 signals
    and the PSU2COIL coil currents (`st40_magrun16`), so MAG RUN16 and PSU2COIL must be written first;
 3. compile the preshot into a private copy of the C library (`isolated_build`) and call `rtgsfit()`
@@ -20,7 +20,7 @@ controller.run()
 4. write the results and unvalidated data-quality report to the `RTGSFIT` tree.
 
 The coil eras need nothing special: PSU2COIL gives the current of every PF coil, so GSFit builds the
-same preshot for every pulse. `PRESHOT06` is its build from pulse 14816's machine description.
+same preshot for every pulse. `PRESHOT09` is its build from pulse 14816's machine description.
 
 Every other setting is that of the `st40_magrun16` configuration. A setting can be changed before `run()`:
 

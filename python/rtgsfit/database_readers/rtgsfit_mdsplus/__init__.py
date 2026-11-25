@@ -1,6 +1,6 @@
 """Read the preshot from the RTGSFIT MDSplus tree (TE network only).
 
-Settings, `preshot/rtgsfit_mdsplus/`: `pulse` (e.g. 99_000_230), `run_name` (e.g. `PRESHOT07`) and
+Settings, `preshot/rtgsfit_mdsplus/`: `pulse` (e.g. 99_000_230), `run_name` (e.g. `PRESHOT10`) and
 optionally `server` (default `smaug`). The preshot is written there by
 `python -m rtgsfit preshot <settings>` with the `rtgsfit_mdsplus` writer.
 

@@ -4,9 +4,9 @@ GSFit's `st40_mdsplus_with_digital_filter` reader fits the processed magnetic si
 (offset and drift corrected and digitally filtered) and the PF coil currents of PSU2COIL. This reader
 gives RT-GSFit the same inputs, so that the two codes differ only in their algorithms:
 
-* `PRESHOT.MEAS:NAMES` are PCS sensor names: `PSI_FLOOP_007` is `\\MAG::TOP.RUN16.FLOOP.L007:PSI_PROCESS`,
+* `PRESHOT.CONSTRAINT:MAG_SIGNALS` are PCS sensor names: `PSI_FLOOP_007` is `\\MAG::TOP.RUN16.FLOOP.L007:PSI_PROCESS`,
   `B_BPPROBE_101` is `BPPROBE.P101:B_PROCESS` and `I_ROG_INIVC000` is `ROG.INIVC000:I_PROCESS`;
-* `PRESHOT.COIL:SIGNALS` are `I_<COIL>_PSU2COIL`: the current of the PSU2COIL channel that carries every
+* `PRESHOT.COIL:COIL_SIGNALS` are `I_<COIL>_PSU2COIL`: the current of the PSU2COIL channel that carries every
   PF coil of `gsfit/coils/groups/<COIL>`.
 
 Settings: `signals/st40_magrun16/psu2coil_run` (default `BEST`, as GSFIT RUN04 used) and `server`
@@ -104,13 +104,13 @@ def magrun16_signals(connection: mdsthin.Connection, settings: Settings, preshot
 
     connection.openTree("ST40", pulse)
     try:
-        meas = []
-        for name in preshot["MEAS:NAMES"]:
+        mag_signal = []
+        for name in preshot["CONSTRAINT:MAG_SIGNALS"]:
             path = f"{MAG_ROOT}.{mag_node(str(name))}"
             values = _get(connection, f"data({path})", pulse).astype(np.float64)
             signal_time = _get(connection, f"dim_of({path})", pulse).astype(np.float64)
             _check_time(signal_time, len(values), path)
-            meas.append(interpolate(signal_time, values))
+            mag_signal.append(interpolate(signal_time, values))
     finally:
         connection.closeTree("ST40", pulse)
 
@@ -119,7 +119,7 @@ def magrun16_signals(connection: mdsthin.Connection, settings: Settings, preshot
     try:
         channel_coils = _get(connection, f"{root}.PF.ALL:COILS", pulse)
         channels = psu2coil_channels(
-            [str(name) for name in preshot["COIL:SIGNALS"]], settings["gsfit"]["coils"]["groups"], channel_coils
+            [str(name) for name in preshot["COIL:COIL_SIGNALS"]], settings["gsfit"]["coils"]["groups"], channel_coils
         )
         coil_time = _get(connection, f"{root}:TIME", pulse).astype(np.float64)
         currents = _get(connection, f"{root}.PF.ALL:I", pulse).astype(np.float64)
@@ -136,11 +136,11 @@ def magrun16_signals(connection: mdsthin.Connection, settings: Settings, preshot
         raise InputDataError(f"pulse {pulse} has no replay times recorded by every MAG RUN16 and PSU2COIL signal")
     signals = Signals(
         time=time[recorded],
-        meas=np.column_stack(meas)[recorded],
+        mag_signal=np.column_stack(mag_signal)[recorded],
         coil_signal=np.column_stack(coil_signal)[recorded],
         input_quality={"source": f"MAG RUN16 processed signals and PSU2COIL {psu2coil_run}"},
     )
-    if not np.isfinite(signals.meas).all() or not np.isfinite(signals.coil_signal).all():
+    if not np.isfinite(signals.mag_signal).all() or not np.isfinite(signals.coil_signal).all():
         raise InputDataError(f"pulse {pulse} has non-finite MAG RUN16 or PSU2COIL values at the replay times")
     return signals
 

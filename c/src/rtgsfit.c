@@ -100,7 +100,7 @@ int32_t rtgsfit_get_sizes(int32_t sizes[], const int32_t n_sizes)
     sizes[RTGSFIT_SIZE_N_EDGE] = N_EDGE;
     sizes[RTGSFIT_SIZE_N_LIMITER] = N_LIMITER;
     sizes[RTGSFIT_SIZE_N_COIL] = N_COIL;
-    sizes[RTGSFIT_SIZE_N_MEAS] = N_MEAS;
+    sizes[RTGSFIT_SIZE_N_MAG_SIGNAL] = N_MAG_SIGNAL;
     sizes[RTGSFIT_SIZE_N_FLUX_LOOP] = N_FLUX_LOOP;
     sizes[RTGSFIT_SIZE_N_BP_PROBE] = N_BP_PROBE;
     sizes[RTGSFIT_SIZE_N_ROGOWSKI] = N_ROGOWSKI;
@@ -252,8 +252,8 @@ static int32_t compute_total_psi(const double coil_current[],
     return RTGSFIT_OK;
 }
 
-int32_t rtgsfit(const double meas[],
-                const int32_t n_meas,
+int32_t rtgsfit(const double mag_signal[],
+                const int32_t n_mag_signal,
                 const double coil_current[],
                 const int32_t n_coil_current,
                 double psi_norm[],
@@ -293,7 +293,7 @@ int32_t rtgsfit(const double meas[],
     const uint64_t start_total_ns = timing_now_ns();
     uint64_t start_ns = start_total_ns;
 
-    RTGSFIT_CHECK_SIZE(n_meas, N_MEAS);
+    RTGSFIT_CHECK_SIZE(n_mag_signal, N_MAG_SIGNAL);
     RTGSFIT_CHECK_SIZE(n_coil_current, N_COIL);
     RTGSFIT_CHECK_SIZE(n_psi_norm, N_GRID);
     RTGSFIT_CHECK_SIZE(n_mask, N_GRID);
@@ -305,7 +305,7 @@ int32_t rtgsfit(const double meas[],
     RTGSFIT_CHECK_SIZE(n_xpt_r, N_XPT_MAX);
     RTGSFIT_CHECK_SIZE(n_xpt_z, N_XPT_MAX);
     RTGSFIT_CHECK_SIZE(n_xpt_psi, N_XPT_MAX);
-    RTGSFIT_CHECK_ARRAY(meas, n_meas);
+    RTGSFIT_CHECK_ARRAY(mag_signal, n_mag_signal);
     RTGSFIT_CHECK_ARRAY(coil_current, n_coil_current);
     RTGSFIT_CHECK_ARRAY(psi_norm, n_psi_norm);
     RTGSFIT_CHECK_ARRAY(mask, n_mask);
@@ -338,10 +338,10 @@ int32_t rtgsfit(const double meas[],
 
     /* 1. Constraints and fit_target. */
     status = measurement_processing_prepare(
-        meas, n_meas, coil_current, n_coil_current, CONSTRAINT_REPLACEMENT, N_CONSTRAINT * N_MEAS,
-        CONSTRAINT_G_COIL, N_CONSTRAINT * N_COIL, FIT_WEIGHT, N_FIT_TARGET, constraint_measured,
-        n_constraint_measured, workspace.constraint_coil, N_CONSTRAINT, workspace.fit_target,
-        N_FIT_TARGET);
+        mag_signal, n_mag_signal, coil_current, n_coil_current, CONSTRAINT_REPLACEMENT,
+        N_CONSTRAINT * N_MAG_SIGNAL, CONSTRAINT_G_COIL, N_CONSTRAINT * N_COIL, FIT_WEIGHT,
+        N_FIT_TARGET, constraint_measured, n_constraint_measured, workspace.constraint_coil,
+        N_CONSTRAINT, workspace.fit_target, N_FIT_TARGET);
     if (status != RTGSFIT_OK)
     {
         goto finish;
