@@ -80,12 +80,16 @@ def _code_version() -> dict[str, str]:
     git_id = ""
     for parent in Path(__file__).resolve().parents:
         if (parent / ".git").exists():
-            git_id = subprocess.run(
-                ["git", "-C", str(parent), "rev-parse", "--short", "HEAD"],
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip()
+            # Provenance only: a missing git or a refused checkout must not stop the write.
+            try:
+                git_id = subprocess.run(
+                    ["git", "-C", str(parent), "rev-parse", "--short", "HEAD"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip()
+            except (OSError, subprocess.CalledProcessError):
+                pass
             break
     library = sorted(
         f"{distribution.metadata['Name']}=={distribution.version}"

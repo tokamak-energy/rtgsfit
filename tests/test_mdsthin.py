@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from datetime import UTC
 from datetime import datetime
@@ -66,7 +67,9 @@ def test_writer_explicitly_uses_mdsthin(
         "USER",
         "VERSION",
     } <= set(code_version)
-    assert all(code_version[key] for key in ("COMPUTER", "GIT_ID", "LIBRARY", "PYTHON", "USER", "VERSION"))
+    assert all(code_version[key] for key in ("COMPUTER", "LIBRARY", "PYTHON", "USER", "VERSION"))
+    # Blank when not run from a git checkout, as in CI (checked out without git) or a wheel install.
+    assert isinstance(code_version["GIT_ID"], str)
     assert code_version["MATLAB"] == "N/A"
     written_at = datetime.fromisoformat(data["CODE_VERSION"]["DATETIME"])
     assert written_at.tzinfo == UTC
@@ -76,6 +79,21 @@ def test_writer_explicitly_uses_mdsthin(
         assert original["CODE_VERSION"]["DATETIME"] == "2000-01-01T00:00:00+00:00"
     else:
         assert "CODE_VERSION" not in original
+
+
+@pytest.mark.parametrize(
+    "error", [FileNotFoundError("git"), subprocess.CalledProcessError(128, "git", stderr="dubious ownership")]
+)
+def test_code_version_tolerates_git_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, error: Exception) -> None:
+    writer = import_module("rtgsfit.database_writers.rtgsfit_mdsplus")
+    (tmp_path / ".git").mkdir()
+    monkeypatch.setattr(writer, "__file__", str(tmp_path / "rtgsfit" / "__init__.py"))
+
+    def fail(*args: Any, **kwargs: Any) -> None:
+        raise error
+
+    monkeypatch.setattr(writer.subprocess, "run", fail)
+    assert writer._code_version()["GIT_ID"] == ""
 
 
 @pytest.mark.parametrize("existing", [False, True])

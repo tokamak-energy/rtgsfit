@@ -999,8 +999,9 @@ physics and preshot nodes (keys such as `PROFILES_2D.R_Z.PSI`). Every such node 
 [data_dictionary.md](data_dictionary.md).
 
 MDSplus also has the common run metadata created by `standard_utility`. For both preshots and results,
-the writer fills missing `CODE_VERSION` fields with the RT-GSFit version, Git commit, installed Python
-packages, host, user, Python version and UTC write time. `MATLAB` is `N/A` for this Python writer.
+the writer fills missing `CODE_VERSION` fields with the RT-GSFit version, Git commit (blank outside a Git
+checkout, e.g. a wheel install), installed Python packages, host, user, Python version and UTC write time.
+`MATLAB` is `N/A` for this Python writer.
 Caller-supplied fields are preserved. The physics viewer displays the timestamp in its configured time
 zone. It is write metadata, not a plasma time or a replacement for the archived settings and code
 version in `INPUT`.
