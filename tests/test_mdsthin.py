@@ -141,10 +141,10 @@ def test_quality_only_does_not_replace_a_run_or_link_best(
     settings = load_settings("st40_magrun16").copy_with({"writers/rtgsfit_mdsplus/enabled": True})
     if existing:
         with pytest.raises(FileExistsError, match="already exists"):
-            write_quality_only({"SCORE": 0}, settings)
+            write_quality_only({"SCORE": -2}, settings)
         assert calls == []
     else:
-        write_quality_only({"SCORE": 0}, settings)
+        write_quality_only({"SCORE": -2}, settings)
         assert calls[0]["link_best"] is False
         assert set(calls[1]["data_to_write"]["CODE_VERSION"]) == {
             "COMPUTER",
@@ -156,7 +156,7 @@ def test_quality_only_does_not_replace_a_run_or_link_best(
             "USER",
             "VERSION",
         }
-        assert calls[2]["data_to_write"] == {"SCORE": 0}
+        assert calls[2]["data_to_write"] == {"SCORE": -2}
 
 
 def test_quality_writer_uses_standard_data_quality_schema(monkeypatch: pytest.MonkeyPatch) -> None:

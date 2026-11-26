@@ -12,10 +12,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 from rtgsfit import data_dictionary as dd
 from rtgsfit import ppac
+from rtgsfit.data_quality import add_replay_quality
 from rtgsfit.library import LIBRARY
 from rtgsfit.library import build_directory
 from rtgsfit.library import isolated_build
@@ -152,5 +154,35 @@ def test_missing_input_writes_quality_only_and_propagates_error(monkeypatch: pyt
     controller = ppac.RtgsfitReplay(pulseNo=14894, verbose=False)
     with pytest.raises(InputDataError, match="missing MAG RUN16 signal"):
         controller.run()
-    assert calls[0]["SCORE"] == 0
+    assert calls[0]["SCORE"] == -2
+    assert calls[0]["SCORE_INFO"].startswith("Missing data")
     assert json.loads(calls[0]["RESULTS"]) == {"completed": False, "input_error": "missing MAG RUN16 signal"}
+
+
+@pytest.mark.parametrize(
+    ("status", "score", "per_slice", "meaning"),
+    [
+        ([0, 0], 0, [0, 0], "Default flag"),
+        ([0, 2, 0], 0, [0, -1, 0], "Default flag"),
+        ([2, 128], -1, [-1, -1], "Invalid data"),
+        ([], -2, [], "Missing data"),
+    ],
+)
+def test_quality_distinguishes_missing_invalid_and_unvalidated(
+    status: list[int], score: int, per_slice: list[int], meaning: str
+) -> None:
+    time = np.arange(len(status), dtype=np.float64) * 0.001
+    results = Results({"TIME": time, "GLOBAL": {"STATUS": np.array(status, dtype=np.int32)}})
+    settings = ppac.RtgsfitReplay(pulseNo=14816, write_to_mds=False).settings
+    add_replay_quality(results, settings)
+
+    quality = results.nested["DATA_Q"]
+    assert quality["SCORE"] == score
+    assert_array_equal(quality["SCORE_1D"], per_slice)
+    assert quality["SCORE_1D"].dtype == np.int32
+    assert_array_equal(quality["TIME"], time)
+    assert quality["SCORE_INFO"].startswith(meaning)
+    if score in (-1, 0):
+        assert "internally or externally" in quality["SCORE_INFO"]
+    checks = json.loads(quality["RESULTS"])
+    assert checks["solver_status_counts"] == {str(code): status.count(code) for code in set(status)}

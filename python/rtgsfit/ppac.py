@@ -39,7 +39,7 @@ from typing import Any
 import numpy as np
 
 from rtgsfit.data_quality import add_replay_quality
-from rtgsfit.data_quality import unvalidated_quality
+from rtgsfit.data_quality import quality_report
 from rtgsfit.database_readers import InputDataError
 from rtgsfit.database_writers.rtgsfit_mdsplus import write_quality_only
 from rtgsfit.library import isolated_build
@@ -123,7 +123,7 @@ class RtgsfitReplay:
             with isolated_build():
                 results = replay(self.settings, verbose=self.verbose)
         except InputDataError as exc:
-            quality = unvalidated_quality(self.settings, {"completed": False, "input_error": str(exc)})
+            quality = quality_report(self.settings, {"completed": False, "input_error": str(exc)}, score=-2)
             if "rtgsfit_mdsplus" in self.settings.get("writers", {}).get("names", []):
                 write_quality_only(quality, self.settings)
             raise

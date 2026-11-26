@@ -807,15 +807,35 @@ from 519.5 ms to 599.5 ms a 4–5 kA "plasma" of 0.001 m² at R = 0.83 m, Z = �
 Use `GLOBAL.AREA`, `GLOBAL.IP` and `CONSTRAINTS.CHI_SQ_MAG` together with `GLOBAL.STATUS`.
 The PCS has the same behaviour.
 
-**Data quality.** `DATA_Q:SCORE` and `SCORE_1D` are 0 (unvalidated), not a claim that the
-equilibrium is physically valid. `RESULTS` records input provenance (for example
-`MAG RUN16 processed signals and PSU2COIL BEST (RUN06)`) and solver-status counts; the per-slice
-solver status is in `GLOBAL:STATUS`.
+**Data quality.** `DATA_Q` uses the standard five-level score convention:
 
-Missing or unusable input data produces a quality-only run with the error in `DATA_Q:RESULTS` and then raises the error. It never
-links that run to `BEST` or overwrites an existing run. Other failures propagate without a
-quality-only run. If MDSplus writing is disabled, the input error is raised without creating a report
-in MDSplus.
+| Score | Meaning | Permitted use |
+|---|---|---|
+| −2 | Missing data: no data present in MDS, so no data quality score | No data to assess |
+| −1 | Invalid data | Must not be communicated internally or externally |
+| 0 | Default flag: data not yet validated | Must not be communicated internally or externally |
+| 1 | Automatically validated data | Quick internal analyses; not external publication or communication |
+| 2 | Data validated in detail | External communication and more complicated analysis |
+
+RT-GSFit applies a conservative policy; successful execution is **not** automatic validation:
+
+- `SCORE_1D` is **0** where `GLOBAL:STATUS` is 0, and **−1** where the solver status is nonzero.
+  Status 0 still does not establish physical validity or plasma presence.
+- The overall `SCORE` is **0** if any slices remain unvalidated, even if other slices are invalid.
+  Inspect `SCORE_1D` to identify those invalid times; an overall 0 does not make every slice usable.
+- The overall `SCORE` is **−1** if all slices are invalid, and **−2** if no equilibrium data is produced.
+- Scores **1** and **2** are reserved for actual validation and are not assigned by the replay.
+
+`SCORE_INFO` explains the overall score, including its communication restrictions. `RESULTS` records
+input provenance (for example `MAG RUN16 processed signals and PSU2COIL BEST (RUN06)`) and solver-status
+counts; the per-slice solver status is in `GLOBAL:STATUS`. A `BEST` link selects a run; it does not
+validate the data or override these restrictions.
+
+Missing or unusable input data produces a quality-only run with **SCORE = −2**, because no equilibrium
+data is produced, and the error in `DATA_Q:RESULTS`; the original error is then raised. It never links
+that run to `BEST` or overwrites an existing run. Other failures propagate without a quality-only run.
+If MDSplus writing is disabled, the input error is raised without creating a report in MDSplus.
+This policy applies to newly generated reports; existing MDSplus runs are not automatically rescored.
 
 **Dependencies.** PPAC passes
 `link_run_to_best=True` to every Python package whose entry does not set it, which matches the
