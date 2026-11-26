@@ -1,50 +1,67 @@
-name: Run Tests
+name: Tests
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
   workflow_dispatch:
 
 jobs:
   test:
+    # Rocky Linux 8, as used on the ST40 PCS and the TE analysis servers.
     runs-on: ubuntu-latest
     container:
-      image: rockylinux:8.5
+      image: rockylinux:8
 
     steps:
-    - name: Checkout current repository
-      uses: actions/checkout@v4
-    
-    - name: Setup Rocky 8 environment
-      run: |
-        dnf -y update
-        dnf -y install 'dnf-command(config-manager)' || dnf -y install dnf-plugins-core || true
-        dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled crb || true
-        dnf -y install git gcc gcc-c++ make openblas openblas-devel
-        dnf -y groupinstall "Development Tools"
-        dnf -y install gcc-toolset-14
-        dnf -y install python3.12 python3.12-pip
+      - uses: actions/checkout@v5
 
-    - name: Install uv
-      run: python3.12 -m pip install uv
+      - name: Install system packages
+        run: |
+          dnf -y install dnf-plugins-core epel-release
+          dnf config-manager --set-enabled powertools
+          dnf -y install gcc make diffutils findutils git openblas-devel netcdf-devel tar
 
-    - name: Install and run tests in venv
-      run: |
-        scl enable gcc-toolset-14 bash
-        gcc --version
-        cd tests/rtgsfit_verify_analytic
-        pwd
-        uv venv --python 3.13
-        source .venv/bin/activate
-        uv pip install -e "."
-        pytest
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
-    - name: Build and run null points test
-      working-directory: src
-      run: |
-        make clean
-        cp ../test_data/constants.c .
-        make SHOT=0 RUN_NAME=no_mds DEBUG=1 test_find_plasma
-        ./test_find_plasma
+      - name: Build and run the C unit tests
+        run: make -C c test ARCH_FLAGS=
+
+      - name: Install the Python package
+        run: |
+          uv venv --python 3.13 .venv
+          uv pip install -e ".[dev,freegsnke]"
+
+      # The FreeGSNKE tests read the MAST-U-like machine and example currents from the FreeGSNKE
+      # repository (they are not in its wheel), at the path in settings/freegsnke/rtgsfit.json.
+      - name: Fetch the FreeGSNKE example data
+        run: |
+          version=$(.venv/bin/python -c "import importlib.metadata as m; print(m.version('freegsnke'))")
+          git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v$version" \
+            https://github.com/FusionComputingLab/freegsnke.git "$HOME/github/freegsnke"
+
+      - name: Check Python formatting and lint
+        run: |
+          .venv/bin/ruff format --check python tests hatch_build.py
+          .venv/bin/ruff check python tests hatch_build.py
+
+      - name: Check C formatting
+        run: .venv/bin/clang-format --dry-run --Werror c/src/*.[ch] c/tests/*.[ch] c/tools/*.c
+
+      - name: Run the off-network tests (analytic and FreeGSNKE replays, data dictionary, settings, I/O, CLI)
+        run: .venv/bin/pytest --require-freegsnke
+
+      # As `pip install "git+https://github.com/tokamak-energy/rtgsfit@<tag>"` does, build the sdist and
+      # then the wheel from it, install that without the checkout, and replay. The wheel carries the C
+      # sources and builds from a copy in the user cache, so nothing may be written into the installation.
+      - name: Replay from a normal (non-editable) install
+        run: |
+          uv build --out-dir /tmp/dist
+          uv venv --python 3.13 /tmp/installed
+          uv pip install --python /tmp/installed/bin/python /tmp/dist/rtgsfit-*.whl
+          package=$(/tmp/installed/bin/python -c "import pathlib, rtgsfit; print(pathlib.Path(rtgsfit.__file__).parent)")
+          find "$package" -name __pycache__ -prune -o -print | sort > /tmp/installed-files.txt
+          (cd /tmp && XDG_CACHE_HOME=/tmp/rtgsfit-cache /tmp/installed/bin/rtgsfit replay analytic)
+          find "$package" -name __pycache__ -prune -o -print | sort | diff /tmp/installed-files.txt -
+          test -f /tmp/rtgsfit-cache/rtgsfit/outputs/rtgsfit_analytic.npz

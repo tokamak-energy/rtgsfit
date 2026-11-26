@@ -1,0 +1,330 @@
+{
+    "L001": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L002": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L003": {
+        "fit_settings": {
+            "comment": "MCT flux loop dead",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L004": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L005": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L006": {
+        "fit_settings": {
+            "comment": "doesnt match DIV/SOL flat top",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L007": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L008": {
+        "fit_settings": {
+            "comment": "doesnt match DIV/SOL flat top",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L009": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L010": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L011": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L012": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L013": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L014": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L015": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L016": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L017": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L018": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L019": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L020": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L021": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L022": {
+        "fit_settings": {
+            "comment": "Very high noise; probably dead; extremely wrong in DIV flat top",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L023": {
+        "fit_settings": {
+            "comment": "doesnt match DIV/SOL flat top",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L024": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L025": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L026": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L027": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L029": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": true,
+            "weight": 6.28
+        }
+    },
+    "L030": {
+        "fit_settings": {
+            "comment": "doesnt match DIV/SOL flat top",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L101": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L102": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L103": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L104": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L105": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L106": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L201": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L202": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L203": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L210": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L211": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    },
+    "L212": {
+        "fit_settings": {
+            "comment": "",
+            "expected_value": 0.05,
+            "include": false,
+            "weight": 6.28
+        }
+    }
+}

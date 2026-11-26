@@ -1,0 +1,83 @@
+{
+    "$schema": "../settings.schema.json",
+    "preshot": {
+        "reader": "analytic",
+        "boundary": {
+            "xpt_fraction": 0.99,
+            "tolerance": 1e-10,
+            "ip_min": 1000.0,
+            "n_xpt_max": 50
+        }
+    },
+    "signals": {
+        "reader": "analytic"
+    },
+    "replay": {
+        "pulse": 0,
+        "time_start": 0.0,
+        "time_end": 0.009,
+        "time_step": 0.001,
+        "repeat": 1,
+        "stop_on_status": false,
+        "stop_below_ip": 0.0
+    },
+    "build": {
+        "timing": false,
+        "arch_flags": "-march=native"
+    },
+    "writers": {
+        "names": ["local"],
+        "local": {
+            "path": "rtgsfit_analytic.npz"
+        }
+    },
+    "analytic": {
+        "plasma": {
+            "r_0": 10.0,
+            "z_0": 0.0,
+            "rho_b": 0.5,
+            "ip": 1000000.0
+        },
+        "grid": {
+            "r_min": 9.25,
+            "r_max": 10.75,
+            "n_r": 65,
+            "z_min": -1.5,
+            "z_max": 1.5,
+            "n_z": 129
+        },
+        "limiter": {
+            "r_min": 9.5,
+            "r_max": 10.5,
+            "n_r": 50,
+            "z_min": -1.0,
+            "z_max": 1.0,
+            "n_z": 100
+        },
+        "flux_loops": {
+            "r_min": 9.4,
+            "r_max": 10.6,
+            "n_r": 4,
+            "z_min": -1.2,
+            "z_max": 1.2,
+            "n_z": 8
+        },
+        "bp_probes": {
+            "r_min": 9.4,
+            "r_max": 10.6,
+            "n_r": 5,
+            "z_min": -1.2,
+            "z_max": 1.2,
+            "n_z": 10
+        },
+        "passives": {
+            "r": [9.45, 10.0, 10.55, 10.0],
+            "z": [0.0, 1.1, 0.0, -1.1]
+        },
+        "initial": {
+            "r": 10.2,
+            "z": 0.5,
+            "radius": 0.25
+        }
+    }
+}

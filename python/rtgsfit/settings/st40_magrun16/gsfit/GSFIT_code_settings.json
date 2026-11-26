@@ -1,0 +1,132 @@
+{
+    "RAYON_NUM_THREADS": 10,
+    "database_reader": {
+        "method": "st40_mdsplus_with_digital_filter",
+        "st40_mdsplus": {
+            "workflow": {
+                "elmag": {
+                    "pulseNo": null,
+                    "run_name": "RUN16",
+                    "usage": "PF and vessel geometry and resistance"
+                },
+                "mag": {
+                    "pulseNo": null,
+                    "run_name": "BEST",
+                    "usage": "Magneitc sensors geometry and measured values"
+                },
+                "psu2coil": {
+                    "pulseNo": null,
+                    "run_name": "RUN05",
+                    "usage": "PF and TF coil currents"
+                }
+            }
+        },
+        "freegs": {},
+        "st40_astra_mdsplus": {
+            "workflow": {
+                "elmag": {
+                    "pulseNo": null,
+                    "run_name": "RUN16",
+                    "usage": "PF and vessel geometry and resistance"
+                },
+                "mag": {
+                    "pulseNo": null,
+                    "run_name": "BEST",
+                    "usage": "Magneitc sensors geometry"
+                },
+                "astra": {
+                    "pulseNo": null,
+                    "run_name": "RUN202",
+                    "usage": "PF and TF measured values, and magneitc sensors measured values"
+                }
+            }
+        },
+        "st40_mdsplus_with_digital_filter": {
+            "workflow": {
+                "elmag": {
+                    "pulseNo": null,
+                    "run_name": "RUN16",
+                    "usage": "PF and vessel geometry and resistance"
+                },
+                "mag": {
+                    "pulseNo": null,
+                    "run_name": "RUN16",
+                    "usage": "Magnetic sensors geometry and measured values"
+                },
+                "psu2coil": {
+                    "pulseNo": null,
+                    "run_name": "BEST",
+                    "usage": "PF and TF coil currents"
+                },
+                "dialoop": {
+                    "pulseNo": null,
+                    "run_name": "BEST",
+                    "usage": "Diamagnetic flux measured value"
+                },
+                "ppts": {
+                    "pulseNo": null,
+                    "run_name": "BEST",
+                    "usage": "Pressure sensor good time-slices (BAD_MA flag)"
+                },
+                "ts": {
+                    "pulseNo": null,
+                    "run_name": "BEST",
+                    "usage": "Thomson scattering geometry and electron pressure"
+                }
+            }
+        }
+    },
+    "database_writer": {
+        "method": "rtgsfit_mdsplus",
+        "tokamak_energy_mdsplus": {},
+        "rtgsfit_mdsplus": {}
+    },
+    "numerics": {
+        "n_iter_max": 180,
+        "grad_shafranov_deviation_tolerance": 5e-06,
+        "n_iter_no_vertical_feedback": 1,
+        "n_iter_min": 0,
+        "anderson_mixing": {
+            "use": false,
+            "mixing_from_previous_iter": 0.1
+        },
+        "save_unconverged": false
+    },
+    "type_of_run": {
+        "forward": false,
+        "inverse": true
+    },
+    "grid": {
+        "n_r": 81,
+        "n_z": 161,
+        "r_min": 0.01,
+        "r_max": 1.01,
+        "z_min": -1.0,
+        "z_max": 1.0
+    },
+    "n_psi_n": 100,
+    "vacuum_toroidal_field_reference_radius": 0.4,
+    "timeslices": {
+        "method": "user_defined",
+        "arange": {
+            "time_start": 0.01,
+            "time_end": 0.28,
+            "dt": 0.0005
+        },
+        "linspace": {
+            "time_start": 0.005,
+            "time_end": 0.25,
+            "n_time": 20
+        },
+        "user_defined": [
+            0.1
+        ]
+    },
+    "initial_guess": {
+        "ip": 425000.0,
+        "cur_r": 0.45,
+        "cur_z": 0.0,
+        "minor_radius": 0.2,
+        "elongation": 1.2
+    }
+}
